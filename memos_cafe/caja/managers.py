@@ -28,6 +28,40 @@ class PagoManager(models.Manager):
     def completados(self):
         return self.filter(estado="completado")
 
+    def con_orden_completa(self):
+        """Pagos listos para PagoReadSerializer: orden/caja/comprobante/
+        nota_credito por select_related, mas detalles y pagos completados
+        de la orden prefetcheados -- evita el N+1 de que cada pago listado
+        anide un OrdenReadSerializer completo (incluye get_pagos_resumen)
+        y dispare 2 queries extra por pago.
+
+        apps.get_model en vez de un import directo de memos_cafe.ordenes:
+        caja/api/views.py no puede importar de otra app de negocio
+        (.importlinter), y managers.py evita el mismo acoplamiento aunque
+        no este restringido formalmente. Mismo patron que
+        memos_cafe.ordenes.managers.OrdenManager.con_detalles().
+        """
+        from django.apps import apps
+        from django.db.models import Prefetch
+
+        DetalleOrden = apps.get_model("ordenes", "DetalleOrden")
+
+        return self.select_related(
+            "orden", "orden__mesa", "orden__usuario", "caja",
+            "comprobante", "nota_credito",
+        ).prefetch_related(
+            Prefetch(
+                "orden__detalles",
+                queryset=DetalleOrden.objects.select_related(
+                    "producto", "producto__categoria", "promocion"
+                ),
+            ),
+            Prefetch(
+                "orden__pagos",
+                queryset=self.model.objects.filter(estado="completado"),
+            ),
+        )
+
     def total_por_caja(self, caja):
         return (
             self.completados()

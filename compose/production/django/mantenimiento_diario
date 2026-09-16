@@ -1,0 +1,12 @@
+#!/bin/bash
+# Tarea de mantenimiento diaria: limpia tokens JWT expirados y genera un
+# backup de la base de datos. Pensado para correr como Render Cron Job
+# (o cron/Task Scheduler en local), usando la misma imagen Docker que el
+# servicio web -- no necesita infraestructura aparte.
+
+set -o errexit
+set -o pipefail
+set -o nounset
+
+python /app/manage.py flushexpiredtokens
+python /app/manage.py backup_bd

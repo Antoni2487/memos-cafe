@@ -4,6 +4,7 @@ from memos_cafe.mesas.models import Mesa
 from memos_cafe.ordenes.models import DetalleOrden, Orden
 from memos_cafe.productos.api.serializers import ProductoSerializer, PromocionSerializer
 from memos_cafe.productos.models import Producto, Promocion
+from memos_cafe.utils.validators import es_alfanumerico_extendido, es_telefono_valido
 
 
 class DetalleOrdenReadSerializer(serializers.ModelSerializer):
@@ -73,6 +74,13 @@ class OrdenReadSerializer(serializers.ModelSerializer):
         ]
 
     def get_pagos_resumen(self, obj):
+        # .all() + filtro en Python, NO .filter(): un QuerySet.filter()
+        # sobre una relacion ya prefetcheada (ver OrdenManager.con_detalles
+        # y PagoManager.con_orden_completa) ignora la cache del prefetch y
+        # dispara una query nueva por cada orden -- justo el N+1 que el
+        # prefetch estaba tratando de evitar. .all() si respeta la cache
+        # cuando existe, y cuando no (ej. tras un refresh_from_db()) cae
+        # a una sola query sin filtrar, que Python filtra igual.
         return [
             {
                 "id": p.id,
@@ -80,7 +88,8 @@ class OrdenReadSerializer(serializers.ModelSerializer):
                 "monto": str(p.monto),
                 "estado": p.estado,
             }
-            for p in obj.pagos.filter(estado="completado")
+            for p in obj.pagos.all()
+            if p.estado == "completado"
         ]
 
 
@@ -104,6 +113,16 @@ class OrdenWriteSerializer(serializers.Serializer):
         allow_null=True,
     )
     plataforma_otra = serializers.CharField(max_length=100, required=False, allow_blank=True, default="")
+
+    def validate_cliente_nombre(self, value):
+        if value and not es_alfanumerico_extendido(value):
+            raise serializers.ValidationError("El nombre contiene caracteres no permitidos.")
+        return value
+
+    def validate_cliente_telefono(self, value):
+        if value and not es_telefono_valido(value):
+            raise serializers.ValidationError("El teléfono solo puede contener números, espacios, + y -.")
+        return value
 
     def validate_detalles(self, value):
         if not value:

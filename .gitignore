@@ -16,6 +16,7 @@ downloads/
 eggs/
 .eggs/
 lib/
+!frontend/src/lib/
 lib64/
 parts/
 sdist/
@@ -81,6 +82,9 @@ ENV/
 logs
 *.log
 npm-debug.log*
+
+# Backups de BD (memos_cafe/utils/management/commands/backup_bd.py)
+backups/
 yarn-debug.log*
 yarn-error.log*
 

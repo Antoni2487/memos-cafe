@@ -1,0 +1,55 @@
+name: Mantenimiento diario
+
+# Cron job real: limpia tokens JWT expirados y genera un backup de la BD
+# de produccion (Neon) todos los dias. Se usa GitHub Actions en vez de un
+# servicio de cron pago (Render Cron Jobs requiere plan de pago) porque es
+# gratuito y no depende de infraestructura adicional.
+#
+# Requiere un secret DATABASE_URL en Settings -> Secrets and variables ->
+# Actions, con la misma cadena de conexion de Neon que usa Render.
+
+on:
+  schedule:
+    - cron: '0 5 * * *' # 05:00 UTC = 00:00 hora de Lima, todos los dias
+  workflow_dispatch: {} # permite correrlo manualmente desde la pestaña Actions
+
+jobs:
+  mantenimiento:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code Repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version-file: '.python-version'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Instalar dependencias
+        run: uv sync --locked --no-dev
+
+      - name: Limpiar tokens JWT expirados
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DJANGO_SETTINGS_MODULE: config.settings.production
+          DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
+          DJANGO_ADMIN_URL: ${{ secrets.DJANGO_ADMIN_URL }}
+        run: uv run python manage.py flushexpiredtokens
+
+      - name: Generar backup de la BD
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DJANGO_SETTINGS_MODULE: config.settings.production
+          DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
+          DJANGO_ADMIN_URL: ${{ secrets.DJANGO_ADMIN_URL }}
+        run: uv run python manage.py backup_bd
+
+      - name: Subir backup como artefacto
+        uses: actions/upload-artifact@v4
+        with:
+          name: backup-bd-${{ github.run_id }}
+          path: backups/*.json
+          retention-days: 30

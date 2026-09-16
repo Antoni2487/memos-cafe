@@ -72,6 +72,7 @@ LOCAL_APPS = [
     "memos_cafe.caja",
     "memos_cafe.insumos",
     "memos_cafe.roles",
+    "memos_cafe.utils",
 ]
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 
@@ -287,6 +288,7 @@ REST_FRAMEWORK = {
         "rest_framework.permissions.IsAuthenticated",
     ),
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "EXCEPTION_HANDLER": "memos_cafe.utils.exception_handler.custom_exception_handler",
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 20,
     "DEFAULT_THROTTLE_CLASSES": [
@@ -308,7 +310,13 @@ REST_FRAMEWORK = {
 # djangorestframework-simplejwt
 # -------------------------------------------------------------------------------
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(hours=8),
+    # 30 min en vez de 8h: el access token vive en localStorage del
+    # frontend (ver frontend/src/services/authService.js), asi que un XSS
+    # exitoso lo puede robar -- 8h de ventana es demasiado. El refresh con
+    # rotacion + blacklist (abajo) ya cubre el turno completo sin
+    # interrumpir al usuario: api.js reintenta con /auth/refresh/ en cada
+    # 401 de forma transparente.
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
     "ROTATE_REFRESH_TOKENS": True,
     "BLACKLIST_AFTER_ROTATION": True,

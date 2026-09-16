@@ -2,6 +2,8 @@
 With these settings, tests run faster.
 """
 
+from django.core.management.utils import get_random_secret_key
+
 from .base import *  # noqa: F403
 from .base import TEMPLATES
 from .base import env
@@ -9,10 +11,9 @@ from .base import env
 # GENERAL
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/dev/ref/settings/#secret-key
-SECRET_KEY = env(
-    "DJANGO_SECRET_KEY",
-    default="nnRioVJyhMsSIj0B723gf72Sq7iIHwhxxBWXxCurqVHms0JKmqJCqa2eJZzy1nix",
-)
+# Sin default fijo (ver config.settings.local para el mismo razonamiento):
+# los tests no necesitan una firma estable entre corridas.
+SECRET_KEY = env("DJANGO_SECRET_KEY", default=get_random_secret_key())
 # https://docs.djangoproject.com/en/dev/ref/settings/#test-runner
 TEST_RUNNER = "django.test.runner.DiscoverRunner"
 

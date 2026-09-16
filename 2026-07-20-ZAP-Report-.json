@@ -1,0 +1,505 @@
+{
+	"@programName": "ZAP",
+	"@version": "2.17.0",
+	"@generated": "lun, 20 jul. 2026 16:54:52",
+	"created": "2026-07-20T21:54:52.231654200Z",
+	"insights":[
+		{
+			"level": "Bajo",
+			"reason": "Advertencia",
+			"site": "",
+			"key": "insight.log.warn",
+			"description": "ZAP warnings logged - see the zap.log file for details",
+			"statistic": "3"
+		},
+		{
+			"level": "Información",
+			"reason": "Informativo",
+			"site": "http://localhost:8000",
+			"key": "insight.code.2xx",
+			"description": "Percentage of responses with status code 2xx",
+			"statistic": "2"
+		},
+		{
+			"level": "Información",
+			"reason": "Informativo",
+			"site": "http://localhost:8000",
+			"key": "insight.code.3xx",
+			"description": "Percentage of responses with status code 3xx",
+			"statistic": "13"
+		},
+		{
+			"level": "Información",
+			"reason": "Informativo",
+			"site": "http://localhost:8000",
+			"key": "insight.code.4xx",
+			"description": "Percentage of responses with status code 4xx",
+			"statistic": "83"
+		},
+		{
+			"level": "Información",
+			"reason": "Informativo",
+			"site": "http://localhost:8000",
+			"key": "insight.code.5xx",
+			"description": "Percentage of responses with status code 5xx",
+			"statistic": "1"
+		},
+		{
+			"level": "Información",
+			"reason": "Informativo",
+			"site": "http://localhost:8000",
+			"key": "insight.endpoint.ctype.application/json",
+			"description": "Percentage of endpoints with content type application/json",
+			"statistic": "25"
+		},
+		{
+			"level": "Información",
+			"reason": "Informativo",
+			"site": "http://localhost:8000",
+			"key": "insight.endpoint.ctype.text/css",
+			"description": "Percentage of endpoints with content type text/css",
+			"statistic": "25"
+		},
+		{
+			"level": "Información",
+			"reason": "Informativo",
+			"site": "http://localhost:8000",
+			"key": "insight.endpoint.ctype.text/html",
+			"description": "Percentage of endpoints with content type text/html",
+			"statistic": "37"
+		},
+		{
+			"level": "Información",
+			"reason": "Informativo",
+			"site": "http://localhost:8000",
+			"key": "insight.endpoint.ctype.text/javascript",
+			"description": "Percentage of endpoints with content type text/javascript",
+			"statistic": "12"
+		},
+		{
+			"level": "Información",
+			"reason": "Informativo",
+			"site": "http://localhost:8000",
+			"key": "insight.endpoint.method.GET",
+			"description": "Percentage of endpoints with method GET",
+			"statistic": "87"
+		},
+		{
+			"level": "Información",
+			"reason": "Informativo",
+			"site": "http://localhost:8000",
+			"key": "insight.endpoint.method.POST",
+			"description": "Percentage of endpoints with method POST",
+			"statistic": "12"
+		},
+		{
+			"level": "Información",
+			"reason": "Informativo",
+			"site": "http://localhost:8000",
+			"key": "insight.endpoint.total",
+			"description": "Count of total endpoints",
+			"statistic": "8"
+		},
+		{
+			"level": "Información",
+			"reason": "Informativo",
+			"site": "http://localhost:8000",
+			"key": "insight.response.slow",
+			"description": "Percentage of slow responses",
+			"statistic": "11"
+		}
+	],
+	"site":[ 
+		{
+			"@name": "http://localhost:8000",
+			"@host": "localhost",
+			"@port": "8000",
+			"@ssl": "false",
+			"alerts": [ 
+				{
+					"pluginid": "40018",
+					"alertRef": "40018",
+					"alert": "Inyecci\u00F3n SQL",
+					"name": "Inyecci\u00F3n SQL",
+					"riskcode": "3",
+					"confidence": "2",
+					"riskdesc": "Alto (Media)",
+					"desc": "<p>Inyecci\u00F3n SQL puede ser posible.</p>",
+					"instances":[ 
+						{
+							"id": "25",
+							"uri": "http://localhost:8000/api/auth/login/",
+							"nodeName": "http:\/\/localhost:8000\/api\/auth\/login\/ ()({email,password})",
+							"method": "POST",
+							"param": "email",
+							"attack": "zap.scan@test.local' OR '1'='1' -- ",
+							"evidence": "",
+							"otherinfo": "Los resultados de la p\u00E1gina fueron manipulados con \u00E9xito utilizando las condiciones booleanas [zap.scan@test.local' AND '1'='1' -- ] y [zap.scan@test.local' OR '1'='1' -- ]. \nEl valor del par\u00E1metro modificado fue , que fue eliminado del HTML para facilitar la comparaci\u00F3n.\nNo se devolvieron datos para el par\u00E1metro original. \nLa vulnerabilidad se detect\u00F3 al recuperar con \u00E9xito m\u00E1s datos de los que se devolv\u00EDan originalmente, manipulando el par\u00E1metro."
+						},
+						{
+							"id": "26",
+							"uri": "http://localhost:8000/api/auth/login/",
+							"nodeName": "http:\/\/localhost:8000\/api\/auth\/login\/ ()({email,password})",
+							"method": "POST",
+							"param": "password",
+							"attack": "ZapScan-Local-2026!' OR '1'='1' -- ",
+							"evidence": "",
+							"otherinfo": "Los resultados de la p\u00E1gina fueron manipulados con \u00E9xito utilizando las condiciones booleanas [ZapScan-Local-2026!' AND '1'='1' -- ] y [ZapScan-Local-2026!' OR '1'='1' -- ]. \nEl valor del par\u00E1metro modificado fue , que fue eliminado del HTML para facilitar la comparaci\u00F3n.\nNo se devolvieron datos para el par\u00E1metro original. \nLa vulnerabilidad se detect\u00F3 al recuperar con \u00E9xito m\u00E1s datos de los que se devolv\u00EDan originalmente, manipulando el par\u00E1metro."
+						}
+					],
+					"count": "2",
+					"systemic": false,
+					"solution": "<p>No conf\u00EDe en los datos de entrada del lado del cliente, incluso si existe una validaci\u00F3n del lado del cliente.</p><p>Como norma general, escriba la verificaci\u00F3n de los datos en el lado del servidor.</p><p>Si la aplicaci\u00F3n usa JDBC, use PreparedStatement o CallableStatement, con par\u00E1metros pasados \u200B\u200Bpor '?'</p><p>Si la aplicaci\u00F3n usa ASP, use objetos de comando ADO con verificaci\u00F3n de tipo fuerte y consultas parametrizadas.</p><p>Si se pueden usar los procedimientos almacenados de la base de datos, util\u00EDcelos.</p><p>\u00A1*No* concatene cadenas en consultas en el procedimiento almacenado, o use 'exec', 'exex immediate' o una funci\u00F3n equivalente!</p><p>No cree consultas SQL din\u00E1micas mediante la concatenaci\u00F3n de cadenas simples.</p><p>Escape todos los datos recibidos del cliente.</p><p>Aplique una 'lista de permitidos' para caracteres permitidos o una 'lista de denegados' para caracteres no permitidos en la entrada del usuario.</p><p>Aplique el principio de privilegio m\u00EDnimo utilizando el usuario de base de datos con el menor privilegio posible.</p><p>En particular, evite utilizar usuarios de bases de datos 'sa' o 'db-owner'. Esto no elimina la inyecci\u00F3n SQL, pero minimiza su impacto.</p><p>Otorgue el acceso m\u00EDnimo a la base de datos que sea necesario para la aplicaci\u00F3n.</p>",
+					"otherinfo": "<p>Los resultados de la p\u00E1gina fueron manipulados con \u00E9xito utilizando las condiciones booleanas [zap.scan@test.local' AND '1'='1' -- ] y [zap.scan@test.local' OR '1'='1' -- ]. </p><p>El valor del par\u00E1metro modificado fue , que fue eliminado del HTML para facilitar la comparaci\u00F3n.</p><p>No se devolvieron datos para el par\u00E1metro original. </p><p>La vulnerabilidad se detect\u00F3 al recuperar con \u00E9xito m\u00E1s datos de los que se devolv\u00EDan originalmente, manipulando el par\u00E1metro.</p>",
+					"reference": "<p>https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html</p>",
+					"cweid": "89",
+					"wascid": "19",
+					"sourceid": "163"
+				},
+				{
+					"pluginid": "10038",
+					"alertRef": "10038-1",
+					"alert": "Cabecera Content Security Policy (CSP) no configurada",
+					"name": "Cabecera Content Security Policy (CSP) no configurada",
+					"riskcode": "2",
+					"confidence": "3",
+					"riskdesc": "Medio (Alta)",
+					"desc": "<p>La Pol\u00EDtica de seguridad de contenido (CSP) es una capa adicional de seguridad que ayuda a detectar y mitigar ciertos tipos de ataques, incluidos Cross Site Scripting (XSS) y ataques de inyecci\u00F3n de datos. Estos ataques se utilizan para todo, desde el robo de datos hasta la desfiguraci\u00F3n del sitio o la distribuci\u00F3n de malware. CSP proporciona un conjunto de encabezados HTTP est\u00E1ndar que permiten a los propietarios de sitios web declarar fuentes de contenido aprobadas que los navegadores deber\u00EDan poder cargar en esa p\u00E1gina; los tipos cubiertos son JavaScript, CSS, marcos HTML, fuentes, im\u00E1genes y objetos incrustados como applets de Java, ActiveX, archivos de audio y video.</p>",
+					"instances":[ 
+						{
+							"id": "3",
+							"uri": "http://localhost:8000/api/",
+							"nodeName": "http:\/\/localhost:8000\/api\/",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "",
+							"otherinfo": ""
+						},
+						{
+							"id": "11",
+							"uri": "http://localhost:8000/robots.txt",
+							"nodeName": "http:\/\/localhost:8000\/robots.txt",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "",
+							"otherinfo": ""
+						},
+						{
+							"id": "9",
+							"uri": "http://localhost:8000/sitemap.xml",
+							"nodeName": "http:\/\/localhost:8000\/sitemap.xml",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "",
+							"otherinfo": ""
+						}
+					],
+					"count": "3",
+					"systemic": false,
+					"solution": "<p>Aseg\u00FArese de que su servidor web, servidor de aplicaciones, balanceador de carga, etc. est\u00E9 configurado para establecer la cabecera Content-Security-Policy.</p>",
+					"otherinfo": "",
+					"reference": "<p>https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CSP</p><p>https://cheatsheetseries.owasp.org/cheatsheets/Content_Security_Policy_Cheat_Sheet.html</p><p>https://www.w3.org/TR/CSP/</p><p>https://w3c.github.io/webappsec-csp/</p><p>https://web.dev/articles/csp</p><p>https://caniuse.com/#feat=contentsecuritypolicy</p><p>https://content-security-policy.com/</p>",
+					"cweid": "693",
+					"wascid": "15",
+					"sourceid": "8"
+				},
+				{
+					"pluginid": "10098",
+					"alertRef": "10098",
+					"alert": "Configuraci\u00F3n Incorrecta Cross-Domain",
+					"name": "Configuraci\u00F3n Incorrecta Cross-Domain",
+					"riskcode": "2",
+					"confidence": "2",
+					"riskdesc": "Medio (Media)",
+					"desc": "<p>La carga de datos del navegador web puede ser posible, debido a una mala configuraci\u00F3n de Cross Origin Resource Sharing (CORS) en el servidor web.</p>",
+					"instances":[ 
+						{
+							"id": "7",
+							"uri": "http://localhost:8000/static/debug_toolbar/css/print.css",
+							"nodeName": "http:\/\/localhost:8000\/static\/debug_toolbar\/css\/print.css",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "Access-Control-Allow-Origin: *",
+							"otherinfo": "La configuraci\u00F3n incorrecta de CORS en el servidor web permite solicitudes de lectura entre dominios de terceros arbitrarios, utilizando API no autenticadas en este dominio. Sin embargo, las implementaciones de los navegadores web no permiten que terceros arbitrarios lean la respuesta de las API autenticadas. Esto reduce un poco el riesgo. Esta configuraci\u00F3n err\u00F3nea podr\u00EDa ser utilizada por un atacante para acceder a datos que est\u00E1n disponibles de forma no autenticada, pero que utilizan alguna otra forma de seguridad, como la lista blanca de direcciones IP."
+						},
+						{
+							"id": "8",
+							"uri": "http://localhost:8000/static/debug_toolbar/css/toolbar.css",
+							"nodeName": "http:\/\/localhost:8000\/static\/debug_toolbar\/css\/toolbar.css",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "Access-Control-Allow-Origin: *",
+							"otherinfo": "La configuraci\u00F3n incorrecta de CORS en el servidor web permite solicitudes de lectura entre dominios de terceros arbitrarios, utilizando API no autenticadas en este dominio. Sin embargo, las implementaciones de los navegadores web no permiten que terceros arbitrarios lean la respuesta de las API autenticadas. Esto reduce un poco el riesgo. Esta configuraci\u00F3n err\u00F3nea podr\u00EDa ser utilizada por un atacante para acceder a datos que est\u00E1n disponibles de forma no autenticada, pero que utilizan alguna otra forma de seguridad, como la lista blanca de direcciones IP."
+						},
+						{
+							"id": "14",
+							"uri": "http://localhost:8000/static/debug_toolbar/js/toolbar.js",
+							"nodeName": "http:\/\/localhost:8000\/static\/debug_toolbar\/js\/toolbar.js",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "Access-Control-Allow-Origin: *",
+							"otherinfo": "La configuraci\u00F3n incorrecta de CORS en el servidor web permite solicitudes de lectura entre dominios de terceros arbitrarios, utilizando API no autenticadas en este dominio. Sin embargo, las implementaciones de los navegadores web no permiten que terceros arbitrarios lean la respuesta de las API autenticadas. Esto reduce un poco el riesgo. Esta configuraci\u00F3n err\u00F3nea podr\u00EDa ser utilizada por un atacante para acceder a datos que est\u00E1n disponibles de forma no autenticada, pero que utilizan alguna otra forma de seguridad, como la lista blanca de direcciones IP."
+						}
+					],
+					"count": "3",
+					"systemic": false,
+					"solution": "<p>Aseg\u00FArese de que los datos confidenciales no est\u00E9n disponibles de forma no autenticada (por ejemplo, mediante listas blancas de direcciones IP).</p><p>Configure el encabezado HTTP \"Access-Control-Allow-Origin\" a un conjunto m\u00E1s restrictivo de dominios, o elimine todos los encabezados CORS por completo, para permitir que el navegador web aplique la Pol\u00EDtica del Mismo Origen (SOP) de una manera m\u00E1s restrictiva.</p>",
+					"otherinfo": "<p>La configuraci\u00F3n incorrecta de CORS en el servidor web permite solicitudes de lectura entre dominios de terceros arbitrarios, utilizando API no autenticadas en este dominio. Sin embargo, las implementaciones de los navegadores web no permiten que terceros arbitrarios lean la respuesta de las API autenticadas. Esto reduce un poco el riesgo. Esta configuraci\u00F3n err\u00F3nea podr\u00EDa ser utilizada por un atacante para acceder a datos que est\u00E1n disponibles de forma no autenticada, pero que utilizan alguna otra forma de seguridad, como la lista blanca de direcciones IP.</p>",
+					"reference": "<p>https://vulncat.fortify.com/en/detail?category=HTML5&subcategory=Overly%20Permissive%20CORS%20Policy</p>",
+					"cweid": "264",
+					"wascid": "14",
+					"sourceid": "20"
+				},
+				{
+					"pluginid": "90022",
+					"alertRef": "90022",
+					"alert": "Divulgaci\u00F3n de error de aplicaci\u00F3n",
+					"name": "Divulgaci\u00F3n de error de aplicaci\u00F3n",
+					"riskcode": "1",
+					"confidence": "2",
+					"riskdesc": "Bajo (Media)",
+					"desc": "<p>Esta p\u00E1gina contiene un mensaje de error/advertencia que podr\u00EDa revelar informaci\u00F3n sensible como la ubicaci\u00F3n del archivo que produjo la excepci\u00F3n no controlada. Esta informaci\u00F3n puede ser usada para lanzas futuros ataques contra la aplicaci\u00F3n web. La alerta podr\u00EDa ser una falso positivo si el mensaje de error es encontrado dentro de una p\u00E1gina de documentaci\u00F3n.</p>",
+					"instances":[ 
+						{
+							"id": "2",
+							"uri": "http://localhost:8000/api/",
+							"nodeName": "http:\/\/localhost:8000\/api\/",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "HTTP/1.1 500 INTERNAL SERVER ERROR",
+							"otherinfo": ""
+						}
+					],
+					"count": "1",
+					"systemic": false,
+					"solution": "<p>Revisar el c\u00F3digo de fuente de esta p\u00E1gina. Implementaci\u00F3n de p\u00E1ginas de error personalizadas. Considerar implementar un mecanismos para proveer una \u00FAnica referencia/identificaci\u00F3n de error para el cliente (navegador) mientras insertando los detalles en el sitio del navegador y no exponi\u00E9ndolos al usuario.</p>",
+					"otherinfo": "",
+					"reference": "",
+					"cweid": "550",
+					"wascid": "13",
+					"sourceid": "8"
+				},
+				{
+					"pluginid": "10036",
+					"alertRef": "10036-2",
+					"alert": "El servidor filtra informaci\u00F3n de versi\u00F3n a trav\u00E9s del campo \"Server\" del encabezado de respuesta HTTP",
+					"name": "El servidor filtra informaci\u00F3n de versi\u00F3n a trav\u00E9s del campo \"Server\" del encabezado de respuesta HTTP",
+					"riskcode": "1",
+					"confidence": "3",
+					"riskdesc": "Bajo (Alta)",
+					"desc": "<p>El servidor web/aplicaci\u00F3n est\u00E1 filtrando informaci\u00F3n de versi\u00F3n a trav\u00E9s de la cabecera de respuesta HTTP \"Server\". El acceso a dicha informaci\u00F3n puede facilitar a los atacantes la identificaci\u00F3n de otras vulnerabilidades a las que est\u00E1 sujeto su servidor web/aplicaci\u00F3n.</p>",
+					"instances":[ 
+						{
+							"id": "6",
+							"uri": "http://localhost:8000/api/",
+							"nodeName": "http:\/\/localhost:8000\/api\/",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "Werkzeug/3.1.8 Python/3.12.12",
+							"otherinfo": ""
+						},
+						{
+							"id": "13",
+							"uri": "http://localhost:8000/api/users/",
+							"nodeName": "http:\/\/localhost:8000\/api\/users\/",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "Werkzeug/3.1.8 Python/3.12.12",
+							"otherinfo": ""
+						},
+						{
+							"id": "10",
+							"uri": "http://localhost:8000/static/debug_toolbar/css/print.css",
+							"nodeName": "http:\/\/localhost:8000\/static\/debug_toolbar\/css\/print.css",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "Werkzeug/3.1.8 Python/3.12.12",
+							"otherinfo": ""
+						},
+						{
+							"id": "16",
+							"uri": "http://localhost:8000/static/debug_toolbar/css/toolbar.css",
+							"nodeName": "http:\/\/localhost:8000\/static\/debug_toolbar\/css\/toolbar.css",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "Werkzeug/3.1.8 Python/3.12.12",
+							"otherinfo": ""
+						},
+						{
+							"id": "1",
+							"uri": "http://localhost:8000/api/auth/login/",
+							"nodeName": "http:\/\/localhost:8000\/api\/auth\/login\/ ()({email,password})",
+							"method": "POST",
+							"param": "",
+							"attack": "",
+							"evidence": "Werkzeug/3.1.8 Python/3.12.12",
+							"otherinfo": ""
+						}
+					],
+					"count": "5",
+					"systemic": true,
+					"solution": "<p>Aseg\u00FArese de que su servidor web, servidor de aplicaciones, balanceador de carga, etc. est\u00E1 configurado para suprimir la cabecera \"Server\" o proporcionar detalles gen\u00E9ricos.</p>",
+					"otherinfo": "",
+					"reference": "<p>https://httpd.apache.org/docs/current/mod/core.html#servertokens</p><p>https://learn.microsoft.com/en-us/previous-versions/msp-n-p/ff648552(v=pandp.10)</p><p>https://www.troyhunt.com/shhh-dont-let-your-response-headers/</p>",
+					"cweid": "497",
+					"wascid": "13",
+					"sourceid": "8"
+				},
+				{
+					"pluginid": "10109",
+					"alertRef": "10109",
+					"alert": "Aplicaci\u00F3n Web Moderna",
+					"name": "Aplicaci\u00F3n Web Moderna",
+					"riskcode": "0",
+					"confidence": "2",
+					"riskdesc": "Informativo (Media)",
+					"desc": "<p>La aplicaci\u00F3n parece ser una aplicaci\u00F3n web moderna. Si necesita explorarla autom\u00E1ticamente, el Ajax Spider puede ser m\u00E1s eficaz que el est\u00E1ndar.</p>",
+					"instances":[ 
+						{
+							"id": "5",
+							"uri": "http://localhost:8000/api/",
+							"nodeName": "http:\/\/localhost:8000\/api\/",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "<script src=\"?__debugger__=yes&amp;cmd=resource&amp;f=debugger.js\"></script>",
+							"otherinfo": "No se han encontrado enlaces aunque s\u00ED scripts, lo que indica que se trata de una aplicaci\u00F3n web moderna."
+						},
+						{
+							"id": "18",
+							"uri": "http://localhost:8000/robots.txt",
+							"nodeName": "http:\/\/localhost:8000\/robots.txt",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "<a id=\"djHideToolBarButton\" href=\"#\" title=\"Hide toolbar\">Hide \u00BB</a>",
+							"otherinfo": "Se han encontrado enlaces que no tienen atributos href tradicionales, lo que indica que se trata de una aplicaci\u00F3n web moderna."
+						},
+						{
+							"id": "17",
+							"uri": "http://localhost:8000/sitemap.xml",
+							"nodeName": "http:\/\/localhost:8000\/sitemap.xml",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "<a id=\"djHideToolBarButton\" href=\"#\" title=\"Hide toolbar\">Hide \u00BB</a>",
+							"otherinfo": "Se han encontrado enlaces que no tienen atributos href tradicionales, lo que indica que se trata de una aplicaci\u00F3n web moderna."
+						}
+					],
+					"count": "3",
+					"systemic": false,
+					"solution": "<p>Se trata de una alerta informativa, por lo que no es necesario realizar ning\u00FAn cambio.</p>",
+					"otherinfo": "<p>No se han encontrado enlaces aunque s\u00ED scripts, lo que indica que se trata de una aplicaci\u00F3n web moderna.</p>",
+					"reference": "",
+					"cweid": "-1",
+					"wascid": "-1",
+					"sourceid": "8"
+				},
+				{
+					"pluginid": "10027",
+					"alertRef": "10027",
+					"alert": "Divulgaci\u00F3n de informaci\u00F3n - Comentarios sospechosos",
+					"name": "Divulgaci\u00F3n de informaci\u00F3n - Comentarios sospechosos",
+					"riskcode": "0",
+					"confidence": "2",
+					"riskdesc": "Informativo (Media)",
+					"desc": "<p>The response appears to contain suspicious comments which may help an attacker.</p>",
+					"instances":[ 
+						{
+							"id": "4",
+							"uri": "http://localhost:8000/api/",
+							"nodeName": "http:\/\/localhost:8000\/api\/",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": " 5, in <module>\n    from memos_cafe.reportes",
+							"otherinfo": "The following pattern was used: \\bFROM\\b and was detected in likely comment: \"<!--\n\nTraceback (most recent call last):\n  File \"/app/.venv/lib/python3.12/site-packages/django_extensions/management/commands/r\", see evidence field for the suspicious comment/snippet."
+						},
+						{
+							"id": "21",
+							"uri": "http://localhost:8000/static/debug_toolbar/js/toolbar.js",
+							"nodeName": "http:\/\/localhost:8000\/static\/debug_toolbar\/js\/toolbar.js",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "// Make sure the debug element is rendered",
+							"otherinfo": "The following pattern was used: \\bDEBUG\\b and was detected 2 times, the first in likely comment: \"// Make sure the debug element is rendered at least once.\", see evidence field for the suspicious comment/snippet."
+						},
+						{
+							"id": "23",
+							"uri": "http://localhost:8000/static/debug_toolbar/js/toolbar.js",
+							"nodeName": "http:\/\/localhost:8000\/static\/debug_toolbar\/js\/toolbar.js",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "h the debug element from the DOM.",
+							"otherinfo": "The following pattern was used: \\bFROM\\b and was detected 2 times, the first in likely comment: \"// Fetch the debug element from the DOM.\", see evidence field for the suspicious comment/snippet."
+						},
+						{
+							"id": "22",
+							"uri": "http://localhost:8000/static/debug_toolbar/js/toolbar.js",
+							"nodeName": "http:\/\/localhost:8000\/static\/debug_toolbar\/js\/toolbar.js",
+							"method": "GET",
+							"param": "",
+							"attack": "",
+							"evidence": "tes the theme using user settings",
+							"otherinfo": "The following pattern was used: \\bUSER\\b and was detected in likely comment: \"// Updates the theme using user settings\", see evidence field for the suspicious comment/snippet."
+						}
+					],
+					"count": "4",
+					"systemic": false,
+					"solution": "<p>Eliminar todos los comentarios que muestren informaci\u00F3n que pueda ayudar a un atacante y solucionar el problema al que se refieren.</p>",
+					"otherinfo": "<p>The following pattern was used: \\bFROM\\b and was detected in likely comment: \"<!--</p><p></p><p>Traceback (most recent call last):</p><p>  File \"/app/.venv/lib/python3.12/site-packages/django_extensions/management/commands/r\", see evidence field for the suspicious comment/snippet.</p>",
+					"reference": "",
+					"cweid": "615",
+					"wascid": "13",
+					"sourceid": "8"
+				},
+				{
+					"pluginid": "10111",
+					"alertRef": "10111",
+					"alert": "Petici\u00F3n de Autenticaci\u00F3n Identificada",
+					"name": "Petici\u00F3n de Autenticaci\u00F3n Identificada",
+					"riskcode": "0",
+					"confidence": "3",
+					"riskdesc": "Informativo (Alta)",
+					"desc": "<p>La petici\u00F3n en cuesti\u00F3n se ha identificado como una petici\u00F3n de autenticaci\u00F3n. El campo \"Otra informaci\u00F3n\" contiene un conjunto de l\u00EDneas key=vvalue que identifican cualquier campo relevante. Si la solicitud est\u00E1 en un contexto que tiene un m\u00E9todo de autenticaci\u00F3n configurado como \"Detecci\u00F3n autom\u00E1tica\", esta regla cambiar\u00E1 la autenticaci\u00F3n para que coincida con la petici\u00F3n identificada.</p>",
+					"instances":[ 
+						{
+							"id": "0",
+							"uri": "http://localhost:8000/api/auth/login/",
+							"nodeName": "http:\/\/localhost:8000\/api\/auth\/login\/ ()({email,password})",
+							"method": "POST",
+							"param": "email",
+							"attack": "",
+							"evidence": "password",
+							"otherinfo": "userParam=email\nuserValue=zap.scan@test.local\npasswordParam=password"
+						}
+					],
+					"count": "1",
+					"systemic": false,
+					"solution": "<p>Se trata de una alerta informativa y no de una vulnerabilidad, por lo que no hay nada que corregir.</p>",
+					"otherinfo": "<p>userParam=email</p><p>userValue=zap.scan@test.local</p><p>passwordParam=password</p>",
+					"reference": "<p>https://www.zaproxy.org/docs/desktop/addons/authentication-helper/auth-req-id/</p>",
+					"cweid": "-1",
+					"wascid": "-1",
+					"sourceid": "1"
+				}
+			]
+		}
+	],
+	"sequences":[
+	]
+
+}

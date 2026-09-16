@@ -1,3 +1,5 @@
+from django.core.management.utils import get_random_secret_key
+
 from .base import *  # noqa: F403
 from .base import INSTALLED_APPS
 from .base import MIDDLEWARE
@@ -5,10 +7,12 @@ from .base import env
 
 # GENERAL
 DEBUG = True
-SECRET_KEY = env(
-    "DJANGO_SECRET_KEY",
-    default="rHtdQc2tpJhDyFRHig5zbJO32lpt1xtNREMmgt0W8QvDJut5xZKyAZtPetoz7wzU",
-)
+# Sin default fijo: una clave hardcodeada queda publicada en el historial
+# de git para siempre. Si no se define DJANGO_SECRET_KEY, se genera una
+# aleatoria en cada arranque -- invalida sesiones/JWT existentes al
+# reiniciar el contenedor local, pero eso es aceptable en dev y no en
+# produccion (config.settings.production exige la env var sin default).
+SECRET_KEY = env("DJANGO_SECRET_KEY", default=get_random_secret_key())
 ALLOWED_HOSTS = ["localhost", "0.0.0.0", "127.0.0.1"]  # noqa: S104
 
 # CACHES

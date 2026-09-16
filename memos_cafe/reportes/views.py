@@ -1,4 +1,4 @@
-﻿import logging
+import logging
 import io
 from datetime import timedelta
 import django
@@ -16,6 +16,8 @@ from django.db.models import Value
 from django.db.models.functions import Coalesce
 from django.db.models.functions import TruncDate
 from django.utils import timezone
+from django.utils.dateparse import parse_date
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -27,6 +29,42 @@ from memos_cafe.mesas.models import Mesa
 from memos_cafe.ordenes.models import DetalleOrden
 from memos_cafe.ordenes.models import Orden
 from memos_cafe.utils.permissions import EsAdmin, EsAdminOCajero, modulo_requerido
+
+
+MAX_DIAS_RANGO_REPORTE = 366
+
+
+def _parse_fecha(valor, campo):
+    """Parsea un query param de fecha (YYYY-MM-DD). Levanta ValidationError
+    (400 JSON, capturado automaticamente por APIView.dispatch) en vez de
+    dejar que un formato invalido llegue crudo a un filtro __date__gte/lte
+    de Django, que revienta con un 500 sin JSON."""
+    fecha = parse_date(valor) if valor else None
+    if fecha is None:
+        raise ValidationError({campo: f"'{valor}' no es una fecha valida. Formato esperado: YYYY-MM-DD."})
+    return fecha
+
+
+def _parse_rango_fechas(request, mensaje_requerido=None):
+    """Valida y parsea fecha_inicio/fecha_fin de los query params. Devuelve
+    (fecha_inicio, fecha_fin) como date, o levanta ValidationError."""
+    fecha_inicio_str = request.query_params.get("fecha_inicio")
+    fecha_fin_str = request.query_params.get("fecha_fin")
+
+    if not fecha_inicio_str or not fecha_fin_str:
+        raise ValidationError(
+            mensaje_requerido or "Los parámetros fecha_inicio y fecha_fin son requeridos."
+        )
+
+    fecha_inicio = _parse_fecha(fecha_inicio_str, "fecha_inicio")
+    fecha_fin = _parse_fecha(fecha_fin_str, "fecha_fin")
+    if fecha_fin < fecha_inicio:
+        raise ValidationError({"fecha_fin": "No puede ser anterior a fecha_inicio."})
+    if (fecha_fin - fecha_inicio).days > MAX_DIAS_RANGO_REPORTE:
+        raise ValidationError(
+            {"fecha_fin": f"El rango no puede superar los {MAX_DIAS_RANGO_REPORTE} días."}
+        )
+    return fecha_inicio, fecha_fin
 
 
 class DashboardView(APIView):
@@ -180,16 +218,9 @@ class ReporteVentasView(APIView):
     permission_classes = [EsAdmin]
 
     def get(self, request):
-        fecha_inicio = request.query_params.get("fecha_inicio")
-        fecha_fin = request.query_params.get("fecha_fin")
+        fecha_inicio, fecha_fin = _parse_rango_fechas(request)
         usuario_id = request.query_params.get("usuario_id")
         metodo_pago = request.query_params.get("metodo_pago")
-
-        if not fecha_inicio or not fecha_fin:
-            return Response(
-                {"detail": "Los parÃ¡metros fecha_inicio y fecha_fin son requeridos."},
-                status=400,
-            )
 
         # Base queryset de solo pagos completados
         pagos = Pago.objects.filter(
@@ -214,7 +245,7 @@ class ReporteVentasView(APIView):
             round(total_ventas / total_ordenes, 2) if total_ordenes > 0 else 0
         )
 
-        # Ventas por dÃ­a
+        # Ventas por día
         ventas_por_dia = list(
             pagos.annotate(fecha_dia=TruncDate("fecha"))
             .values("fecha_dia")
@@ -256,13 +287,8 @@ class ReporteVentasView(APIView):
         })
 
     def export_excel(self, request):
-        """GET /api/reportes/ventas/export/ â€” descarga .xlsx"""
-        fecha_inicio = request.query_params.get("fecha_inicio")
-        fecha_fin    = request.query_params.get("fecha_fin")
-
-        if not fecha_inicio or not fecha_fin:
-            from rest_framework.response import Response as R
-            return R({"detail": "fecha_inicio y fecha_fin son requeridos."}, status=400)
+        """GET /api/reportes/ventas/export/ — descarga .xlsx"""
+        fecha_inicio, fecha_fin = _parse_rango_fechas(request)
 
         pagos = Pago.objects.filter(
             estado="completado",
@@ -273,7 +299,7 @@ class ReporteVentasView(APIView):
         try:
             wb = openpyxl.Workbook()
 
-            # â”€â”€ Hoja 1: Resumen â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            # ── Hoja 1: Resumen ───────────────────────────────────────────────
             ws1 = wb.active
             ws1.title = "Resumen"
             header_font  = Font(bold=True, color="FFFFFF")
@@ -293,13 +319,13 @@ class ReporteVentasView(APIView):
             ticket = round(tv / to, 2) if to > 0 else 0
 
             ws1.append(["Total ventas", float(tv)])
-            ws1.append(["Total Ã³rdenes", to])
+            ws1.append(["Total órdenes", to])
             ws1.append(["Ticket promedio", float(ticket)])
             ws1.append([])
 
-            # â”€â”€ Hoja 2: Ventas por dia â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-            ws2 = wb.create_sheet("Ventas por dÃ­a")
-            headers2 = ["Fecha", "Total (S/)", "Ã“rdenes"]
+            # ── Hoja 2: Ventas por dia ────────────────────────────────────────
+            ws2 = wb.create_sheet("Ventas por día")
+            headers2 = ["Fecha", "Total (S/)", "Órdenes"]
             ws2.append(headers2)
             for col, h in enumerate(headers2, 1):
                 cell = ws2.cell(row=1, column=col)
@@ -320,9 +346,9 @@ class ReporteVentasView(APIView):
             ws2.column_dimensions["B"].width = 14
             ws2.column_dimensions["C"].width = 10
 
-            # â”€â”€ Hoja 3: Por metodo de pago â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-            ws3 = wb.create_sheet("Por mÃ©todo de pago")
-            headers3 = ["MÃ©todo", "Total (S/)", "Cantidad"]
+            # ── Hoja 3: Por metodo de pago ────────────────────────────────────
+            ws3 = wb.create_sheet("Por método de pago")
+            headers3 = ["Método", "Total (S/)", "Cantidad"]
             ws3.append(headers3)
             for col, h in enumerate(headers3, 1):
                 cell = ws3.cell(row=1, column=col)
@@ -344,14 +370,14 @@ class ReporteVentasView(APIView):
             ws3.column_dimensions["B"].width = 14
             ws3.column_dimensions["C"].width = 10
 
-            # â”€â”€ Serializar y responder â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            # ── Serializar y responder ────────────────────────────────────────
             buffer = io.BytesIO()
             wb.save(buffer)
             buffer.seek(0)
 
             filename = f"reporte_ventas_{fecha_inicio}_{fecha_fin}.xlsx"
             logger.info(
-                "ExportaciÃ³n Excel generada | usuario=%s | archivo=%s",
+                "Exportación Excel generada | usuario=%s | archivo=%s",
                 request.user.email, filename,
             )
             response = HttpResponse(
@@ -374,10 +400,7 @@ class ReporteCajaExportView(APIView):
     permission_classes = [EsAdmin]
 
     def get(self, request):
-        fecha_inicio = request.query_params.get("fecha_inicio")
-        fecha_fin    = request.query_params.get("fecha_fin")
-        if not fecha_inicio or not fecha_fin:
-            return Response({"detail": "fecha_inicio y fecha_fin son requeridos."}, status=400)
+        fecha_inicio, fecha_fin = _parse_rango_fechas(request)
 
         cajas = Caja.objects.filter(
             estado="cerrada",
@@ -469,16 +492,9 @@ class ReporteProductosView(APIView):
     permission_classes = [EsAdmin]
 
     def get(self, request):
-        fecha_inicio = request.query_params.get("fecha_inicio")
-        fecha_fin    = request.query_params.get("fecha_fin")
+        fecha_inicio, fecha_fin = _parse_rango_fechas(request)
         usuario_id   = request.query_params.get("usuario_id")
         metodo_pago  = request.query_params.get("metodo_pago")
-
-        if not fecha_inicio or not fecha_fin:
-            return Response(
-                {"detail": "Los parÃ¡metros fecha_inicio y fecha_fin son requeridos."},
-                status=400,
-            )
 
         detalles = DetalleOrden.objects.filter(
             orden__estado="cerrada",
@@ -533,8 +549,6 @@ class ReporteCajaView(APIView):
     permission_classes = [EsAdminOCajero, modulo_requerido("reportes")]
 
     def get(self, request):
-        fecha_inicio = request.query_params.get("fecha_inicio")
-        fecha_fin    = request.query_params.get("fecha_fin")
         usuario_id   = request.query_params.get("usuario_id")
         metodo_pago  = request.query_params.get("metodo_pago")
         caja_id      = request.query_params.get("caja_id")
@@ -544,16 +558,17 @@ class ReporteCajaView(APIView):
             try:
                 caja = Caja.objects.get(id=caja_id)
             except Caja.DoesNotExist:
-                return Response({"detail": "SesiÃ³n de caja no encontrada."}, status=404)
+                return Response({"detail": "Sesión de caja no encontrada."}, status=404)
             if not es_admin and caja.usuario != request.user:
-                return Response({"detail": "No tienes permiso para ver esta sesiÃ³n."}, status=403)
+                return Response({"detail": "No tienes permiso para ver esta sesión."}, status=403)
             return Response(self._cuadre_caja(caja, metodo_pago))
 
         if not es_admin:
             return Response({"detail": "No tienes permiso para ver este reporte."}, status=403)
 
-        if not fecha_inicio or not fecha_fin:
-            return Response({"detail": "Debe enviar caja_id o fecha_inicio y fecha_fin."}, status=400)
+        fecha_inicio, fecha_fin = _parse_rango_fechas(
+            request, mensaje_requerido="Debe enviar caja_id o fecha_inicio y fecha_fin."
+        )
 
         cajas = Caja.objects.filter(
             estado="cerrada",
@@ -613,10 +628,7 @@ class ReporteProductosExportView(APIView):
     permission_classes = [EsAdmin]
 
     def get(self, request):
-        fecha_inicio = request.query_params.get("fecha_inicio")
-        fecha_fin    = request.query_params.get("fecha_fin")
-        if not fecha_inicio or not fecha_fin:
-            return Response({"detail": "fecha_inicio y fecha_fin son requeridos."}, status=400)
+        fecha_inicio, fecha_fin = _parse_rango_fechas(request)
 
         productos = list(
             DetalleOrden.objects.filter(
@@ -700,7 +712,7 @@ class ReporteProductosExportView(APIView):
 
 
 class ReporteVentasExportView(APIView):
-    """GET /api/reportes/ventas/export/ â€” descarga Excel de ventas."""
+    """GET /api/reportes/ventas/export/ — descarga Excel de ventas."""
     permission_classes = [EsAdmin]
 
     def get(self, request):
@@ -709,24 +721,17 @@ class ReporteVentasExportView(APIView):
 
 class ReporteOrdenesView(APIView):
     """
-    GET /api/reportes/ordenes/          â€” datos JSON
-    GET /api/reportes/ordenes/export/   â€” descarga Excel
+    GET /api/reportes/ordenes/          — datos JSON
+    GET /api/reportes/ordenes/export/   — descarga Excel
     Filtros: fecha_inicio, fecha_fin, tipo_orden, estado
     Solo admin.
     """
     permission_classes = [EsAdmin]
 
     def get(self, request):
-        fecha_inicio = request.query_params.get("fecha_inicio")
-        fecha_fin    = request.query_params.get("fecha_fin")
+        fecha_inicio, fecha_fin = _parse_rango_fechas(request)
         tipo_orden   = request.query_params.get("tipo_orden")
         estado       = request.query_params.get("estado")
-
-        if not fecha_inicio or not fecha_fin:
-            return Response(
-                {"detail": "Los parametros fecha_inicio y fecha_fin son requeridos."},
-                status=400,
-            )
 
         ordenes = Orden.objects.filter(
             fecha_creacion__date__gte=fecha_inicio,
@@ -765,7 +770,10 @@ class ReporteOrdenesView(APIView):
                 "estado":       o.estado,
                 "mesa":         o.mesa.numero if o.mesa else None,
                 "usuario":      o.usuario.name or o.usuario.email,
-                "items":        o.detalles.count(),
+                # len(...all()) en vez de .count(): .count() ignora la cache
+                # de prefetch_related("detalles") y dispara una query nueva
+                # por cada orden listada.
+                "items":        len(o.detalles.all()),
                 "total":        o.total,
                 "cliente":      o.cliente_nombre or None,
                 "plataforma":   o.plataforma_delivery or None,
@@ -784,15 +792,10 @@ class ReporteOrdenesView(APIView):
         })
 
     def export_excel(self, request):
-        """GET /api/reportes/ordenes/export/ â€” descarga .xlsx"""
-        fecha_inicio = request.query_params.get("fecha_inicio")
-        fecha_fin    = request.query_params.get("fecha_fin")
+        """GET /api/reportes/ordenes/export/ — descarga .xlsx"""
+        fecha_inicio, fecha_fin = _parse_rango_fechas(request)
         tipo_orden   = request.query_params.get("tipo_orden")
         estado       = request.query_params.get("estado")
-
-        if not fecha_inicio or not fecha_fin:
-            from rest_framework.response import Response as R
-            return R({"detail": "fecha_inicio y fecha_fin son requeridos."}, status=400)
 
         ordenes = Orden.objects.filter(
             fecha_creacion__date__gte=fecha_inicio,
@@ -866,7 +869,7 @@ class ReporteOrdenesView(APIView):
                     o.usuario.name or o.usuario.email,
                     o.cliente_nombre or "",
                     o.plataforma_delivery or "",
-                    o.detalles.count(),
+                    len(o.detalles.all()),
                     float(o.total),
                 ])
 

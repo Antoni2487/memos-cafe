@@ -116,11 +116,7 @@ class PagoViewSet(
     permission_classes = [EsAdminOCajero, modulo_requerido("caja")]
 
     def get_queryset(self):
-        return (
-            Pago.objects
-            .select_related("orden", "orden__mesa", "orden__usuario", "caja")
-            .all()
-        )
+        return Pago.objects.con_orden_completa()
 
     def get_serializer_class(self):
         return PagoReadSerializer

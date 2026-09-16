@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from memos_cafe.insumos.models import RegistroInsumo, TipoInsumo
+from memos_cafe.utils.validators import es_alfanumerico_extendido
 
 
 class TipoInsumoSerializer(serializers.ModelSerializer):
@@ -84,4 +85,9 @@ class RegistroInsumoWriteSerializer(serializers.Serializer):
     def validate_costo_unitario(self, value):
         if value <= 0:
             raise serializers.ValidationError("El costo unitario debe ser mayor a 0.")
+        return value
+
+    def validate_proveedor(self, value):
+        if value and not es_alfanumerico_extendido(value):
+            raise serializers.ValidationError("El proveedor contiene caracteres no permitidos.")
         return value
