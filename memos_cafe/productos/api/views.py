@@ -92,6 +92,8 @@ class ProductoViewSet(
     def get_permissions(self):
         if self.action in ["list", "retrieve"]:
             return [TodosAutenticados()]
+        if self.action == "publico":
+            return []
         return [EsAdmin()]
 
     def get_serializer_class(self):
@@ -151,6 +153,13 @@ class ProductoViewSet(
         producto.desactivar()
         return Response(ProductoSerializer(producto).data)
 
+    @action(detail=False, methods=["get"], url_path="publico", permission_classes=[])
+    def publico(self, request):
+        """GET /api/productos/publico/ — catálogo sin login, para el
+        pedido por QR. Mismo serializer que list(), sin datos sensibles."""
+        productos = Producto.objects.disponibles()
+        return Response(ProductoSerializer(productos, many=True).data)
+
 
 class PromocionViewSet(
     mixins.ListModelMixin,
@@ -167,6 +176,8 @@ class PromocionViewSet(
     def get_permissions(self):
         if self.action in ["list", "retrieve"]:
             return [TodosAutenticados()]
+        if self.action == "publico":
+            return []
         return [EsAdmin()]
 
     def get_serializer_class(self):
@@ -208,3 +219,9 @@ class PromocionViewSet(
         promocion = self.get_object()
         PromocionService.desactivar(promocion)
         return Response(PromocionSerializer(promocion).data)
+
+    @action(detail=False, methods=["get"], url_path="publico", permission_classes=[])
+    def publico(self, request):
+        """GET /api/productos/promociones/publico/ — vigentes, sin login."""
+        promociones = Promocion.objects.vigentes()
+        return Response(PromocionSerializer(promociones, many=True).data)

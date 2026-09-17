@@ -13,6 +13,7 @@ services:
     container_name: memos_cafe_local_django
     depends_on:
       - postgres
+      - redis
     volumes:
       - memos_cafe_local_venv:/app/.venv   
       - .:/app:z                           
@@ -34,3 +35,7 @@ services:
       - memos_cafe_local_postgres_data_backups:/backups
     env_file:
       - ./.envs/.local/.postgres
+
+  redis:
+    image: docker.io/redis:7.2
+    container_name: memos_cafe_local_redis

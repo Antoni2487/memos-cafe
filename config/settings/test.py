@@ -35,6 +35,17 @@ TEMPLATES[0]["OPTIONS"]["debug"] = True  # type: ignore[index]
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/dev/ref/settings/#media-url
 MEDIA_URL = "http://media.testserver/"
+
+# django-channels
+# ------------------------------------------------------------------------------
+# InMemoryChannelLayer en vez de Redis: los tests no deben depender de un
+# Redis real corriendo, y no hace falta — un solo proceso de test no tiene
+# el problema de "grupos distintos por worker" que si existe en produccion.
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer",
+    },
+}
 # Your stuff...
 # ------------------------------------------------------------------------------
 

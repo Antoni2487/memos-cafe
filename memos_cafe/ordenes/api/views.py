@@ -3,15 +3,23 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
-from memos_cafe.ordenes.models import Orden
+from memos_cafe.ordenes.models import DetalleOrden, Orden
 from memos_cafe.ordenes.services import DetalleOrdenService, OrdenService
 from memos_cafe.ordenes.api.serializers import (
+    ActualizarEstadoPreparacionSerializer,
     DetalleOrdenWriteSerializer,
     MarcarImpresoSerializer,
     OrdenReadSerializer,
     OrdenWriteSerializer,
+    TicketCocinaSerializer,
 )
-from memos_cafe.utils.permissions import EsAdmin, EsAdminOMesero, TodosAutenticados, modulo_requerido
+from memos_cafe.utils.permissions import (
+    EsAdmin,
+    EsAdminOCocina,
+    EsAdminOMesero,
+    TodosAutenticados,
+    modulo_requerido,
+)
 
 
 class OrdenViewSet(
@@ -48,6 +56,11 @@ class OrdenViewSet(
                 return qs.filter(fecha_creacion__gte=fecha_apertura)
             return qs.none()  # sin turno activo: vista vacía
 
+        # Cocina: todas las órdenes abiertas del día (para ver qué preparar)
+        if user.groups.filter(name="cocina").exists():
+            from django.utils import timezone
+            return qs.filter(fecha_creacion__date=timezone.localdate())
+
         # Admin: todas las órdenes del día (todos los estados, todos los meseros)
         from django.utils import timezone
         return qs.filter(fecha_creacion__date=timezone.localdate())
@@ -57,6 +70,17 @@ class OrdenViewSet(
             return [TodosAutenticados(), modulo_requerido("ordenes")()]
         if self.action in ["crear", "agregar_detalle", "eliminar_detalle", "marcar_impreso"]:
             return [EsAdminOMesero(), modulo_requerido("ordenes")()]
+        if self.action == "cocina":
+            return [EsAdminOCocina(), modulo_requerido("ordenes_cocina")()]
+        if self.action == "actualizar_estado_preparacion":
+            # El mesero entra por el modulo "ordenes" (el mismo que ya
+            # necesita para tomar pedidos) porque solo puede marcar
+            # 'entregado' (retirar lo que Cocina dejo listo) -- no es
+            # acceso al tablero de Cocina, ver el chequeo de mas abajo en
+            # la vista. Cocina/admin siguen entrando por "ordenes_cocina".
+            if self.request.user.groups.filter(name="mesero").exists():
+                return [EsAdminOMesero(), modulo_requerido("ordenes")()]
+            return [EsAdminOCocina(), modulo_requerido("ordenes_cocina")()]
         return [EsAdmin(), modulo_requerido("ordenes")()]
 
     def get_serializer_class(self):
@@ -148,3 +172,62 @@ class OrdenViewSet(
         DetalleOrdenService.marcar_impreso(orden, serializer.validated_data["detalle_ids"])
         orden.refresh_from_db()
         return Response(OrdenReadSerializer(orden).data)
+
+    @action(detail=False, methods=["get"], url_path="cocina")
+    def cocina(self, request):
+        """GET /api/ordenes/cocina/ — tickets abiertos con items por preparar
+        o ya listos (sin entregar todavía), para el tablero de Cocina.
+        Serializer liviano: nada de precios/pagos/datos de cliente."""
+        ordenes = (
+            Orden.objects.con_detalles()
+            .filter(
+                estado=Orden.Estado.ABIERTA,
+                detalles__estado_preparacion__in=[
+                    DetalleOrden.EstadoPreparacion.PENDIENTE,
+                    DetalleOrden.EstadoPreparacion.EN_PREPARACION,
+                    DetalleOrden.EstadoPreparacion.LISTO,
+                ],
+            )
+            .distinct()
+            .order_by("fecha_creacion")
+        )
+        return Response(TicketCocinaSerializer(ordenes, many=True).data)
+
+    @action(
+        detail=True,
+        methods=["patch"],
+        url_path=r"detalles/(?P<detalle_id>[0-9]+)/estado-preparacion",
+    )
+    def actualizar_estado_preparacion(self, request, pk=None, detalle_id=None):
+        """PATCH /api/ordenes/{id}/detalles/{detalle_id}/estado-preparacion/
+        — avanza el estado de preparación de un ítem. Cocina/admin pueden
+        cualquier transición válida; el mesero solo puede marcar
+        'entregado' (retirar el plato que Cocina ya dejó listo, nunca
+        adelantarse a las transiciones que le corresponden a Cocina)."""
+        orden = self.get_object()
+        serializer = ActualizarEstadoPreparacionSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        nuevo_estado = serializer.validated_data["estado_preparacion"]
+
+        es_solo_mesero = (
+            request.user.groups.filter(name="mesero").exists()
+            and not request.user.groups.filter(name__in=["admin", "cocina"]).exists()
+        )
+        if es_solo_mesero and nuevo_estado != DetalleOrden.EstadoPreparacion.ENTREGADO:
+            return Response(
+                {"detail": "Un mesero solo puede marcar un ítem como entregado."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        try:
+            detalle = orden.detalles.get(id=detalle_id)
+        except DetalleOrden.DoesNotExist:
+            return Response(
+                {"detail": f"El item #{detalle_id} no existe en esta orden."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        try:
+            DetalleOrdenService.actualizar_estado_preparacion(detalle, nuevo_estado)
+        except ValueError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        orden.refresh_from_db()
+        return Response(TicketCocinaSerializer(orden).data)

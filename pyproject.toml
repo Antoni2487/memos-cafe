@@ -42,6 +42,9 @@ dependencies = [
   "python-slugify==8.0.4",
   "redis==7.4.0",
   "whitenoise==6.12.0",
+  "channels==4.3.2",
+  "channels-redis==4.3.0",
+  "daphne==4.2.3",
 ]
 
 [dependency-groups]

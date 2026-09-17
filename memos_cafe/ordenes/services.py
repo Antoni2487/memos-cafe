@@ -35,7 +35,15 @@ class OrdenService:
         direccion_entrega: str = "",
         plataforma_delivery: str = "",
         plataforma_otra: str = "",
+        mesa_ya_ocupada: bool = False,
     ) -> Orden:
+        """mesa_ya_ocupada=True: la mesa ya esta 'ocupada' por un motivo
+        ajeno a esta orden (pedido por QR: SesionMesaService.abrir_sesion
+        ya la ocupo al abrir la sesion, antes de que exista ningun
+        pedido). Salta el chequeo de 'mesa libre' y no vuelve a llamar
+        mesa.ocupar(). Por defecto False: el flujo manual del mesero no
+        cambia — la mesa debe estar libre y esta orden es quien la ocupa,
+        igual que hoy."""
         if not Caja.objects.get_sesion_abierta():
             raise ValueError("No hay una sesion de caja abierta. Un cajero debe abrir turno antes de crear ordenes.")
 
@@ -47,7 +55,7 @@ class OrdenService:
 
         if mesa:
             mesa = Mesa.objects.select_for_update().get(pk=mesa.pk)
-            if mesa.estado != Mesa.Estado.LIBRE:
+            if not mesa_ya_ocupada and mesa.estado != Mesa.Estado.LIBRE:
                 raise ValueError(f"La mesa {mesa.numero} no esta libre.")
 
         if not detalles:
@@ -64,7 +72,7 @@ class OrdenService:
             plataforma_otra=plataforma_otra if tipo_orden == Orden.TipoOrden.DELIVERY else "",
         )
 
-        if mesa:
+        if mesa and not mesa_ya_ocupada:
             mesa.ocupar()
 
         for item in detalles:
@@ -76,7 +84,29 @@ class OrdenService:
             "Orden #%s creada por usuario %s | tipo=%s | total=%s",
             orden.id, usuario, tipo_orden, orden.total,
         )
+        OrdenService._notificar_nuevo_pedido(orden)
         return orden
+
+    @staticmethod
+    def _notificar_nuevo_pedido(orden: Orden) -> None:
+        """Avisa a Cocina que hay items nuevos por preparar (orden recien
+        creada, o una ronda nueva agregada a una ya abierta). No-op
+        silencioso si Channels no esta configurado, igual que
+        DetalleOrdenService._notificar_cambio_estado — nunca debe hacer
+        fallar la creacion de una orden real por un problema de broadcast."""
+        from channels.layers import get_channel_layer
+
+        channel_layer = get_channel_layer()
+        if channel_layer is None:
+            return
+
+        from asgiref.sync import async_to_sync
+
+        async_to_sync(channel_layer.group_send)("cocina", {
+            "type": "pedido.nuevo",
+            "orden_id": orden.id,
+            "mesa_numero": orden.mesa.numero if orden.mesa_id else None,
+        })
 
     @staticmethod
     @transaction.atomic
@@ -99,6 +129,7 @@ class DetalleOrdenService:
         nota: str = "",
         producto: Producto | None = None,
         promocion: Promocion | None = None,
+        ronda: int | None = None,
     ) -> DetalleOrden:
         if not producto and not promocion:
             raise ValueError("Debe especificar al menos un producto o una promocion.")
@@ -111,6 +142,7 @@ class DetalleOrdenService:
         if promocion:
             precio_unitario += promocion.precio
 
+        extra = {"ronda": ronda} if ronda is not None else {}
         return DetalleOrden.objects.create(
             orden=orden,
             producto=producto,
@@ -118,7 +150,21 @@ class DetalleOrdenService:
             cantidad=cantidad,
             precio_unitario=precio_unitario,
             nota=nota,
+            **extra,
         )
+
+    @staticmethod
+    def siguiente_ronda(orden: Orden) -> int:
+        """Numero de ronda para la proxima TANDA de items que se agrega de
+        una sola vez (ej. un pedido por QR). Solo lo calculan los llamadores
+        que reciben un lote completo de items juntos — el endpoint actual
+        del mesero (POST .../detalles/) agrega un item por llamada y no
+        tiene forma de saber si varias llamadas seguidas son una sola tanda,
+        asi que esos items se quedan en la ronda 1 por defecto del modelo,
+        sin cambio de comportamiento respecto a hoy."""
+        from django.db.models import Max
+        actual = orden.detalles.aggregate(m=Max("ronda"))["m"] or 0
+        return actual + 1
 
     @staticmethod
     @transaction.atomic
@@ -128,6 +174,7 @@ class DetalleOrdenService:
         nota: str = "",
         producto: Producto | None = None,
         promocion: Promocion | None = None,
+        ronda: int | None = None,
     ) -> DetalleOrden:
         if not orden.esta_abierta:
             raise ValueError("No se pueden agregar items a una orden cerrada o anulada.")
@@ -138,8 +185,10 @@ class DetalleOrdenService:
             nota=nota,
             producto=producto,
             promocion=promocion,
+            ronda=ronda,
         )
         orden.recalcular_total()
+        OrdenService._notificar_nuevo_pedido(orden)
         return detalle
 
     @staticmethod
@@ -168,3 +217,67 @@ class DetalleOrdenService:
         if not detalle_ids:
             return
         orden.detalles.filter(id__in=detalle_ids).update(impreso=True)
+
+    _TRANSICIONES_PREPARACION = {
+        DetalleOrden.EstadoPreparacion.PENDIENTE: {DetalleOrden.EstadoPreparacion.EN_PREPARACION},
+        DetalleOrden.EstadoPreparacion.EN_PREPARACION: {DetalleOrden.EstadoPreparacion.LISTO},
+        DetalleOrden.EstadoPreparacion.LISTO: {DetalleOrden.EstadoPreparacion.ENTREGADO},
+        DetalleOrden.EstadoPreparacion.ENTREGADO: set(),
+    }
+
+    @staticmethod
+    def actualizar_estado_preparacion(detalle: DetalleOrden, nuevo_estado: str) -> DetalleOrden:
+        """Avanza el estado de preparacion de un item (pendiente ->
+        en_preparacion -> listo -> entregado, sin saltos ni retrocesos) y
+        dispara el evento de tiempo real. El disparo vive aca, no en el
+        consumer de WebSocket, para que toda la logica de negocio quede en
+        la capa de servicios."""
+        transiciones_validas = DetalleOrdenService._TRANSICIONES_PREPARACION.get(
+            detalle.estado_preparacion, set()
+        )
+        if nuevo_estado not in transiciones_validas:
+            raise ValueError(
+                f"No se puede pasar el item #{detalle.id} de "
+                f"'{detalle.estado_preparacion}' a '{nuevo_estado}'."
+            )
+        detalle.estado_preparacion = nuevo_estado
+        detalle.save(update_fields=["estado_preparacion"])
+        DetalleOrdenService._notificar_cambio_estado(detalle)
+        return detalle
+
+    @staticmethod
+    def _notificar_cambio_estado(detalle: DetalleOrden) -> None:
+        """Envia el evento al channel layer. No-op silencioso si Channels
+        no esta configurado (ej. entorno de tests) — nunca debe hacer
+        fallar una transicion de estado real por un problema de broadcast."""
+        from channels.layers import get_channel_layer
+
+        channel_layer = get_channel_layer()
+        if channel_layer is None:
+            return
+
+        from asgiref.sync import async_to_sync
+
+        if detalle.producto_id:
+            nombre = detalle.producto.nombre
+        elif detalle.promocion_id:
+            nombre = detalle.promocion.nombre
+        else:
+            nombre = ""
+
+        payload = {
+            "type": "detalle.actualizado",
+            "detalle_id": detalle.id,
+            "orden_id": detalle.orden_id,
+            "estado_preparacion": detalle.estado_preparacion,
+            "nombre": nombre,
+            # nombre/mesa_numero van en el payload para que el mesero pueda
+            # armar un mensaje ("Capuchino de Mesa 4 listo") sin tener que
+            # pedirle nada mas al backend -- es la unica señal que recibe,
+            # a diferencia de Cocina que ademas puede volver a consultar el
+            # tablero completo.
+            "mesa_numero": detalle.orden.mesa.numero if detalle.orden.mesa_id else None,
+        }
+        async_to_sync(channel_layer.group_send)("cocina", payload)
+        if detalle.estado_preparacion == DetalleOrden.EstadoPreparacion.LISTO:
+            async_to_sync(channel_layer.group_send)("meseros", payload)

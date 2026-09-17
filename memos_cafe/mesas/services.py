@@ -1,4 +1,15 @@
-﻿from memos_cafe.mesas.models import Mesa
+﻿from django.db import transaction
+
+from memos_cafe.mesas.models import Mesa, SesionMesaQR
+
+# Cruce a otras apps de negocio (ordenes/caja) permitido en la capa de
+# servicios — igual patron que ordenes/services.py importando Mesa/Caja.
+# Las vistas de mesas/api/ nunca importan estos modulos directo (ver
+# .importlinter, contrato "vistas-no-cruzan-apps-de-negocio"): siempre
+# pasan por SesionMesaService, que es quien conoce el cruce.
+from memos_cafe.caja.models import SolicitudCobro
+from memos_cafe.ordenes.models import Orden
+from memos_cafe.ordenes.services import DetalleOrdenService, OrdenService
 
 
 class MesaService:
@@ -58,3 +69,114 @@ class MesaService:
         mesa.estado = nuevo_estado
         mesa.save(update_fields=["estado"])
         return mesa
+
+
+class SesionMesaService:
+    """Abre/cierra la sesion de pedido por QR de una mesa. La atribucion de
+    la venta al mesero y la validez del QR fisico (que nunca cambia)
+    dependen de que exista como maximo una sesion activa por mesa."""
+
+    @staticmethod
+    @transaction.atomic
+    def abrir_sesion(mesa: Mesa, mesero) -> SesionMesaQR:
+        mesa = Mesa.objects.select_for_update().get(pk=mesa.pk)
+        if mesa.estado != Mesa.Estado.LIBRE:
+            raise ValueError(f"La mesa {mesa.numero} no está libre para abrir un pedido por QR.")
+        sesion = SesionMesaQR.objects.create(mesa=mesa, mesero=mesero)
+        mesa.ocupar()
+        return sesion
+
+    @staticmethod
+    def sesion_activa(mesa: Mesa) -> SesionMesaQR | None:
+        return SesionMesaQR.objects.filter(mesa=mesa, cerrada_en__isnull=True).first()
+
+    @staticmethod
+    @transaction.atomic
+    def cancelar_sesion(mesa: Mesa) -> None:
+        """Cierra una sesion de pedido por QR que se abrio por error y
+        nunca genero ningun pedido (el mesero se equivoco de mesa, o el
+        cliente nunca llego a pedir). Libera la mesa.
+
+        Si ya hay una Orden abierta para la mesa, se rechaza: esa orden
+        hay que anularla o cerrarla (lo que ya libera la mesa y cierra la
+        sesion solo, via Mesa.liberar()) -- esto no es un atajo para
+        descartar pedidos reales."""
+        mesa = Mesa.objects.select_for_update().get(pk=mesa.pk)
+        sesion = SesionMesaQR.objects.filter(mesa=mesa, cerrada_en__isnull=True).first()
+        if not sesion:
+            raise ValueError(f"La mesa {mesa.numero} no tiene una sesión de pedido por QR activa.")
+        if Orden.objects.filter(mesa=mesa, estado=Orden.Estado.ABIERTA).exists():
+            raise ValueError(
+                f"La mesa {mesa.numero} ya tiene un pedido en curso — anúlalo o ciérralo, "
+                "eso libera la mesa automáticamente."
+            )
+        mesa.liberar()
+
+    @staticmethod
+    @transaction.atomic
+    def registrar_pedido(mesa: Mesa, items: list[dict]) -> Orden:
+        """Crea la Orden de la mesa (primer pedido de la sesion) o agrega
+        una ronda nueva a la que ya esta abierta — ambos casos reusan
+        OrdenService/DetalleOrdenService de ordenes/services.py tal cual,
+        sin tocar su firma. El mesero que abrio la sesion queda como
+        usuario de la orden, asi que Orden.usuario no necesita ser
+        nullable para pedidos que se originan por QR."""
+        mesa = Mesa.objects.select_for_update().get(pk=mesa.pk)
+        sesion = SesionMesaQR.objects.filter(mesa=mesa, cerrada_en__isnull=True).first()
+        if not sesion:
+            raise ValueError(
+                f"No hay un pedido abierto para la mesa {mesa.numero}. "
+                "Pedile a tu mesero que la abra."
+            )
+
+        orden = Orden.objects.filter(
+            mesa=mesa, estado=Orden.Estado.ABIERTA
+        ).order_by("-fecha_creacion").first()
+
+        if orden is None:
+            return OrdenService.crear_orden(
+                usuario=sesion.mesero,
+                tipo_orden=Orden.TipoOrden.MESA,
+                mesa=mesa,
+                detalles=items,
+                mesa_ya_ocupada=True,  # abrir_sesion() ya la ocupo al abrir
+            )
+
+        ronda = DetalleOrdenService.siguiente_ronda(orden)
+        for item in items:
+            DetalleOrdenService.agregar_detalle(orden=orden, ronda=ronda, **item)
+        orden.refresh_from_db()
+        return orden
+
+    @staticmethod
+    def solicitar_cobro(mesa: Mesa, metodo_pago_sugerido: str) -> SolicitudCobro:
+        orden = Orden.objects.filter(
+            mesa=mesa, estado=Orden.Estado.ABIERTA
+        ).order_by("-fecha_creacion").first()
+        if orden is None:
+            raise ValueError(f"No hay una orden abierta para la mesa {mesa.numero}.")
+        solicitud = SolicitudCobro.objects.create(
+            orden=orden, metodo_pago_sugerido=metodo_pago_sugerido
+        )
+        SesionMesaService._notificar_solicitud_cobro(mesa, solicitud)
+        return solicitud
+
+    @staticmethod
+    def _notificar_solicitud_cobro(mesa: Mesa, solicitud: SolicitudCobro) -> None:
+        """Avisa en vivo a mesero y cajero — el admin ya se entera de esto
+        via el polling de /api/alertas/ (AlertasView), asi que no hace
+        falta duplicarlo aca. No-op silencioso si Channels no esta
+        configurado, mismo criterio que el resto de las notificaciones."""
+        from channels.layers import get_channel_layer
+
+        channel_layer = get_channel_layer()
+        if channel_layer is None:
+            return
+
+        from asgiref.sync import async_to_sync
+
+        async_to_sync(channel_layer.group_send)("meseros", {
+            "type": "solicitud_cobro.nueva",
+            "mesa_numero": mesa.numero,
+            "metodo_pago_sugerido": solicitud.metodo_pago_sugerido,
+        })

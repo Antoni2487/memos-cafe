@@ -24,7 +24,7 @@ from rest_framework.views import APIView
 from memos_cafe.caja.models import Caja
 
 logger = logging.getLogger("memos_cafe.reportes")
-from memos_cafe.caja.models import MovimientoCaja, Pago
+from memos_cafe.caja.models import MovimientoCaja, Pago, SolicitudCobro
 from memos_cafe.mesas.models import Mesa
 from memos_cafe.ordenes.models import DetalleOrden
 from memos_cafe.ordenes.models import Orden
@@ -990,6 +990,20 @@ class AlertasView(APIView):
                 "mensaje": f"Venta cobrada — Orden #{pago.orden_id} · S/ {pago.monto}",
                 "fecha": pago.fecha,
                 "icono": "venta",
+            })
+
+        # ── Solicitudes de cobro (cliente pidio la cuenta por QR) ──────────
+        solicitudes = SolicitudCobro.objects.filter(
+            solicitado_en__gte=desde
+        ).select_related("orden", "orden__mesa")
+
+        for s in solicitudes:
+            mesa_txt = f"Mesa {s.orden.mesa.numero}" if s.orden.mesa_id else f"Orden #{s.orden_id}"
+            alertas.append({
+                "tipo": "solicitud_cobro",
+                "mensaje": f"{mesa_txt} pidió la cuenta — {s.get_metodo_pago_sugerido_display()}",
+                "fecha": s.solicitado_en,
+                "icono": "caja",
             })
 
         # ── Ordenar por fecha descendente ─────────────────────────────────

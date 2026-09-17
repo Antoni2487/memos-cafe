@@ -128,6 +128,15 @@ class TestProductoViewSet:
         r = admin_client.get("/api/productos/99999/")
         assert r.status_code == 404
 
+    def test_catalogo_publico_accesible_sin_login(self, anon_client):
+        disponible = ProductoFactory(disponible=True)
+        no_disponible = ProductoFactory(disponible=False)
+        r = anon_client.get("/api/productos/publico/")
+        assert r.status_code == 200
+        ids = [p["id"] for p in r.data]
+        assert disponible.id in ids
+        assert no_disponible.id not in ids
+
 
 class TestPromocionViewSet:
     def test_listar_autenticado(self, user_client):
@@ -159,3 +168,12 @@ class TestPromocionViewSet:
         r = admin_client.post(f"/api/productos/promociones/{promo.id}/activar/")
         assert r.status_code == 200
         assert r.data["activo"] is True
+
+    def test_catalogo_publico_accesible_sin_login(self, anon_client):
+        vigente = PromocionFactory(activo=True)
+        inactiva = PromocionFactory(activo=False)
+        r = anon_client.get("/api/productos/promociones/publico/")
+        assert r.status_code == 200
+        ids = [p["id"] for p in r.data]
+        assert vigente.id in ids
+        assert inactiva.id not in ids

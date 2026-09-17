@@ -158,3 +158,43 @@ class MarcarImpresoSerializer(serializers.Serializer):
         child=serializers.IntegerField(),
         allow_empty=False,
     )
+
+
+class DetalleCocinaSerializer(serializers.ModelSerializer):
+    """Lectura liviana de un ítem para el tablero de Cocina: solo lo que
+    hace falta para preparar, nada de precios/pagos."""
+    nombre = serializers.SerializerMethodField()
+
+    def get_nombre(self, obj):
+        if obj.producto:
+            return obj.producto.nombre
+        if obj.promocion:
+            return obj.promocion.nombre
+        return ""
+
+    class Meta:
+        model = DetalleOrden
+        fields = ["id", "nombre", "cantidad", "nota", "ronda", "estado_preparacion", "fecha_creacion"]
+
+
+class TicketCocinaSerializer(serializers.ModelSerializer):
+    """Lectura liviana de una orden para el tablero de Cocina."""
+    mesa_numero = serializers.IntegerField(source="mesa.numero", read_only=True, default=None)
+    tipo_orden_display = serializers.CharField(source="get_tipo_orden_display", read_only=True)
+    detalles = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Orden
+        fields = ["id", "mesa_numero", "tipo_orden", "tipo_orden_display", "fecha_creacion", "detalles"]
+
+    def get_detalles(self, obj):
+        pendientes = [
+            d for d in obj.detalles.all()
+            if d.estado_preparacion != DetalleOrden.EstadoPreparacion.ENTREGADO
+        ]
+        return DetalleCocinaSerializer(pendientes, many=True).data
+
+
+class ActualizarEstadoPreparacionSerializer(serializers.Serializer):
+    """Valida el nuevo estado de preparación de un ítem."""
+    estado_preparacion = serializers.ChoiceField(choices=DetalleOrden.EstadoPreparacion.choices)

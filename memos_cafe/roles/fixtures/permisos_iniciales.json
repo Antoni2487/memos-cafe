@@ -22,5 +22,17 @@
   {"model": "roles.permisorol", "pk": 21, "fields": {"modulo": "reportes",  "rol": "mesero",  "puede_acceder": false}},
   {"model": "roles.permisorol", "pk": 22, "fields": {"modulo": "usuarios",  "rol": "admin",   "puede_acceder": true}},
   {"model": "roles.permisorol", "pk": 23, "fields": {"modulo": "usuarios",  "rol": "cajero",  "puede_acceder": false}},
-  {"model": "roles.permisorol", "pk": 24, "fields": {"modulo": "usuarios",  "rol": "mesero",  "puede_acceder": false}}
+  {"model": "roles.permisorol", "pk": 24, "fields": {"modulo": "usuarios",  "rol": "mesero",  "puede_acceder": false}},
+  {"model": "roles.permisorol", "pk": 25, "fields": {"modulo": "dashboard", "rol": "cocina",  "puede_acceder": false}},
+  {"model": "roles.permisorol", "pk": 26, "fields": {"modulo": "mesas",     "rol": "cocina",  "puede_acceder": false}},
+  {"model": "roles.permisorol", "pk": 27, "fields": {"modulo": "ordenes",   "rol": "cocina",  "puede_acceder": false}},
+  {"model": "roles.permisorol", "pk": 28, "fields": {"modulo": "caja",      "rol": "cocina",  "puede_acceder": false}},
+  {"model": "roles.permisorol", "pk": 29, "fields": {"modulo": "productos", "rol": "cocina",  "puede_acceder": false}},
+  {"model": "roles.permisorol", "pk": 30, "fields": {"modulo": "insumos",   "rol": "cocina",  "puede_acceder": false}},
+  {"model": "roles.permisorol", "pk": 31, "fields": {"modulo": "reportes",  "rol": "cocina",  "puede_acceder": false}},
+  {"model": "roles.permisorol", "pk": 32, "fields": {"modulo": "usuarios",  "rol": "cocina",  "puede_acceder": false}},
+  {"model": "roles.permisorol", "pk": 33, "fields": {"modulo": "ordenes_cocina", "rol": "admin",  "puede_acceder": true}},
+  {"model": "roles.permisorol", "pk": 34, "fields": {"modulo": "ordenes_cocina", "rol": "cajero", "puede_acceder": false}},
+  {"model": "roles.permisorol", "pk": 35, "fields": {"modulo": "ordenes_cocina", "rol": "mesero", "puede_acceder": false}},
+  {"model": "roles.permisorol", "pk": 36, "fields": {"modulo": "ordenes_cocina", "rol": "cocina", "puede_acceder": true}}
 ]

@@ -122,6 +122,12 @@ class Orden(models.Model):
 
 
 class DetalleOrden(models.Model):
+    class EstadoPreparacion(models.TextChoices):
+        PENDIENTE      = "pendiente", "Pendiente"
+        EN_PREPARACION = "en_preparacion", "En preparación"
+        LISTO          = "listo", "Listo"
+        ENTREGADO      = "entregado", "Entregado"
+
     orden    = models.ForeignKey(Orden, on_delete=models.CASCADE, related_name="detalles")
     producto = models.ForeignKey(
         Producto, on_delete=models.PROTECT,
@@ -136,6 +142,17 @@ class DetalleOrden(models.Model):
     subtotal        = models.DecimalField(max_digits=10, decimal_places=2)
     nota            = models.CharField(max_length=150, blank=True)
     impreso         = models.BooleanField(default=False)
+    estado_preparacion = models.CharField(
+        max_length=15,
+        choices=EstadoPreparacion.choices,
+        default=EstadoPreparacion.PENDIENTE,
+    )
+    # Agrupa items agregados juntos: el pedido inicial (por QR o mesero) es
+    # la ronda 1, cada tanda subsiguiente que el cliente manda por QR suma
+    # una ronda — permite a Cocina mostrar "Ronda 2 de Mesa 4" en vez de una
+    # lista plana. Ver DetalleOrdenService.agregar_detalle().
+    ronda           = models.PositiveSmallIntegerField(default=1)
+    fecha_creacion  = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         db_table         = "detalle_orden"

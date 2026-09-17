@@ -1,8 +1,25 @@
+from django.urls import path
 from rest_framework.routers import DefaultRouter
 
+from memos_cafe.mesas.api.qr_views import (
+    MesaQREstadoView,
+    MesaQRPedidoView,
+    MesaQRSolicitarCobroView,
+)
 from memos_cafe.mesas.api.views import MesaViewSet
 
 router = DefaultRouter()
 router.register("", MesaViewSet, basename="mesa")
 
-urlpatterns = router.urls
+# Van ANTES de router.urls: son rutas publicas explicitas bajo el mismo
+# prefijo "mesas/" y deben resolverse antes que el patron {pk} generico
+# del router (que si no, podria intentar interpretar "qr" como un pk).
+urlpatterns = [
+    path("qr/<int:mesa_id>/", MesaQREstadoView.as_view(), name="mesa-qr-estado"),
+    path("qr/<int:mesa_id>/pedido/", MesaQRPedidoView.as_view(), name="mesa-qr-pedido"),
+    path(
+        "qr/<int:mesa_id>/solicitar-cobro/",
+        MesaQRSolicitarCobroView.as_view(),
+        name="mesa-qr-solicitar-cobro",
+    ),
+] + router.urls

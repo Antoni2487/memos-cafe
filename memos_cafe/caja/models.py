@@ -129,6 +129,33 @@ class Pago(models.Model):
         self.save(update_fields=["estado"])
 
 
+class SolicitudCobro(models.Model):
+    """El cliente en una mesa (via QR) pide la cuenta y sugiere un metodo
+    de pago. NO es un Pago real: el cajero/mesero sigue cobrando
+    fisicamente y registrando el Pago como hoy (efectivo/POS/QR del
+    negocio, sin pasarela integrada) — esto solo alimenta la campanita de
+    alertas para que el personal se entere sin que el cliente tenga que
+    llamar."""
+
+    orden = models.ForeignKey(Orden, on_delete=models.PROTECT, related_name="solicitudes_cobro")
+    metodo_pago_sugerido = models.CharField(max_length=10, choices=Pago.MetodoPago.choices)
+    solicitado_en = models.DateTimeField(auto_now_add=True)
+    atendido_en = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "solicitud_cobro"
+        verbose_name = "Solicitud de cobro"
+        verbose_name_plural = "Solicitudes de cobro"
+        ordering = ["-solicitado_en"]
+
+    def __str__(self):
+        return f"Solicitud de cobro Orden #{self.orden_id} ({self.metodo_pago_sugerido})"
+
+    @property
+    def esta_pendiente(self):
+        return self.atendido_en is None
+
+
 class NotaCredito(models.Model):
     """Registro interno (no fiscal) que documenta por que se anulo un pago.
     No reabre la orden asociada: si el negocio necesita volver a cobrar,

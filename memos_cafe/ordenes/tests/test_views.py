@@ -32,6 +32,16 @@ def cajero_client():
     return client
 
 
+@pytest.fixture
+def cocina_client():
+    grupo, _ = Group.objects.get_or_create(name="cocina")
+    usuario = UserFactory()
+    usuario.groups.add(grupo)
+    client = APIClient()
+    client.force_authenticate(user=usuario)
+    return client
+
+
 class TestOrdenViewSetQuerysetCajero:
     """Cubre OrdenViewSet.get_queryset() para el rol cajero — la rama que
     se toco al mover la consulta de la caja abierta a OrdenService
@@ -106,3 +116,181 @@ class TestCrearOrdenReflejaMesaOcupadaSinPolling:
             format="json",
         )
         assert r_crear.status_code == 400
+
+
+class TestTableroCocina:
+    """GET /api/ordenes/cocina/ y PATCH .../estado-preparacion/ — tablero
+    de Cocina y avance de estado de un item."""
+
+    def _crear_orden_con_item(self):
+        CajaFactory()
+        mesero = UserFactory()
+        mesa = MesaFactory(estado=Mesa.Estado.LIBRE)
+        producto = ProductoFactory(precio=Decimal("10.00"))
+        from memos_cafe.ordenes.services import OrdenService
+        return OrdenService.crear_orden(
+            usuario=mesero, tipo_orden="mesa", mesa=mesa,
+            detalles=[{"producto": producto, "cantidad": 2}],
+        )
+
+    def test_cocina_ve_tickets_con_items_pendientes(self, cocina_client):
+        orden = self._crear_orden_con_item()
+
+        r = cocina_client.get("/api/ordenes/cocina/")
+
+        assert r.status_code == 200
+        assert len(r.data) == 1
+        assert r.data[0]["id"] == orden.id
+        assert r.data[0]["mesa_numero"] == orden.mesa.numero
+        assert len(r.data[0]["detalles"]) == 1
+        assert r.data[0]["detalles"][0]["estado_preparacion"] == "pendiente"
+        # serializer liviano: no expone precios ni datos de cliente
+        assert "total" not in r.data[0]
+        assert "precio_unitario" not in r.data[0]["detalles"][0]
+
+    def test_cocina_no_ve_items_ya_entregados(self, cocina_client):
+        orden = self._crear_orden_con_item()
+        detalle = orden.detalles.first()
+        detalle.estado_preparacion = "entregado"
+        detalle.save(update_fields=["estado_preparacion"])
+
+        r = cocina_client.get("/api/ordenes/cocina/")
+
+        assert r.status_code == 200
+        assert r.data == []
+
+    def test_mesero_no_puede_ver_tablero_de_cocina(self, mesero_client):
+        self._crear_orden_con_item()
+
+        r = mesero_client.get("/api/ordenes/cocina/")
+
+        assert r.status_code == 403
+
+    def test_cocina_avanza_estado_de_un_item(self, cocina_client):
+        orden = self._crear_orden_con_item()
+        detalle = orden.detalles.first()
+
+        r = cocina_client.patch(
+            f"/api/ordenes/{orden.id}/detalles/{detalle.id}/estado-preparacion/",
+            {"estado_preparacion": "en_preparacion"},
+            format="json",
+        )
+
+        assert r.status_code == 200
+        detalle.refresh_from_db()
+        assert detalle.estado_preparacion == "en_preparacion"
+
+    def test_cocina_no_puede_saltar_estados(self, cocina_client):
+        orden = self._crear_orden_con_item()
+        detalle = orden.detalles.first()
+
+        r = cocina_client.patch(
+            f"/api/ordenes/{orden.id}/detalles/{detalle.id}/estado-preparacion/",
+            {"estado_preparacion": "listo"},
+            format="json",
+        )
+
+        assert r.status_code == 400
+        detalle.refresh_from_db()
+        assert detalle.estado_preparacion == "pendiente"
+
+    def test_mesero_no_ve_ordenes_ajenas_para_cambiar_estado(self, mesero_client):
+        """El mesero ahora puede llegar a este endpoint (para marcar sus
+        propios items como 'entregado'), pero su queryset lo sigue
+        limitando a sus propias órdenes del día — esta orden es de otro
+        mesero, así que ni siquiera la ve (404, no 403).
+        La restricción de qué TRANSICIÓN puede pedir sobre una orden
+        propia se cubre en TestMeseroMarcaEntregado."""
+        orden = self._crear_orden_con_item()
+        detalle = orden.detalles.first()
+
+        r = mesero_client.patch(
+            f"/api/ordenes/{orden.id}/detalles/{detalle.id}/estado-preparacion/",
+            {"estado_preparacion": "en_preparacion"},
+            format="json",
+        )
+
+        assert r.status_code == 404
+
+
+class TestMeseroMarcaEntregado:
+    """El mesero solo puede avanzar un item hasta 'entregado' (retirarlo
+    de la mesa una vez que Cocina lo dejó listo) — nunca las transiciones
+    que le corresponden a Cocina."""
+
+    def _crear_orden_de(self, mesero):
+        CajaFactory()
+        mesa = MesaFactory(estado=Mesa.Estado.LIBRE)
+        producto = ProductoFactory(precio=Decimal("10.00"))
+        from memos_cafe.ordenes.services import OrdenService
+        return OrdenService.crear_orden(
+            usuario=mesero, tipo_orden="mesa", mesa=mesa,
+            detalles=[{"producto": producto, "cantidad": 1}],
+        )
+
+    def _cliente_de(self, usuario):
+        client = APIClient()
+        client.force_authenticate(user=usuario)
+        return client
+
+    def test_mesero_marca_entregado_un_item_listo_de_su_propia_orden(self):
+        grupo, _ = Group.objects.get_or_create(name="mesero")
+        mesero = UserFactory()
+        mesero.groups.add(grupo)
+        orden = self._crear_orden_de(mesero)
+        detalle = orden.detalles.first()
+        detalle.estado_preparacion = "listo"
+        detalle.save(update_fields=["estado_preparacion"])
+
+        r = self._cliente_de(mesero).patch(
+            f"/api/ordenes/{orden.id}/detalles/{detalle.id}/estado-preparacion/",
+            {"estado_preparacion": "entregado"},
+            format="json",
+        )
+
+        assert r.status_code == 200
+        detalle.refresh_from_db()
+        assert detalle.estado_preparacion == "entregado"
+
+    def test_mesero_no_puede_saltarse_a_cocina(self):
+        grupo, _ = Group.objects.get_or_create(name="mesero")
+        mesero = UserFactory()
+        mesero.groups.add(grupo)
+        orden = self._crear_orden_de(mesero)
+        detalle = orden.detalles.first()
+
+        r = self._cliente_de(mesero).patch(
+            f"/api/ordenes/{orden.id}/detalles/{detalle.id}/estado-preparacion/",
+            {"estado_preparacion": "en_preparacion"},
+            format="json",
+        )
+
+        assert r.status_code == 403
+        detalle.refresh_from_db()
+        assert detalle.estado_preparacion == "pendiente"
+
+    def test_cajero_no_puede_marcar_entregado(self, cajero_client):
+        orden = self._crear_orden_de(UserFactory())
+        detalle = orden.detalles.first()
+        detalle.estado_preparacion = "listo"
+        detalle.save(update_fields=["estado_preparacion"])
+
+        r = cajero_client.patch(
+            f"/api/ordenes/{orden.id}/detalles/{detalle.id}/estado-preparacion/",
+            {"estado_preparacion": "entregado"},
+            format="json",
+        )
+
+        assert r.status_code == 403
+
+    def test_cocina_sigue_pudiendo_cualquier_transicion_valida(self, cocina_client):
+        orden = self._crear_orden_de(UserFactory())
+        detalle = orden.detalles.first()
+
+        r = cocina_client.patch(
+            f"/api/ordenes/{orden.id}/detalles/{detalle.id}/estado-preparacion/",
+            {"estado_preparacion": "en_preparacion"},
+            format="json",
+        )
+
+        assert r.status_code == 200

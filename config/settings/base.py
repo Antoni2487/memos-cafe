@@ -36,6 +36,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # ------------------------------------------------------------------------------
 ROOT_URLCONF = "config.urls"
 WSGI_APPLICATION = "config.wsgi.application"
+ASGI_APPLICATION = "config.asgi.application"
 
 # APPS
 # ------------------------------------------------------------------------------
@@ -50,6 +51,7 @@ DJANGO_APPS = [
     "django.forms",
 ]
 THIRD_PARTY_APPS = [
+    "channels",
     "crispy_forms",
     "crispy_bootstrap5",
     "allauth",
@@ -73,6 +75,7 @@ LOCAL_APPS = [
     "memos_cafe.insumos",
     "memos_cafe.roles",
     "memos_cafe.utils",
+    "memos_cafe.realtime",
 ]
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 
@@ -266,6 +269,21 @@ LOGGING = {
 REDIS_URL = env("REDIS_URL", default="redis://redis:6379/0")
 REDIS_SSL = REDIS_URL.startswith("rediss://")
 
+# django-channels
+# -------------------------------------------------------------------------------
+# Mismo Redis self-hosted que ya usa django-redis (ver REDIS_URL arriba) —
+# no hace falta un servicio nuevo. InMemoryChannelLayer no sirve en
+# produccion con mas de un worker: cada proceso tendria su propia copia de
+# los grupos "cocina"/"meseros" y los eventos no cruzarian entre workers.
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [REDIS_URL],
+        },
+    },
+}
+
 # django-allauth
 # ------------------------------------------------------------------------------
 ACCOUNT_ALLOW_REGISTRATION = env.bool("DJANGO_ACCOUNT_ALLOW_REGISTRATION", False)
@@ -299,6 +317,8 @@ REST_FRAMEWORK = {
         "anon": "20/minute",
         "user": "200/minute",
         "login": "5/minute",
+        "pedido_qr": "20/minute",
+        "solicitar_cobro": "5/minute",
     },
     "DEFAULT_FILTER_BACKENDS": [
         "django_filters.rest_framework.DjangoFilterBackend",

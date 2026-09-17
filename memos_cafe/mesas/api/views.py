@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 
 from memos_cafe.mesas.models import Mesa
-from memos_cafe.mesas.services import MesaService
+from memos_cafe.mesas.services import MesaService, SesionMesaService
 from memos_cafe.mesas.api.serializers import MesaEstadoSerializer
 from memos_cafe.mesas.api.serializers import MesaSerializer
 from memos_cafe.utils.permissions import EsAdmin
@@ -31,7 +31,7 @@ class MesaViewSet(ModelViewSet):
         # "Mesas" (gestion/CRUD) este deshabilitado para el rol.
         if self.action in ["list", "retrieve"]:
             return [TodosAutenticados()]
-        if self.action == "estado":
+        if self.action in ("estado", "abrir_sesion_qr", "cerrar_sesion_qr"):
             return [EsAdminOMesero(), modulo_requerido("mesas")()]
         return [EsAdmin(), modulo_requerido("mesas")()]
 
@@ -82,4 +82,36 @@ class MesaViewSet(ModelViewSet):
         except ValueError as e:
             raise ValidationError({"detail": str(e)})
 
+        return Response(MesaSerializer(mesa).data)
+
+    @action(detail=True, methods=["post"], url_path="abrir-qr")
+    def abrir_sesion_qr(self, request, pk=None):
+        """El mesero abre la mesa para que el cliente pida por QR: crea la
+        sesion (token) y ocupa la mesa. El QR fisico nunca cambia — solo
+        esta accion habilita que escanearlo sirva para algo."""
+        mesa = self.get_object()
+        try:
+            sesion = SesionMesaService.abrir_sesion(mesa, mesero=request.user)
+        except ValueError as e:
+            raise ValidationError({"detail": str(e)})
+        # abrir_sesion() ocupa la mesa sobre su propia copia re-fetcheada
+        # (select_for_update); esta instancia local sigue con el estado
+        # viejo en memoria hasta refrescarla.
+        mesa.refresh_from_db()
+        return Response(
+            {"mesa": MesaSerializer(mesa).data, "token": str(sesion.token)},
+            status=status.HTTP_201_CREATED,
+        )
+
+    @action(detail=True, methods=["post"], url_path="cerrar-qr")
+    def cerrar_sesion_qr(self, request, pk=None):
+        """POST /api/mesas/{id}/cerrar-qr/ — cancela una sesión de QR
+        abierta por error (sin ningún pedido todavía) y libera la mesa.
+        Si ya hay un pedido en curso, el servicio rechaza la acción."""
+        mesa = self.get_object()
+        try:
+            SesionMesaService.cancelar_sesion(mesa)
+        except ValueError as e:
+            raise ValidationError({"detail": str(e)})
+        mesa.refresh_from_db()
         return Response(MesaSerializer(mesa).data)

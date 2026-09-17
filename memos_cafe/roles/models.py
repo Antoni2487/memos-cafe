@@ -10,12 +10,14 @@ MODULOS = [
     ("insumos",   "Insumos"),
     ("reportes",  "Reportes"),
     ("usuarios",  "Usuarios"),
+    ("ordenes_cocina", "Cocina — Pedidos"),
 ]
 
 ROLES = [
     ("admin",   "Admin"),
     ("cajero",  "Cajero"),
     ("mesero",  "Mesero"),
+    ("cocina",  "Cocina"),
 ]
 
 

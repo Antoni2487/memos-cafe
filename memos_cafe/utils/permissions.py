@@ -28,6 +28,15 @@ class EsMesero(BasePermission):
         )
 
 
+class EsCocina(BasePermission):
+    """Solo usuarios del grupo 'cocina'."""
+    def has_permission(self, request, view):
+        return (
+            request.user.is_authenticated
+            and request.user.groups.filter(name="cocina").exists()
+        )
+
+
 class EsAdminOCajero(BasePermission):
     """Admin o cajero."""
     def has_permission(self, request, view):
@@ -43,6 +52,15 @@ class EsAdminOMesero(BasePermission):
         return (
             request.user.is_authenticated
             and request.user.groups.filter(name__in=["admin", "mesero"]).exists()
+        )
+
+
+class EsAdminOCocina(BasePermission):
+    """Admin o cocina."""
+    def has_permission(self, request, view):
+        return (
+            request.user.is_authenticated
+            and request.user.groups.filter(name__in=["admin", "cocina"]).exists()
         )
 
 
