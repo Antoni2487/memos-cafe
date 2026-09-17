@@ -47,6 +47,17 @@
     --radius-2xl: calc(var(--radius) * 1.8);
     --radius-3xl: calc(var(--radius) * 2.2);
     --radius-4xl: calc(var(--radius) * 2.6);
+
+    /* Marca Memo's Café — registrados aquí para que Tailwind genere
+       utilidades reales (bg-brand, text-gold, font-display, etc).
+       No tocan los slots semánticos de shadcn de arriba. */
+    --color-brand: #2C5545;
+    --color-brand-dark: #1E4A37;
+    --color-cream: #F8F4EE;
+    --color-gold: #C9A84C;
+    --shadow-card: 0 2px 12px rgba(44, 85, 69, 0.07);
+    --font-display: 'Playfair Display', serif;
+    --font-body: 'Lato', sans-serif;
 }
 
 :root {

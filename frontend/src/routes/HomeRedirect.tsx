@@ -7,5 +7,10 @@ export default function HomeRedirect() {
   if (user.roles.includes(ROLES.ADMIN)) {
     return <Navigate to="/dashboard" replace />;
   }
+  // Cocina no puede leer /api/ordenes/ (solo "ordenes_cocina") — /home
+  // quedaría degradado para ese rol, así que va directo a su tablero.
+  if (user.roles.includes(ROLES.COCINA)) {
+    return <Navigate to="/cocina" replace />;
+  }
   return <Navigate to="/home" replace />;
 }

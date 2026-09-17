@@ -19,6 +19,8 @@ import UsuariosPage from "../pages/usuarios/UsuariosPage";
 import RolesPage from "../pages/roles/RolesPage";
 import CategoriaPage from "../pages/categorias/CategoriaPage";
 import PromocionesPage from "../pages/promociones/PromocionesPage";
+import CocinaPage from "../pages/cocina/CocinaPage";
+import PedidoQRPage from "../pages/pedido/PedidoQRPage";
 
 export default function AppRouter() {
   return (
@@ -26,6 +28,8 @@ export default function AppRouter() {
       <Routes>
         {/* Pública */}
         <Route path="/login" element={<LoginPage />} />
+        {/* Pedido por QR del cliente — sin login, sin sidebar/layout de staff */}
+        <Route path="/pedir/:mesaId" element={<PedidoQRPage />} />
 
         {
           /* Rutas protegidas dentro del layout común */
@@ -52,6 +56,10 @@ export default function AppRouter() {
           <Route element={<PrivateRoute modulo="ordenes" />}>
             <Route path="/ordenes" element={<OrdenesPage />} />
             <Route path="/comanda/:ordenId" element={<ComandaPage />} />
+          </Route>
+
+          <Route element={<PrivateRoute modulo="ordenes_cocina" />}>
+            <Route path="/cocina" element={<CocinaPage />} />
           </Route>
 
           {/* Solo admin y cajero, y solo si el módulo "caja" está habilitado */}

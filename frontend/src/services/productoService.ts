@@ -24,6 +24,8 @@ function toFormData(data: ProductoFormData): FormData {
 const productoService = {
   listar: () => api.get<Paginated<Producto> | Producto[]>("/productos/"),
   listarPromociones: () => api.get<Paginated<Promocion> | Promocion[]>("/productos/promociones/"),
+  // Sin login — catálogo para /pedir/:mesaId (ver ProductoViewSet.publico)
+  listarPublico: () => api.get<Producto[]>("/productos/publico/"),
   crear: (data: ProductoFormData) => api.post<Producto>("/productos/crear/", toFormData(data)),
   editar: (id: number, data: ProductoFormData) => api.patch<Producto>(`/productos/${id}/editar/`, toFormData(data)),
   activar: (id: number) => api.post<Producto>(`/productos/${id}/activar/`),

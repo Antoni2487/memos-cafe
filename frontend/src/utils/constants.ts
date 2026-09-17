@@ -3,6 +3,7 @@ export const ROLES = {
   ADMIN: "admin",
   CAJERO: "cajero",
   MESERO: "mesero",
+  COCINA: "cocina",
 } as const;
 
 // Estados de mesa

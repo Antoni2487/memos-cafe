@@ -30,6 +30,8 @@ function toFormData(data: PromocionFormData): FormData {
 
 const promocionService = {
   getAll:     ()                                       => api.get<Paginated<Promocion> | Promocion[]>("/productos/promociones/"),
+  // Sin login — catálogo para /pedir/:mesaId (ver PromocionViewSet.publico)
+  listarPublico: ()                                    => api.get<Promocion[]>("/productos/promociones/publico/"),
   getById:    (id: number)                             => api.get<Promocion>(`/productos/promociones/${id}/`),
   crear:      (data: PromocionFormData)                => api.post<Promocion>("/productos/promociones/crear/", toFormData(data)),
   editar:     (id: number, data: PromocionFormData)    => api.patch<Promocion>(`/productos/promociones/${id}/editar/`, toFormData(data)),

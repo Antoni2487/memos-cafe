@@ -1,5 +1,5 @@
 import api from "./api";
-import type { Orden, Paginated, TipoOrden } from "../types";
+import type { EstadoPreparacion, Orden, Paginated, TicketCocina, TipoOrden } from "../types";
 
 export interface DetalleOrdenPayload {
   producto: number | null;
@@ -26,6 +26,10 @@ const ordenesService = {
   eliminarDetalle: (ordenId: number, detalleId: number)      => api.delete<Orden>(`/ordenes/${ordenId}/detalles/${detalleId}/`),
   marcarImpreso:   (ordenId: number, detalleIds: number[])   => api.post<Orden>(`/ordenes/${ordenId}/marcar-impreso/`, { detalle_ids: detalleIds }),
   anular:          (ordenId: number)                         => api.post<Orden>(`/ordenes/${ordenId}/anular/`),
+  // Tablero de Cocina
+  cocina:          ()                                        => api.get<TicketCocina[]>("/ordenes/cocina/"),
+  actualizarEstadoPreparacion: (ordenId: number, detalleId: number, estado: EstadoPreparacion) =>
+    api.patch<TicketCocina>(`/ordenes/${ordenId}/detalles/${detalleId}/estado-preparacion/`, { estado_preparacion: estado }),
 };
 
 export default ordenesService;

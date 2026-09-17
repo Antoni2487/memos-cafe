@@ -306,3 +306,53 @@ export interface Columna<T> {
   width?: string;
   render?: (fila: T) => ReactNode;
 }
+
+// ── Cocina / Pedido por QR ──────────────────────────────────────────────
+
+export type EstadoPreparacion = "pendiente" | "en_preparacion" | "listo" | "entregado";
+
+// Tablero de Cocina — GET /api/ordenes/cocina/ (serializer liviano, sin
+// precios ni datos de cliente/pago).
+export interface DetalleCocina {
+  id: number;
+  nombre: string;
+  cantidad: number;
+  nota?: string;
+  ronda: number;
+  estado_preparacion: EstadoPreparacion;
+  fecha_creacion: string;
+}
+
+export interface TicketCocina {
+  id: number;
+  mesa_numero: number | null;
+  tipo_orden: TipoOrden;
+  tipo_orden_display?: string;
+  fecha_creacion: string;
+  detalles: DetalleCocina[];
+}
+
+// Pedido por QR — endpoints públicos (sin login) bajo /api/mesas/qr/.
+export interface DetalleQR {
+  id: number;
+  nombre: string;
+  cantidad: number;
+  precio_unitario: number | string;
+  subtotal: number | string;
+  nota?: string;
+  ronda: number;
+  estado_preparacion: EstadoPreparacion;
+}
+
+export interface OrdenQR {
+  id: number;
+  estado: EstadoOrden;
+  total: number | string;
+  detalles: DetalleQR[];
+}
+
+export interface SesionMesaQREstado {
+  sesion_activa: boolean;
+  mesa_numero: number;
+  orden: OrdenQR | null;
+}

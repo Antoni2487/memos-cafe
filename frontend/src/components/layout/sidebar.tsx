@@ -3,6 +3,7 @@ import {
   LayoutDashboard,
   Table2,
   ClipboardList,
+  ChefHat,
   Receipt,
   Package,
   BarChart3,
@@ -25,9 +26,18 @@ interface NavItem {
 }
 
 const getNavItems = (userRoles: string[]): NavItem[] => [
-  { icon: LayoutDashboard, label: "Panel", path: userRoles.includes("admin") ? "/dashboard" : "/home", roles: null, modulo: null },
+  {
+    icon: LayoutDashboard,
+    label: "Panel",
+    path: userRoles.includes("admin") ? "/dashboard" : "/home",
+    // Cocina no tiene "Panel": su pantalla principal es "Cocina" (ver abajo),
+    // /home muestra mesas/órdenes que ese rol no puede leer.
+    roles: ["admin", "cajero", "mesero"],
+    modulo: null,
+  },
   { icon: Table2, label: "Mesas", path: "/mesas", roles: null, modulo: "mesas" },
   { icon: ClipboardList, label: "Órdenes", path: "/ordenes", roles: null, modulo: "ordenes" },
+  { icon: ChefHat, label: "Cocina", path: "/cocina", roles: null, modulo: "ordenes_cocina" },
   { icon: Receipt, label: "Caja", path: "/caja", roles: ["admin", "cajero"], modulo: "caja" },
   { icon: Package, label: "Productos", path: "/productos", roles: ["admin"], modulo: null },
   { icon: Tag, label: "Promociones", path: "/promociones", roles: ["admin"], modulo: null },

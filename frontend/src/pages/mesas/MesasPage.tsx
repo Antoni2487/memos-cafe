@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { Pencil, Trash2, Plus } from "lucide-react";
+import { Pencil, Trash2, Plus, QrCode, XCircle, Copy, Check } from "lucide-react";
 import useMesas from "../../hooks/useMesas";
 import MesaForm from "../../components/mesas/MesaForm";
 import mesasService from "../../services/mesasService";
+import { getErrorMessage } from "../../utils/errors";
 import {
   PageHeader, DataTable,
-  SearchBar, ConfirmDialog,
+  SearchBar, ConfirmDialog, DetailModal,
 } from "../../components/common";
 import type { Columna, EstadoMesa, Mesa } from "../../types";
 import type { MesaFormData } from "../../services/mesasService";
@@ -27,6 +28,12 @@ export default function MesasPage() {
   const [mesaBaja, setMesaBaja]       = useState<Mesa | null>(null);
   const [guardando, setGuardando]     = useState(false);
   const [dandoBaja, setDandoBaja]     = useState(false);
+  const [abriendoQR, setAbriendoQR]   = useState<number | null>(null);
+  const [linkQR, setLinkQR]           = useState<{ mesaNumero: number; url: string } | null>(null);
+  const [copiado, setCopiado]         = useState(false);
+  const [errorQR, setErrorQR]         = useState<string | null>(null);
+  const [mesaCancelarQR, setMesaCancelarQR] = useState<Mesa | null>(null);
+  const [cancelandoQR, setCancelandoQR]     = useState(false);
 
   const filtradas = mesas.filter((m) =>
     String(m.numero).includes(busqueda)
@@ -61,6 +68,47 @@ export default function MesasPage() {
       await recargar();
     } finally {
       setDandoBaja(false);
+    }
+  };
+
+  const handleAbrirQR = async (mesa: Mesa) => {
+    try {
+      setAbriendoQR(mesa.id);
+      setErrorQR(null);
+      await mesasService.abrirSesionQR(mesa.id);
+      setLinkQR({ mesaNumero: mesa.numero, url: `${window.location.origin}/pedir/${mesa.id}` });
+      await recargar();
+    } catch (err) {
+      setErrorQR(getErrorMessage(err, "No se pudo abrir la mesa para pedido por QR"));
+    } finally {
+      setAbriendoQR(null);
+    }
+  };
+
+  const handleCancelarQR = async () => {
+    if (!mesaCancelarQR) return;
+    try {
+      setCancelandoQR(true);
+      setErrorQR(null);
+      await mesasService.cerrarSesionQR(mesaCancelarQR.id);
+      setMesaCancelarQR(null);
+      await recargar();
+    } catch (err) {
+      setErrorQR(getErrorMessage(err, "No se pudo cancelar la sesión de QR"));
+      setMesaCancelarQR(null);
+    } finally {
+      setCancelandoQR(false);
+    }
+  };
+
+  const handleCopiarLink = async () => {
+    if (!linkQR) return;
+    try {
+      await navigator.clipboard.writeText(linkQR.url);
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 2000);
+    } catch {
+      // clipboard puede fallar sin HTTPS/permiso — el link igual se ve y se puede copiar a mano
     }
   };
 
@@ -117,9 +165,30 @@ export default function MesasPage() {
     },
     {
       label: "Acciones",
-      width: "90px",
+      width: "120px",
       render: (m) => (
         <div className="flex items-center gap-1">
+          {m.estado === "libre" && (
+            <button onClick={() => handleAbrirQR(m)} title="Abrir para pedido por QR"
+              disabled={abriendoQR === m.id}
+              style={{ width: 30, height: 30, borderRadius: 6, border: "1px solid rgba(201,168,76,0.4)",
+                backgroundColor: "white", cursor: abriendoQR === m.id ? "wait" : "pointer", display: "flex",
+                alignItems: "center", justifyContent: "center", color: "#9a7a1a" }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "rgba(201,168,76,0.1)"}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "white"}>
+              <QrCode size={13} strokeWidth={2} />
+            </button>
+          )}
+          {m.estado === "ocupada" && (
+            <button onClick={() => setMesaCancelarQR(m)} title="Cancelar sesión de QR (si no hay pedido en curso)"
+              style={{ width: 30, height: 30, borderRadius: 6, border: "1px solid rgba(201,168,76,0.4)",
+                backgroundColor: "white", cursor: "pointer", display: "flex",
+                alignItems: "center", justifyContent: "center", color: "#9a7a1a" }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "rgba(201,168,76,0.1)"}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "white"}>
+              <XCircle size={13} strokeWidth={2} />
+            </button>
+          )}
           <button onClick={() => { setMesaEditar(m); setShowForm(true); }} title="Editar"
             style={{ width: 30, height: 30, borderRadius: 6, border: "1px solid rgba(44,85,69,0.2)",
               backgroundColor: "white", cursor: "pointer", display: "flex",
@@ -157,6 +226,12 @@ export default function MesasPage() {
         }
       />
 
+      {errorQR && (
+        <div className="mb-4 rounded-lg bg-red-50 px-4 py-2.5 font-body text-sm text-red-700">
+          {errorQR}
+        </div>
+      )}
+
       <div className="mb-4">
         <SearchBar placeholder="Buscar por número de mesa..." onBuscar={(t) => { setBusqueda(t); setPagina(1); }} />
       </div>
@@ -190,6 +265,37 @@ export default function MesasPage() {
         onConfirmar={handleDarDeBaja}
         onCancelar={() => setMesaBaja(null)}
       />
+
+      <ConfirmDialog
+        abierto={!!mesaCancelarQR}
+        titulo="¿Cancelar la sesión de QR?"
+        descripcion={`Solo funciona si la Mesa ${mesaCancelarQR?.numero} todavía no tiene ningún pedido — la deja libre de nuevo. Si ya hay un pedido en curso, esta acción se va a rechazar (hay que anularlo o cerrarlo desde Órdenes).`}
+        textoOk="Sí, cancelar y liberar"
+        variante="warning"
+        cargando={cancelandoQR}
+        onConfirmar={handleCancelarQR}
+        onCancelar={() => setMesaCancelarQR(null)}
+      />
+
+      <DetailModal
+        abierto={!!linkQR}
+        titulo={`Mesa ${linkQR?.mesaNumero} lista para pedir por QR`}
+        onCerrar={() => setLinkQR(null)}
+      >
+        <p className="font-body text-sm text-[#555]">
+          El QR físico de esta mesa ya funciona. Para probarlo sin escanear, usá este link:
+        </p>
+        <div className="flex items-center gap-2 rounded-lg border border-brand/20 bg-cream px-3 py-2.5">
+          <span className="min-w-0 flex-1 truncate font-body text-xs text-brand">{linkQR?.url}</span>
+          <button
+            onClick={handleCopiarLink}
+            className="flex shrink-0 items-center gap-1 rounded-md bg-brand px-2.5 py-1.5 font-body text-xs font-semibold text-white hover:bg-brand-dark"
+          >
+            {copiado ? <Check size={13} /> : <Copy size={13} />}
+            {copiado ? "Copiado" : "Copiar"}
+          </button>
+        </div>
+      </DetailModal>
     </>
   );
 }

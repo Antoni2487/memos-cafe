@@ -21,6 +21,10 @@ const COLORES: Record<string, EstiloEstado> = {
   activo:    { bg: "#e8f5e9", color: "#2e7d32", border: "rgba(46,125,50,0.25)" },
   inactivo:  { bg: "#f5f5f5", color: "#616161", border: "rgba(97,97,97,0.25)" },
   pendiente: { bg: "#fff8e1", color: "#f57f17", border: "rgba(245,127,23,0.25)" },
+  // Preparación (Cocina)
+  en_preparacion: { bg: "#e3f2fd", color: "#1565c0", border: "rgba(21,101,192,0.25)" },
+  listo:          { bg: "#e8f5e9", color: "#2e7d32", border: "rgba(46,125,50,0.25)" },
+  entregado:      { bg: "#f5f5f5", color: "#616161", border: "rgba(97,97,97,0.25)" },
 };
 
 const LABELS: Record<string, string> = {
@@ -28,6 +32,7 @@ const LABELS: Record<string, string> = {
   libre: "Libre", ocupada: "Ocupada", reservada: "Reservada",
   ok: "OK", bajo: "Stock bajo", agotado: "Agotado",
   activo: "Activo", inactivo: "Inactivo", pendiente: "Pendiente",
+  en_preparacion: "En preparación", listo: "Listo", entregado: "Entregado",
 };
 
 interface StatusBadgeProps {

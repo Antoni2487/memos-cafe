@@ -1,10 +1,20 @@
 import { useLocation } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
-import { Bell, ShoppingBag, Receipt, Menu } from "lucide-react";
+import { Bell, ShoppingBag, Receipt, Menu, Check } from "lucide-react";
 import authService from "../../services/authService";
 import { useReloj } from "../../hooks/useReloj";
+import useStaffSocket from "../../hooks/useStaffSocket";
 import api from "../../services/api";
+import ordenesService from "../../services/ordenesService";
 import type { Alerta } from "../../types";
+
+// Alertas en vivo (plato listo / pidió la cuenta) además llevan un id
+// propio para poder quitarlas de la lista tras una acción, y opcionalmente
+// la referencia al ítem para que el mesero lo marque "entregado" desde acá.
+interface AlertaLocal extends Alerta {
+  id?: string;
+  accion?: { ordenId: number; detalleId: number };
+}
 
 // Mapeo de ruta → título de página
 const PAGE_TITLES: Record<string, string> = {
@@ -46,9 +56,14 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
   const user = authService.getUser();
   const ahora = useReloj();
   const esAdmin = user?.roles?.includes("admin");
+  const esMesero = user?.roles?.includes("mesero");
+  const esCajero = user?.roles?.includes("cajero");
+  const puedeVerCampana = esAdmin || esMesero || esCajero;
   const titulo = PAGE_TITLES[location.pathname] || "Memo's Café";
 
   const [alertas, setAlertas] = useState<Alerta[]>([]);
+  const [alertasListo, setAlertasListo] = useState<AlertaLocal[]>([]);
+  const [entregando, setEntregando] = useState<string | null>(null);
   const [abierto, setAbierto] = useState(false);
   const [ultimaLectura, setUltimaLectura] = useState(
     () => localStorage.getItem("notif_ultima_lectura") ?? new Date().toISOString()
@@ -76,6 +91,63 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [esAdmin]);
 
+  // ── Avisos en vivo por ws/meseros/ ──────────────────────────────────────
+  // "plato listo": solo le importa al mesero (quien lo lleva a la mesa).
+  // "pidió la cuenta": le importa a mesero Y cajero — según el método de
+  // pago, cobra el cajero en caja o el mesero le lleva el POS a la mesa.
+  // Al admin NO se le agregan acá: ya le llegan por el polling de
+  // /alertas/, sumarlos también duplicaría la notificación.
+  // Se guardan solo en memoria (no persisten, son avisos efímeros de turno).
+  // Sin useCallback a propósito: useStaffSocket sincroniza esta función a
+  // un ref en su propio efecto, así que una referencia nueva en cada
+  // render (por leer esMesero/esCajero/esAdmin directo) es segura acá.
+  const manejarEventoEnVivo = (evento: Record<string, unknown>) => {
+    const mesa = evento.mesa_numero != null ? `Mesa ${evento.mesa_numero}` : "Para llevar";
+
+    if (evento.type === "detalle.actualizado" && (esMesero || esAdmin)) {
+      setAlertasListo((prev) => [
+        {
+          id: crypto.randomUUID(),
+          icono: "orden",
+          mensaje: `${evento.nombre} listo — ${mesa}`,
+          fecha: new Date().toISOString(),
+          accion: {
+            ordenId: Number(evento.orden_id),
+            detalleId: Number(evento.detalle_id),
+          },
+        },
+        ...prev,
+      ].slice(0, 20));
+      return;
+    }
+
+    if (evento.type === "solicitud_cobro.nueva" && (esMesero || esCajero)) {
+      const metodo = String(evento.metodo_pago_sugerido ?? "");
+      const metodoLabel = metodo.charAt(0).toUpperCase() + metodo.slice(1);
+      setAlertasListo((prev) => [
+        { id: crypto.randomUUID(), icono: "caja", mensaje: `${mesa} pidió la cuenta — ${metodoLabel}`, fecha: new Date().toISOString() },
+        ...prev,
+      ].slice(0, 20));
+    }
+  };
+
+  // ── El mesero marca "entregado" directo desde la notificación ───────────
+  const marcarEntregado = async (alerta: AlertaLocal) => {
+    if (!alerta.accion || !alerta.id) return;
+    setEntregando(alerta.id);
+    try {
+      await ordenesService.actualizarEstadoPreparacion(
+        alerta.accion.ordenId, alerta.accion.detalleId, "entregado"
+      );
+      setAlertasListo((prev) => prev.filter((a) => a.id !== alerta.id));
+    } catch {
+      // se queda en la lista — el mesero puede reintentar
+    } finally {
+      setEntregando(null);
+    }
+  };
+  useStaffSocket("meseros", manejarEventoEnVivo, puedeVerCampana);
+
   // ── Cerrar al hacer clic fuera ────────────────────────────────────────────
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -93,8 +165,14 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
     localStorage.setItem("notif_ultima_lectura", ts);
   };
 
+  // Fusiona el feed polleado (admin) con los avisos de "plato listo" en
+  // vivo (admin + mesero), más recientes primero.
+  const alertasCombinadas: AlertaLocal[] = [...alertasListo, ...alertas].sort(
+    (a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime()
+  );
+
   // Solo cuentan las alertas POSTERIORES al último timestamp
-  const noLeidas = alertas.filter(
+  const noLeidas = alertasCombinadas.filter(
     (a) => new Date(a.fecha) > new Date(ultimaLectura)
   ).length;
 
@@ -150,7 +228,7 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
         </div>
 
         {/* ── Campana ── */}
-        {esAdmin && (
+        {puedeVerCampana && (
           <div ref={dropdownRef} style={{ position: "relative" }}>
             <button
               onClick={() => {
@@ -194,12 +272,12 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
                     Notificaciones
                   </span>
                   <span style={{ fontFamily: "'Lato', sans-serif", fontSize: 11, color: "rgba(44,85,69,0.5)" }}>
-                    Últimas 8 horas
+                    {esAdmin ? "Últimas 8 horas" : "En vivo"}
                   </span>
                 </div>
 
                 <div style={{ maxHeight: 380, overflowY: "auto" }}>
-                  {alertas.length === 0 ? (
+                  {alertasCombinadas.length === 0 ? (
                     <div style={{
                       padding: "32px 16px", textAlign: "center",
                       fontFamily: "'Lato', sans-serif", fontSize: 13,
@@ -208,11 +286,11 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
                       Sin notificaciones recientes
                     </div>
                   ) : (
-                    alertas.map((alerta, i) => {
+                    alertasCombinadas.map((alerta, i) => {
                       const cfg = ICONO_CONFIG[alerta.icono] ?? ICONO_CONFIG.orden;
                       const leida = new Date(alerta.fecha) <= new Date(ultimaLectura);
                       return (
-                        <div key={i} style={{
+                        <div key={alerta.id ?? i} style={{
                           padding: "10px 16px",
                           borderBottom: "1px solid rgba(44,85,69,0.06)",
                           display: "flex", alignItems: "flex-start", gap: 10,
@@ -242,6 +320,22 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
                               {formatHora(alerta.fecha)}
                             </p>
                           </div>
+                          {alerta.accion && (esMesero || esAdmin) && (
+                            <button
+                              onClick={() => marcarEntregado(alerta)}
+                              disabled={entregando === alerta.id}
+                              className="shrink-0 flex items-center gap-1 rounded-md"
+                              style={{
+                                padding: "4px 8px", border: "1px solid rgba(44,85,69,0.25)",
+                                backgroundColor: "white", color: "#2C5545",
+                                fontFamily: "'Lato', sans-serif", fontSize: 10.5, fontWeight: 700,
+                                cursor: entregando === alerta.id ? "not-allowed" : "pointer",
+                              }}
+                            >
+                              <Check size={11} strokeWidth={2.5} />
+                              {entregando === alerta.id ? "..." : "Entregado"}
+                            </button>
+                          )}
                         </div>
                       );
                     })
