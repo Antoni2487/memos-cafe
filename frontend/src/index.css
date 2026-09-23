@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Lato:wght@300;400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
@@ -7,7 +7,6 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-    --font-heading: var(--font-sans);
     --font-sans: 'Geist Variable', sans-serif;
     --color-sidebar-ring: var(--sidebar-ring);
     --color-sidebar-border: var(--sidebar-border);
@@ -50,14 +49,24 @@
 
     /* Marca Memo's Café — registrados aquí para que Tailwind genere
        utilidades reales (bg-brand, text-gold, font-display, etc).
-       No tocan los slots semánticos de shadcn de arriba. */
-    --color-brand: #2C5545;
-    --color-brand-dark: #1E4A37;
+       --color-brand/--color-brand-dark son alias de --primary/--primary-hover:
+       un solo verde de marca, con soporte de dark mode heredado de esos slots. */
+    --color-brand: var(--primary);
+    --color-brand-dark: var(--primary-hover);
     --color-cream: #F8F4EE;
     --color-gold: #C9A84C;
     --shadow-card: 0 2px 12px rgba(44, 85, 69, 0.07);
     --font-display: 'Playfair Display', serif;
-    --font-body: 'Lato', sans-serif;
+
+    /* Colores semánticos de estado — única fuente de verdad para badges
+       de orden/mesa/insumo/preparación (ver StatusBadge). El error/destructivo
+       ya existe como --destructive más abajo, no se duplica aquí. */
+    --color-success: #2e7d32;
+    --color-success-bg: #e8f5e9;
+    --color-warning: #f57f17;
+    --color-warning-bg: #fff8e1;
+    --color-info: #1565c0;
+    --color-info-bg: #e3f2fd;
 }
 
 :root {
@@ -67,12 +76,6 @@
     --card-foreground: oklch(0.145 0 0);
     --popover: oklch(1 0 0);
     --popover-foreground: oklch(0.145 0 0);
-    --color-primary: #2C5545;
-    --color-primary-dark: #1E4A37;
-    --color-bg: #F8F4EE;
-    --color-gold: #C9A84C;
-    --color-border-gold: rgba(201, 168, 76, 0.35);
-    --color-card-shadow: 0 2px 12px rgba(44, 85, 69, 0.07);
     --primary: oklch(0.49 0.07 162);
     --primary-foreground: oklch(1 0 0);
     --primary-hover: oklch(0.43 0.07 162);
