@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Pencil, Trash2, Plus, QrCode, XCircle, Copy, Check } from "lucide-react";
+import { Pencil, Trash2, Plus, QrCode, ScanLine, XCircle, Copy, Check } from "lucide-react";
 import useMesas from "../../hooks/useMesas";
 import MesaForm from "../../components/mesas/MesaForm";
+import MesaQRCodigo from "../../components/mesas/MesaQRCodigo";
 import mesasService from "../../services/mesasService";
 import { getErrorMessage } from "../../utils/errors";
 import {
@@ -34,6 +35,7 @@ export default function MesasPage() {
   const [errorQR, setErrorQR]         = useState<string | null>(null);
   const [mesaCancelarQR, setMesaCancelarQR] = useState<Mesa | null>(null);
   const [cancelandoQR, setCancelandoQR]     = useState(false);
+  const [mesaVerQR, setMesaVerQR]           = useState<Mesa | null>(null);
 
   const filtradas = mesas.filter((m) =>
     String(m.numero).includes(busqueda)
@@ -165,9 +167,17 @@ export default function MesasPage() {
     },
     {
       label: "Acciones",
-      width: "120px",
+      width: "150px",
       render: (m) => (
         <div className="flex items-center gap-1">
+          <button onClick={() => setMesaVerQR(m)} title="Ver / imprimir el código QR de la mesa"
+            style={{ width: 30, height: 30, borderRadius: 6, border: "1px solid rgba(44,85,69,0.2)",
+              backgroundColor: "white", cursor: "pointer", display: "flex",
+              alignItems: "center", justifyContent: "center", color: "#2C5545" }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "rgba(44,85,69,0.08)"}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "white"}>
+            <ScanLine size={13} strokeWidth={2} />
+          </button>
           {m.estado === "libre" && (
             <button onClick={() => handleAbrirQR(m)} title="Abrir para pedido por QR"
               disabled={abriendoQR === m.id}
@@ -295,6 +305,19 @@ export default function MesasPage() {
             {copiado ? "Copiado" : "Copiar"}
           </button>
         </div>
+      </DetailModal>
+
+      <DetailModal
+        abierto={!!mesaVerQR}
+        titulo="Código QR de la mesa"
+        onCerrar={() => setMesaVerQR(null)}
+      >
+        {mesaVerQR && (
+          <MesaQRCodigo
+            mesaNumero={mesaVerQR.numero}
+            url={`${window.location.origin}/pedir/${mesaVerQR.id}`}
+          />
+        )}
       </DetailModal>
     </>
   );
