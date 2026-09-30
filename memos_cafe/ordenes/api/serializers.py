@@ -1,3 +1,4 @@
+from django.utils import timezone
 from rest_framework import serializers
 
 from memos_cafe.mesas.models import Mesa
@@ -309,9 +310,25 @@ class ComandaCocinaSerializer(serializers.ModelSerializer):
     mesero = serializers.SerializerMethodField()
     detalles = DetalleCocinaSerializer(many=True, read_only=True)
 
+    # Segundos transcurridos segun el reloj del servidor: la tablet de
+    # Cocina cuenta desde ahi, aunque su propio reloj este adelantado.
+    segundos = serializers.SerializerMethodField()
+
     def get_mesero(self, obj):
         usuario = obj.orden.usuario
         return (usuario.name or usuario.email) if usuario else ""
+
+    def get_segundos(self, obj):
+        ahora = timezone.now()
+
+        def desde(momento):
+            return int((ahora - momento).total_seconds()) if momento else None
+
+        return {
+            "desde_creada": desde(obj.creada_en),
+            "desde_iniciada": desde(obj.iniciada_en),
+            "desde_lista": desde(obj.lista_en),
+        }
 
     class Meta:
         model = Comanda
@@ -329,6 +346,7 @@ class ComandaCocinaSerializer(serializers.ModelSerializer):
             "tipo_orden_display",
             "cliente_nombre",
             "mesero",
+            "segundos",
             "detalles",
         ]
 

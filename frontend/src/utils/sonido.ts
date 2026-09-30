@@ -42,3 +42,17 @@ export function sonarAviso() {
     osc.stop(ahora + t + 0.65);
   });
 }
+
+/** false si el navegador todavía no deja sonar (falta un toque en la pantalla). */
+export function sonidoHabilitado(): boolean {
+  const c = contexto();
+  return !!c && c.state === "running";
+}
+
+/** Intenta habilitar el sonido (llamar dentro de un toque/click). */
+export async function habilitarSonido(): Promise<boolean> {
+  const c = contexto();
+  if (!c) return false;
+  await c.resume().catch(() => {});
+  return c.state === "running";
+}

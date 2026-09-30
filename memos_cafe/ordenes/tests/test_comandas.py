@@ -7,6 +7,7 @@ from http import HTTPStatus
 
 import pytest
 from django.contrib.auth.models import Group
+from django.utils import timezone
 from rest_framework.test import APIClient
 
 from memos_cafe.caja.models import Caja
@@ -298,3 +299,14 @@ class TestApi:
         r = mesero.post(f"/api/ordenes/comandas/{comanda.id}/entregar/")
         assert r.status_code == HTTPStatus.OK
         assert r.data["estado"] == Comanda.Estado.ENTREGADA
+
+    def test_segundos_segun_el_reloj_del_servidor(self):
+        comanda = _orden().comandas.get()
+        hace = timezone.now() - timedelta(minutes=12)
+        Comanda.objects.filter(pk=comanda.pk).update(creada_en=hace, iniciada_en=hace)
+
+        (tarjeta,) = _cliente("cocina").get("/api/ordenes/comandas/cocina/").data
+
+        segundos = tarjeta["segundos"]
+        assert 12 * 60 <= segundos["desde_creada"] < 12 * 60 + 5
+        assert segundos["desde_lista"] is None

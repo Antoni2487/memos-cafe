@@ -1,69 +1,121 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import ordenesService from "../services/ordenesService";
+import comandasService from "../services/comandasService";
 import useStaffSocket, { type StaffSocketStatus } from "./useStaffSocket";
 import { getErrorMessage } from "../utils/errors";
-import type { EstadoPreparacion, TicketCocina } from "../types";
+import { sonarAviso } from "../utils/sonido";
+import type { ComandaCocina } from "../types";
 
-const POLL_MS = 60000; // red de seguridad además del WebSocket (ver notas de diseño)
+/** Comanda con sus momentos pasados al reloj de este dispositivo (ms). */
+export interface ComandaTablero extends ComandaCocina {
+  desde: { creada: number; iniciada: number | null; lista: number | null };
+}
 
+// Los segundos los mide el servidor; se restan a "ahora" en este
+// dispositivo, así los cronómetros no dependen de que su reloj esté bien.
+function alReloj(c: ComandaCocina): ComandaTablero {
+  const ahora = Date.now();
+  const hace = (seg: number | null) => (seg === null ? null : ahora - seg * 1000);
+  return {
+    ...c,
+    desde: {
+      creada: ahora - c.segundos.desde_creada * 1000,
+      iniciada: hace(c.segundos.desde_iniciada),
+      lista: hace(c.segundos.desde_lista),
+    },
+  };
+}
+
+const POLL_MS = 30000; // red de seguridad además del WebSocket
+const CLAVE_SONIDO = "cocina_sonido";
+
+/**
+ * Tablero de Cocina por comanda. Suena una vez por cada comanda nueva
+ * (no por cada ítem), llegue por WebSocket o por la consulta de respaldo.
+ */
 export function useCocina() {
-  const [tickets, setTickets] = useState<TicketCocina[]>([]);
+  const [comandas, setComandas] = useState<ComandaTablero[]>([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [sonido, setSonidoState] = useState(() => localStorage.getItem(CLAVE_SONIDO) !== "no");
   const cargandoRef = useRef(false);
+  const pendienteRef = useRef(false);
+  const conocidas = useRef<Set<number> | null>(null);
+  const sonidoRef = useRef(sonido);
+  useEffect(() => { sonidoRef.current = sonido; }, [sonido]);
 
-  // setState solo dentro de callbacks de la promesa
-  // (react-hooks/set-state-in-effect). cargandoRef evita pedidos solapados
-  // cuando llegan varios eventos del WebSocket seguidos.
+  const repetirRef = useRef<() => void>(() => {});
   const cargar = useCallback(() => {
-    if (cargandoRef.current) return Promise.resolve();
+    // Si llegan varios eventos seguidos, se hace una consulta y a lo sumo
+    // una más al terminar (con lo último), nunca en paralelo.
+    if (cargandoRef.current) {
+      pendienteRef.current = true;
+      return;
+    }
     cargandoRef.current = true;
-    return ordenesService
-      .cocina()
+    comandasService
+      .tablero()
       .then(({ data }) => {
-        setTickets(data);
+        const nuevas = conocidas.current ? data.filter((c) => !conocidas.current!.has(c.id)) : [];
+        if (nuevas.length && sonidoRef.current) sonarAviso();
+        conocidas.current = new Set(data.map((c) => c.id));
+        setComandas(data.map(alReloj));
         setError(null);
       })
       .catch((err) => setError(getErrorMessage(err, "No se pudo cargar el tablero de cocina")))
       .finally(() => {
         cargandoRef.current = false;
         setCargando(false);
+        if (pendienteRef.current) {
+          pendienteRef.current = false;
+          repetirRef.current();
+        }
       });
   }, []);
+
+  useEffect(() => { repetirRef.current = cargar; }, [cargar]);
 
   useEffect(() => {
     cargar();
     const iv = setInterval(cargar, POLL_MS);
-    return () => clearInterval(iv);
+    const alVolver = () => document.visibilityState === "visible" && cargar();
+    document.addEventListener("visibilitychange", alVolver);
+    return () => {
+      clearInterval(iv);
+      document.removeEventListener("visibilitychange", alVolver);
+    };
   }, [cargar]);
 
-  // Cualquier evento del canal (pedido nuevo o cambio de estado) es señal
-  // de "algo cambió" — se re-consulta el tablero completo en vez de
-  // parchear localmente: los eventos son poco frecuentes en una cafetería
-  // real, así que la simplicidad de un refetch gana sobre la ganancia
-  // marginal de un patch fino, que además no puede armar un ticket nuevo
-  // completo (nombre, ronda, etc.) sólo con el payload del WebSocket.
-  const manejarEvento = useCallback(() => {
-    cargar();
+  const status: StaffSocketStatus = useStaffSocket("cocina", cargar);
+
+  // Cada acción devuelve la comanda actualizada: se reemplaza en el tablero
+  // sin esperar la próxima consulta (y se quita si ya se entregó).
+  const aplicar = useCallback(async (accion: () => Promise<{ data: ComandaCocina }>) => {
+    try {
+      const { data } = await accion();
+      conocidas.current?.add(data.id);
+      const actualizada = alReloj(data);
+      setComandas((prev) =>
+        prev.map((c) => (c.id === data.id ? actualizada : c)).filter((c) => c.estado !== "entregada")
+      );
+      setError(null);
+    } catch (err) {
+      setError(getErrorMessage(err, "No se pudo actualizar la comanda"));
+      cargar();
+    }
   }, [cargar]);
 
-  const status: StaffSocketStatus = useStaffSocket("cocina", manejarEvento);
+  const setSonido = useCallback((v: boolean) => {
+    setSonidoState(v);
+    try { localStorage.setItem(CLAVE_SONIDO, v ? "si" : "no"); } catch { /* sin almacenamiento */ }
+  }, []);
 
-  const avanzarEstado = useCallback(
-    async (ordenId: number, detalleId: number, estado: EstadoPreparacion) => {
-      const { data } = await ordenesService.actualizarEstadoPreparacion(ordenId, detalleId, estado);
-      setTickets((prev) => {
-        const sinItemsEntregados = data.detalles.length > 0;
-        if (!sinItemsEntregados) {
-          return prev.filter((t) => t.id !== data.id);
-        }
-        return prev.map((t) => (t.id === data.id ? data : t));
-      });
-    },
-    []
-  );
-
-  return { tickets, cargando, error, status, avanzarEstado, recargar: cargar };
+  return {
+    comandas, cargando, error, status, recargar: cargar, sonido, setSonido,
+    iniciar: (id: number) => aplicar(() => comandasService.iniciar(id)),
+    marcarItem: (id: number, detalleId: number, listo: boolean) => aplicar(() => comandasService.marcarItem(id, detalleId, listo)),
+    marcarLista: (id: number) => aplicar(() => comandasService.lista(id)),
+    entregar: (id: number) => aplicar(() => comandasService.entregar(id)),
+  };
 }
 
 export default useCocina;

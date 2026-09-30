@@ -6,6 +6,8 @@ import { useReloj } from "../../hooks/useReloj";
 import useStaffSocket from "../../hooks/useStaffSocket";
 import api from "../../services/api";
 import ordenesService from "../../services/ordenesService";
+import comandasService from "../../services/comandasService";
+import { sonarAviso } from "../../utils/sonido";
 import type { Alerta } from "../../types";
 import { tituloDeRuta } from "./navegacion";
 import { Marca } from "./sidebar";
@@ -15,7 +17,7 @@ import { Marca } from "./sidebar";
 // la referencia al ítem para que el mesero lo marque "entregado" desde acá.
 interface AlertaLocal extends Alerta {
   id?: string;
-  accion?: { ordenId: number; detalleId: number };
+  accion?: { ordenId: number; detalleId: number } | { comandaId: number };
 }
 
 const ICONO_CONFIG: Record<string, { color: string; bg: string }> = {
@@ -85,7 +87,24 @@ export default function Navbar() {
   const manejarEventoEnVivo = (evento: Record<string, unknown>) => {
     const mesa = evento.mesa_numero != null ? `Mesa ${evento.mesa_numero}` : "Para llevar";
 
-    if (evento.type === "detalle.actualizado" && (esMesero || esAdmin)) {
+    // Cocina terminó una comanda (una ronda completa): el mesero la lleva.
+    if (evento.type === "comanda.actualizada" && evento.estado === "lista" && (esMesero || esAdmin)) {
+      const ronda = Number(evento.numero) > 1 ? ` · ronda ${evento.numero}` : "";
+      sonarAviso();
+      setAlertasListo((prev) => [
+        {
+          id: crypto.randomUUID(),
+          icono: "orden",
+          mensaje: `${mesa}${ronda} lista para servir`,
+          fecha: new Date().toISOString(),
+          accion: { comandaId: Number(evento.comanda_id) },
+        },
+        ...prev,
+      ].slice(0, 20));
+      return;
+    }
+
+    if (evento.type === "detalle.actualizado" && evento.estado_preparacion === "listo" && (esMesero || esAdmin)) {
       setAlertasListo((prev) => [
         {
           id: crypto.randomUUID(),
@@ -117,9 +136,13 @@ export default function Navbar() {
     if (!alerta.accion || !alerta.id) return;
     setEntregando(alerta.id);
     try {
-      await ordenesService.actualizarEstadoPreparacion(
-        alerta.accion.ordenId, alerta.accion.detalleId, "entregado"
-      );
+      if ("comandaId" in alerta.accion) {
+        await comandasService.entregar(alerta.accion.comandaId);
+      } else {
+        await ordenesService.actualizarEstadoPreparacion(
+          alerta.accion.ordenId, alerta.accion.detalleId, "entregado"
+        );
+      }
       setAlertasListo((prev) => prev.filter((a) => a.id !== alerta.id));
     } catch {
       // se queda en la lista — el mesero puede reintentar

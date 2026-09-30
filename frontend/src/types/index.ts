@@ -348,6 +348,26 @@ export interface DetalleQR {
 
 export type EstadoComanda = "pendiente" | "en_preparacion" | "lista" | "entregada";
 
+/** Una comanda en el tablero de Cocina (sin precios). */
+export interface ComandaCocina {
+  id: number;
+  numero: number;
+  origen: "mesero" | "qr";
+  estado: EstadoComanda;
+  creada_en: string;
+  iniciada_en: string | null;
+  lista_en: string | null;
+  orden_id: number;
+  mesa_numero: number | null;
+  tipo_orden: TipoOrden;
+  tipo_orden_display: string;
+  cliente_nombre: string;
+  mesero: string;
+  /** Segundos transcurridos según el reloj del servidor al responder. */
+  segundos: { desde_creada: number; desde_iniciada: number | null; desde_lista: number | null };
+  detalles: DetalleCocina[];
+}
+
 /** Cada envío a Cocina (ronda) del pedido de la mesa. */
 export interface ComandaQR {
   numero: number;
