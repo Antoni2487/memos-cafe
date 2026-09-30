@@ -1,41 +1,87 @@
-import { useEffect, type ReactNode, type FormEvent, type MouseEvent } from "react";
+import { useEffect, useRef, type ReactNode, type FormEvent, type MouseEvent } from "react";
+import { AlertTriangle, X } from "lucide-react";
 
-// ─── Base del modal (shared) ──────────────────────────────────────────────────
+// ─── Base del modal ───────────────────────────────────────────────────────────
+// En el celular sube desde abajo como una hoja (al alcance del pulgar, como
+// en una app). En tablet y computadora es un cuadro centrado.
 interface ModalBaseProps {
   children: ReactNode;
   onClose?: () => void;
   maxWidth?: string;
+  etiqueta?: string;
 }
 
-function ModalBase({ children, onClose, maxWidth = "420px" }: ModalBaseProps) {
-  // Cierra con Escape
+function ModalBase({ children, onClose, maxWidth = "420px", etiqueta }: ModalBaseProps) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  // Los que usan el modal suelen pasar onClose como flecha nueva en cada
+  // render: se guarda en un ref para que el efecto corra una sola vez (si no,
+  // el foco saltaria al panel cada vez que el usuario escribe en un campo).
+  const onCloseRef = useRef(onClose);
+  useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
+
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose?.(); };
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onCloseRef.current?.(); };
     document.addEventListener("keydown", handler);
-    return () => document.removeEventListener("keydown", handler);
-  }, [onClose]);
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const previo = document.activeElement as HTMLElement | null;
+    panelRef.current?.focus();
+    return () => {
+      document.removeEventListener("keydown", handler);
+      document.body.style.overflow = overflow;
+      previo?.focus?.();
+    };
+  }, []);
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6 overflow-y-auto"
-      style={{ backgroundColor: "rgba(0,0,0,0.4)", backdropFilter: "blur(2px)" }}
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-espresso/40 backdrop-blur-[2px] sm:p-6 animate-in fade-in-0 duration-150"
       onClick={(e: MouseEvent<HTMLDivElement>) => { if (e.target === e.currentTarget) onClose?.(); }}
     >
       <div
-        style={{
-          backgroundColor: "white",
-          borderRadius: "14px",
-          width: "100%",
-          maxWidth,
-          maxHeight: "calc(100vh - 48px)",
-          display: "flex",
-          flexDirection: "column",
-          boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
-          overflow: "hidden",
-        }}
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={etiqueta}
+        tabIndex={-1}
+        className="flex w-full flex-col overflow-hidden bg-marfil shadow-alta outline-none rounded-t-3xl sm:rounded-2xl max-h-[92dvh] sm:max-h-[calc(100dvh-48px)] animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-2 sm:zoom-in-95 duration-200"
+        style={{ maxWidth }}
       >
+        <div className="sm:hidden mx-auto mt-2.5 h-1.5 w-10 shrink-0 rounded-full bg-linea-fuerte" aria-hidden />
         {children}
       </div>
+    </div>
+  );
+}
+
+function Cabecera({ titulo, onCerrar }: { titulo?: string; onCerrar?: () => void }) {
+  return (
+    <div className="flex shrink-0 items-center justify-between gap-3 border-b border-linea px-5 sm:px-6 py-3.5 sm:py-4">
+      <h3 className="font-display text-lg font-semibold text-espresso leading-tight">{titulo}</h3>
+      <button
+        type="button"
+        onClick={onCerrar}
+        aria-label="Cerrar"
+        className="grid size-9 shrink-0 place-items-center rounded-full text-suave hover:bg-arena transition-colors"
+      >
+        <X className="size-4.5" />
+      </button>
+    </div>
+  );
+}
+
+const btnSecundario =
+  "flex-1 h-12 sm:h-11 rounded-xl border border-linea-fuerte bg-marfil text-[15px] sm:text-sm font-semibold text-espresso hover:bg-arena transition-colors disabled:opacity-60 disabled:cursor-not-allowed";
+const btnPrimario =
+  "flex-1 h-12 sm:h-11 rounded-xl text-[15px] sm:text-sm font-semibold text-marfil transition-colors disabled:opacity-60 disabled:cursor-not-allowed";
+
+function Pie({ children }: { children: ReactNode }) {
+  return (
+    <div
+      className="flex shrink-0 gap-3 border-t border-linea px-5 sm:px-6 pt-3.5 sm:py-4"
+      style={{ paddingBottom: "max(14px, env(safe-area-inset-bottom))" }}
+    >
+      {children}
     </div>
   );
 }
@@ -54,6 +100,12 @@ interface ConfirmDialogProps {
   onCancelar?: () => void;
 }
 
+const VARIANTES: Record<Variante, { boton: string; icono: string }> = {
+  danger: { boton: "bg-peligro hover:bg-peligro/90", icono: "bg-peligro-fondo text-peligro" },
+  warning: { boton: "bg-aviso hover:bg-aviso/90", icono: "bg-aviso-fondo text-aviso" },
+  primary: { boton: "bg-salvia hover:bg-salvia-osc", icono: "bg-salvia-clara text-salvia-osc" },
+};
+
 export function ConfirmDialog({
   abierto,
   titulo,
@@ -66,79 +118,27 @@ export function ConfirmDialog({
   onCancelar,
 }: ConfirmDialogProps) {
   if (!abierto) return null;
-
-  const colores: Record<Variante, { bg: string; hover: string; icon: string; iconColor: string }> = {
-    danger: { bg: "#c62828", hover: "#b71c1c", icon: "#fdecea", iconColor: "#c62828" },
-    warning: { bg: "#f57f17", hover: "#e65100", icon: "#fff8e1", iconColor: "#f57f17" },
-    primary: { bg: "#2C5545", hover: "#1E4A37", icon: "rgba(44,85,69,0.1)", iconColor: "#2C5545" },
-  };
-  const c = colores[variante] ?? colores.danger;
+  const v = VARIANTES[variante] ?? VARIANTES.danger;
 
   return (
-    <ModalBase onClose={onCancelar} maxWidth="400px">
-      <div className="p-6">
-        {/* Ícono */}
-        <div
-          className="flex items-center justify-center mx-auto mb-4"
-          style={{ width: 52, height: 52, borderRadius: "50%", backgroundColor: c.icon }}
-        >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={c.iconColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-            <line x1="12" y1="9" x2="12" y2="13" />
-            <line x1="12" y1="17" x2="12.01" y2="17" />
-          </svg>
+    <ModalBase onClose={onCancelar} maxWidth="400px" etiqueta={titulo}>
+      <div className="px-6 pt-6 pb-2 text-center">
+        <div className={`mx-auto mb-4 grid size-13 place-items-center rounded-full ${v.icono}`}>
+          <AlertTriangle className="size-6" strokeWidth={1.8} />
         </div>
-
-        {/* Texto */}
-        <h3
-          className="text-center"
-          style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "17px", fontWeight: 600, color: "#2C5545", margin: "0 0 8px 0" }}
-        >
-          {titulo}
-        </h3>
+        <h3 className="font-display text-lg font-semibold text-espresso">{titulo}</h3>
         {descripcion && (
-          <p
-            className="text-center whitespace-pre-line"
-            style={{
-              fontFamily: "'Lato', sans-serif",
-              fontSize: "13.5px",
-              color: "#666",
-              margin: "0 0 20px 0",
-              lineHeight: 1.5,
-            }}
-          >
-            {descripcion}
-          </p>
+          <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-suave">{descripcion}</p>
         )}
-
-        {/* Botones */}
-        <div className="flex gap-3">
-          <button
-            onClick={onCancelar}
-            disabled={cargando}
-            style={{
-              flex: 1, padding: "10px", borderRadius: "8px",
-              border: "1px solid rgba(44,85,69,0.2)", backgroundColor: "white",
-              fontFamily: "'Lato', sans-serif", fontSize: "13px", fontWeight: 600,
-              color: "#555", cursor: cargando ? "not-allowed" : "pointer",
-            }}
-          >
-            {textoCancelar}
-          </button>
-          <button
-            onClick={onConfirmar}
-            disabled={cargando}
-            style={{
-              flex: 1, padding: "10px", borderRadius: "8px",
-              border: "none", backgroundColor: cargando ? "#aaa" : c.bg,
-              fontFamily: "'Lato', sans-serif", fontSize: "13px", fontWeight: 600,
-              color: "white", cursor: cargando ? "not-allowed" : "pointer",
-            }}
-          >
-            {cargando ? "Procesando..." : textoOk}
-          </button>
-        </div>
       </div>
+      <Pie>
+        <button type="button" onClick={onCancelar} disabled={cargando} className={btnSecundario}>
+          {textoCancelar}
+        </button>
+        <button type="button" onClick={onConfirmar} disabled={cargando} className={`${btnPrimario} ${v.boton}`}>
+          {cargando ? "Procesando…" : textoOk}
+        </button>
+      </Pie>
     </ModalBase>
   );
 }
@@ -172,72 +172,20 @@ export function FormModal({
   };
 
   return (
-    <ModalBase onClose={onCerrar} maxWidth={maxWidth}>
-      {/* Header */}
-      <div
-        className="flex items-center justify-between px-6 py-4 shrink-0"
-        style={{ borderBottom: "1px solid rgba(44,85,69,0.1)" }}
-      >
-        <h3
-          style={{
-            fontFamily: "'Playfair Display', Georgia, serif",
-            fontSize: "17px", fontWeight: 600,
-            color: "#2C5545", margin: 0,
-          }}
-        >
-          {titulo}
-        </h3>
-        <button
-          onClick={onCerrar}
-          style={{
-            background: "none", border: "none", cursor: "pointer",
-            color: "#999", padding: "4px", borderRadius: "6px",
-          }}
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-            <line x1="18" y1="6" x2="6" y2="18" />
-            <line x1="6" y1="6" x2="18" y2="18" />
-          </svg>
-        </button>
-      </div>
-
-      {/* Formulario */}
-      <form onSubmit={handleSubmit} className="flex flex-col min-h-0" style={{ flex: 1 }}>
-        <div className="px-6 py-5 flex flex-col gap-4 overflow-y-auto" style={{ flex: 1, minHeight: 0 }}>
+    <ModalBase onClose={onCerrar} maxWidth={maxWidth} etiqueta={titulo}>
+      <Cabecera titulo={titulo} onCerrar={onCerrar} />
+      <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-5 sm:px-6 py-5">
           {children}
         </div>
-
-        {/* Footer */}
-        <div
-          className="flex gap-3 px-6 py-4 shrink-0"
-          style={{ borderTop: "1px solid rgba(44,85,69,0.1)" }}
-        >
-          <button
-            type="button"
-            onClick={onCerrar}
-            disabled={cargando}
-            style={{
-              flex: 1, padding: "10px", borderRadius: "8px",
-              border: "1px solid rgba(44,85,69,0.2)", backgroundColor: "white",
-              fontFamily: "'Lato', sans-serif", fontSize: "13px", fontWeight: 600,
-              color: "#555", cursor: cargando ? "not-allowed" : "pointer",
-            }}
-          >
+        <Pie>
+          <button type="button" onClick={onCerrar} disabled={cargando} className={btnSecundario}>
             Cancelar
           </button>
-          <button
-            type="submit"
-            disabled={cargando}
-            style={{
-              flex: 1, padding: "10px", borderRadius: "8px",
-              border: "none", backgroundColor: cargando ? "#aaa" : "#2C5545",
-              fontFamily: "'Lato', sans-serif", fontSize: "13px", fontWeight: 600,
-              color: "white", cursor: cargando ? "not-allowed" : "pointer",
-            }}
-          >
-            {cargando ? "Guardando..." : textoGuardar}
+          <button type="submit" disabled={cargando} className={`${btnPrimario} bg-salvia hover:bg-salvia-osc`}>
+            {cargando ? "Guardando…" : textoGuardar}
           </button>
-        </div>
+        </Pie>
       </form>
     </ModalBase>
   );
@@ -255,35 +203,12 @@ export function DetailModal({ abierto, titulo, onCerrar, maxWidth = "480px", chi
   if (!abierto) return null;
 
   return (
-    <ModalBase onClose={onCerrar} maxWidth={maxWidth}>
+    <ModalBase onClose={onCerrar} maxWidth={maxWidth} etiqueta={titulo}>
+      <Cabecera titulo={titulo} onCerrar={onCerrar} />
       <div
-        className="flex items-center justify-between px-6 py-4 shrink-0"
-        style={{ borderBottom: "1px solid rgba(44,85,69,0.1)" }}
+        className="flex min-h-0 flex-col gap-3 overflow-y-auto px-5 sm:px-6 pt-5"
+        style={{ paddingBottom: "max(20px, env(safe-area-inset-bottom))" }}
       >
-        <h3
-          style={{
-            fontFamily: "'Playfair Display', Georgia, serif",
-            fontSize: "17px", fontWeight: 600,
-            color: "#2C5545", margin: 0,
-          }}
-        >
-          {titulo}
-        </h3>
-        <button
-          onClick={onCerrar}
-          style={{
-            background: "none", border: "none", cursor: "pointer",
-            color: "#999", padding: "4px", borderRadius: "6px",
-          }}
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-            <line x1="18" y1="6" x2="6" y2="18" />
-            <line x1="6" y1="6" x2="18" y2="18" />
-          </svg>
-        </button>
-      </div>
-
-      <div className="px-6 py-5 flex flex-col gap-3 overflow-y-auto" style={{ minHeight: 0 }}>
         {children}
       </div>
     </ModalBase>

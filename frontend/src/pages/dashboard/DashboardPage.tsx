@@ -25,15 +25,15 @@ import { useIsMobile } from "../../hooks/useMediaQuery";
 import type { DashboardCajaActiva, DashboardData, DashboardMesas } from "../../types";
 
 // --- Paleta de colores del proyecto ---
-const VERDE         = "#2C5545";
-const VERDE_CLARO   = "rgba(44,85,69,0.08)";
-const DORADO        = "#C9A84C";
+const VERDE         = "var(--salvia)";
+const VERDE_CLARO   = "rgba(76,107,101,0.08)";
+const DORADO        = "var(--champan)";
 
 const METODO_COLORES: Record<string, string> = {
-  efectivo: "#2C5545",
-  tarjeta:  "#C9A84C",
+  efectivo: "var(--salvia)",
+  tarjeta:  "var(--champan)",
   yape:     "#6B4FA0",
-  plin:     "#0EA5E9",
+  plin:     "var(--info)",
 };
 
 const METODO_LABELS: Record<string, string> = {
@@ -69,20 +69,20 @@ function TooltipVentas({ active, payload, label }: TooltipVentasProps) {
   return (
     <div
       style={{
-        backgroundColor: "white",
-        border: "1px solid rgba(44,85,69,0.15)",
+        backgroundColor: "var(--marfil)",
+        border: "1px solid var(--linea-fuerte)",
         borderRadius: 8,
         padding: "10px 14px",
         boxShadow: "0 4px 16px rgba(0,0,0,0.1)",
       }}
     >
-      <p style={{ fontFamily: "'Lato', sans-serif", fontSize: 11, color: VERDE, fontWeight: 700, margin: "0 0 4px" }}>
+      <p style={{ fontFamily: "var(--font-texto)", fontSize: 11, color: VERDE, fontWeight: 700, margin: "0 0 4px" }}>
         {label}
       </p>
-      <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 15, color: VERDE, margin: 0, fontWeight: 600 }}>
+      <p style={{ fontFamily: "var(--font-titulos)", fontSize: 15, color: VERDE, margin: 0, fontWeight: 600 }}>
         {formatSoles(payload[0]?.value ?? 0)}
       </p>
-      <p style={{ fontFamily: "'Lato', sans-serif", fontSize: 11, color: "rgba(44,85,69,0.6)", margin: "2px 0 0" }}>
+      <p style={{ fontFamily: "var(--font-texto)", fontSize: 11, color: "var(--suave)", margin: "2px 0 0" }}>
         {payload[1]?.value ?? 0} órdenes
       </p>
     </div>
@@ -107,10 +107,10 @@ function KPICard({ titulo, valor, subtitulo, icono: Icono, acento = false, delay
         backgroundColor: acento ? VERDE : "white",
         borderRadius: 14,
         padding: "20px 22px",
-        border: acento ? "none" : `1px solid rgba(201,168,76,0.2)`,
+        border: acento ? "none" : `1px solid rgba(140,108,58,0.2)`,
         boxShadow: acento
-          ? `0 8px 32px rgba(44,85,69,0.25)`
-          : `0 2px 12px rgba(44,85,69,0.06)`,
+          ? `0 8px 32px var(--linea-fuerte)`
+          : `0 2px 12px rgba(76,107,101,0.06)`,
         animation: `fadeUp 0.4s ease both`,
         animationDelay: `${delay}ms`,
       }}
@@ -118,12 +118,12 @@ function KPICard({ titulo, valor, subtitulo, icono: Icono, acento = false, delay
       <div className="flex items-start justify-between mb-4">
         <p
           style={{
-            fontFamily: "'Lato', sans-serif",
+            fontFamily: "var(--font-texto)",
             fontSize: 11,
             fontWeight: 700,
             letterSpacing: "0.08em",
             textTransform: "uppercase",
-            color: acento ? "rgba(255,255,255,0.65)" : "rgba(44,85,69,0.6)",
+            color: acento ? "rgba(255,255,255,0.65)" : "var(--suave)",
             margin: 0,
           }}
         >
@@ -143,7 +143,7 @@ function KPICard({ titulo, valor, subtitulo, icono: Icono, acento = false, delay
       <div>
         <p
           style={{
-            fontFamily: "'Playfair Display', serif",
+            fontFamily: "var(--font-titulos)",
             fontSize: 28,
             fontWeight: 600,
             color: acento ? "white" : VERDE,
@@ -156,9 +156,9 @@ function KPICard({ titulo, valor, subtitulo, icono: Icono, acento = false, delay
         {subtitulo && (
           <p
             style={{
-              fontFamily: "'Lato', sans-serif",
+              fontFamily: "var(--font-texto)",
               fontSize: 12,
-              color: acento ? "rgba(255,255,255,0.55)" : "rgba(44,85,69,0.55)",
+              color: acento ? "rgba(255,255,255,0.55)" : "var(--suave)",
               margin: 0,
             }}
           >
@@ -182,10 +182,10 @@ function Card({ titulo, children, accion, style = {} }: CardProps) {
   return (
     <div
       style={{
-        backgroundColor: "white",
+        backgroundColor: "var(--marfil)",
         borderRadius: 14,
-        border: "1px solid rgba(44,85,69,0.1)",
-        boxShadow: "0 2px 12px rgba(44,85,69,0.06)",
+        border: "1px solid rgba(76,107,101,0.1)",
+        boxShadow: "0 2px 12px rgba(76,107,101,0.06)",
         overflow: "hidden",
         ...style,
       }}
@@ -193,11 +193,11 @@ function Card({ titulo, children, accion, style = {} }: CardProps) {
       {titulo && (
         <div
           className="flex items-center justify-between px-5 py-4"
-          style={{ borderBottom: "1px solid rgba(44,85,69,0.07)" }}
+          style={{ borderBottom: "1px solid rgba(76,107,101,0.07)" }}
         >
           <h3
             style={{
-              fontFamily: "'Playfair Display', serif",
+              fontFamily: "var(--font-titulos)",
               fontSize: 15,
               fontWeight: 600,
               color: VERDE,
@@ -218,14 +218,14 @@ function Card({ titulo, children, accion, style = {} }: CardProps) {
 function MesasWidget({ mesas }: { mesas?: DashboardMesas }) {
   if (!mesas) return null;
   const items = [
-    { label: "Libres",    valor: mesas.libres,    color: "#2e7d32", bg: "#e8f5e9" },
-    { label: "Ocupadas",  valor: mesas.ocupadas,  color: "#c62828", bg: "#fdecea" },
-    { label: "Reservadas",valor: mesas.reservadas,color: "#f57f17", bg: "#fff8e1" },
+    { label: "Libres",    valor: mesas.libres,    color: "var(--exito)", bg: "var(--exito-fondo)" },
+    { label: "Ocupadas",  valor: mesas.ocupadas,  color: "var(--peligro)", bg: "var(--peligro-fondo)" },
+    { label: "Reservadas",valor: mesas.reservadas,color: "var(--aviso)", bg: "var(--aviso-fondo)" },
   ];
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between mb-1">
-        <span style={{ fontFamily: "'Lato', sans-serif", fontSize: 12, color: "rgba(44,85,69,0.6)" }}>
+        <span style={{ fontFamily: "var(--font-texto)", fontSize: 12, color: "var(--suave)" }}>
           Total: {mesas.total} mesas
         </span>
         <div className="flex rounded-full overflow-hidden" style={{ width: 100, height: 6 }}>
@@ -245,14 +245,14 @@ function MesasWidget({ mesas }: { mesas?: DashboardMesas }) {
         <div key={it.label} className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: it.color }} />
-            <span style={{ fontFamily: "'Lato', sans-serif", fontSize: 13, color: "#444" }}>
+            <span style={{ fontFamily: "var(--font-texto)", fontSize: 13, color: "var(--espresso)" }}>
               {it.label}
             </span>
           </div>
           <div className="flex items-center gap-2">
             <span
               style={{
-                fontFamily: "'Playfair Display', serif",
+                fontFamily: "var(--font-titulos)",
                 fontSize: 17,
                 fontWeight: 600,
                 color: VERDE,
@@ -262,7 +262,7 @@ function MesasWidget({ mesas }: { mesas?: DashboardMesas }) {
             </span>
             <span
               style={{
-                fontFamily: "'Lato', sans-serif",
+                fontFamily: "var(--font-texto)",
                 fontSize: 10,
                 color: it.color,
                 backgroundColor: it.bg,
@@ -284,8 +284,8 @@ function MesasWidget({ mesas }: { mesas?: DashboardMesas }) {
 function CajaWidget({ caja }: { caja?: DashboardCajaActiva | null }) {
   if (!caja) return (
     <div className="flex flex-col items-center justify-center py-6 gap-2">
-      <AlertCircle size={28} style={{ color: "rgba(44,85,69,0.3)" }} strokeWidth={1.5} />
-      <p style={{ fontFamily: "'Lato', sans-serif", fontSize: 13, color: "rgba(44,85,69,0.5)", margin: 0 }}>
+      <AlertCircle size={28} style={{ color: "var(--linea-fuerte)" }} strokeWidth={1.5} />
+      <p style={{ fontFamily: "var(--font-texto)", fontSize: 13, color: "var(--suave)", margin: 0 }}>
         No hay caja abierta
       </p>
     </div>
@@ -301,11 +301,11 @@ function CajaWidget({ caja }: { caja?: DashboardCajaActiva | null }) {
         <div
           style={{
             width: 8, height: 8, borderRadius: "50%",
-            backgroundColor: "#2e7d32",
-            boxShadow: "0 0 0 3px rgba(46,125,50,0.2)",
+            backgroundColor: "var(--exito)",
+            boxShadow: "0 0 0 3px rgba(59,107,74,0.2)",
           }}
         />
-        <span style={{ fontFamily: "'Lato', sans-serif", fontSize: 12, color: "#2e7d32", fontWeight: 600 }}>
+        <span style={{ fontFamily: "var(--font-texto)", fontSize: 12, color: "var(--exito)", fontWeight: 600 }}>
           Turno activo desde {apertura}
         </span>
       </div>
@@ -317,28 +317,28 @@ function CajaWidget({ caja }: { caja?: DashboardCajaActiva | null }) {
           padding: "12px 14px",
         }}
       >
-        <p style={{ fontFamily: "'Lato', sans-serif", fontSize: 11, color: "rgba(44,85,69,0.6)", margin: "0 0 2px", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700 }}>
+        <p style={{ fontFamily: "var(--font-texto)", fontSize: 11, color: "var(--suave)", margin: "0 0 2px", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700 }}>
           Cajero
         </p>
-        <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 15, fontWeight: 600, color: VERDE, margin: 0 }}>
+        <p style={{ fontFamily: "var(--font-titulos)", fontSize: 15, fontWeight: 600, color: VERDE, margin: 0 }}>
           {caja.cajero}
         </p>
       </div>
 
       <div className="flex gap-3">
         <div style={{ flex: 1, backgroundColor: VERDE_CLARO, borderRadius: 10, padding: "12px 14px" }}>
-          <p style={{ fontFamily: "'Lato', sans-serif", fontSize: 10, color: "rgba(44,85,69,0.6)", margin: "0 0 2px", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700 }}>
+          <p style={{ fontFamily: "var(--font-texto)", fontSize: 10, color: "var(--suave)", margin: "0 0 2px", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700 }}>
             Monto inicial
           </p>
-          <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 15, fontWeight: 600, color: VERDE, margin: 0 }}>
+          <p style={{ fontFamily: "var(--font-titulos)", fontSize: 15, fontWeight: 600, color: VERDE, margin: 0 }}>
             {formatSoles(caja.monto_inicial)}
           </p>
         </div>
         <div style={{ flex: 1, backgroundColor: VERDE_CLARO, borderRadius: 10, padding: "12px 14px" }}>
-          <p style={{ fontFamily: "'Lato', sans-serif", fontSize: 10, color: "rgba(44,85,69,0.6)", margin: "0 0 2px", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700 }}>
+          <p style={{ fontFamily: "var(--font-texto)", fontSize: 10, color: "var(--suave)", margin: "0 0 2px", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700 }}>
             Ventas turno
           </p>
-          <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 15, fontWeight: 600, color: VERDE, margin: 0 }}>
+          <p style={{ fontFamily: "var(--font-titulos)", fontSize: 15, fontWeight: 600, color: VERDE, margin: 0 }}>
             {formatSoles(caja.ventas_turno)}
           </p>
         </div>
@@ -391,7 +391,7 @@ export default function DashboardPage() {
           style={{
             backgroundColor: VERDE, color: "white", border: "none",
             borderRadius: 8, padding: "9px 18px", cursor: "pointer",
-            fontFamily: "'Lato', sans-serif", fontSize: 13, fontWeight: 600,
+            fontFamily: "var(--font-texto)", fontSize: 13, fontWeight: 600,
           }}
         >
           Reintentar
@@ -409,7 +409,7 @@ export default function DashboardPage() {
   const metodosPago = (data?.ventas_por_metodo ?? []).map((m) => ({
     name:  METODO_LABELS[m.metodo_pago] ?? m.metodo_pago,
     value: Number(m.total),
-    color: METODO_COLORES[m.metodo_pago] ?? "#aaa",
+    color: METODO_COLORES[m.metodo_pago] ?? "var(--tenue)",
   }));
 
   return (
@@ -423,10 +423,10 @@ export default function DashboardPage() {
   <div className="flex flex-col gap-5">
 
     <h2 style={{
-    fontFamily: "'Playfair Display', serif",
+    fontFamily: "var(--font-titulos)",
     fontSize: "1.5rem",
     fontWeight: 600,
-    color: "#2C5545",
+    color: "var(--espresso)",
     margin: 0,
   }}>
     Dashboard
@@ -442,7 +442,7 @@ export default function DashboardPage() {
           backgroundColor: VERDE_CLARO,
           border: "none", borderRadius: 8,
           padding: "7px 14px", cursor: recargando ? "not-allowed" : "pointer",
-          fontFamily: "'Lato', sans-serif", fontSize: 12,
+          fontFamily: "var(--font-texto)", fontSize: 12,
           color: VERDE, fontWeight: 600,
         }}
       >
@@ -506,7 +506,7 @@ export default function DashboardPage() {
           <Card titulo="Ventas de los últimos días">
             {ventasPorDia.length === 0 ? (
               <div className="flex items-center justify-center" style={{ height: 200 }}>
-                <p style={{ fontFamily: "'Lato', sans-serif", fontSize: 13, color: "rgba(44,85,69,0.4)" }}>
+                <p style={{ fontFamily: "var(--font-texto)", fontSize: 13, color: "var(--suave)" }}>
                   Sin datos de ventas aún
                 </p>
               </div>
@@ -519,14 +519,14 @@ export default function DashboardPage() {
                       <stop offset="95%" stopColor={VERDE} stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(44,85,69,0.08)" vertical={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(76,107,101,0.08)" vertical={false} />
                   <XAxis
                     dataKey="fecha"
-                    tick={{ fontFamily: "'Lato', sans-serif", fontSize: 11, fill: "rgba(44,85,69,0.5)" }}
+                    tick={{ fontFamily: "var(--font-texto)", fontSize: 11, fill: "var(--suave)" }}
                     axisLine={false} tickLine={false}
                   />
                   <YAxis
-                    tick={{ fontFamily: "'Lato', sans-serif", fontSize: 11, fill: "rgba(44,85,69,0.5)" }}
+                    tick={{ fontFamily: "var(--font-texto)", fontSize: 11, fill: "var(--suave)" }}
                     axisLine={false} tickLine={false}
                     tickFormatter={(v) => `S/${v}`}
                     width={55}
@@ -555,7 +555,7 @@ export default function DashboardPage() {
           <Card titulo="Métodos de pago">
             {metodosPago.length === 0 ? (
               <div className="flex items-center justify-center" style={{ height: 200 }}>
-                <p style={{ fontFamily: "'Lato', sans-serif", fontSize: 13, color: "rgba(44,85,69,0.4)" }}>
+                <p style={{ fontFamily: "var(--font-texto)", fontSize: 13, color: "var(--suave)" }}>
                   Sin pagos registrados
                 </p>
               </div>
@@ -579,8 +579,8 @@ export default function DashboardPage() {
                     <Tooltip
                       formatter={(v: number) => formatSoles(v)}
                       contentStyle={{
-                        fontFamily: "'Lato', sans-serif", fontSize: 12,
-                        borderRadius: 8, border: "1px solid rgba(44,85,69,0.15)",
+                        fontFamily: "var(--font-texto)", fontSize: 12,
+                        borderRadius: 8, border: "1px solid var(--linea-fuerte)",
                       }}
                     />
                   </PieChart>
@@ -590,9 +590,9 @@ export default function DashboardPage() {
                     <div key={m.name} className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: m.color }} />
-                        <span style={{ fontFamily: "'Lato', sans-serif", fontSize: 12, color: "#444" }}>{m.name}</span>
+                        <span style={{ fontFamily: "var(--font-texto)", fontSize: 12, color: "var(--espresso)" }}>{m.name}</span>
                       </div>
-                      <span style={{ fontFamily: "'Lato', sans-serif", fontSize: 12, fontWeight: 600, color: VERDE }}>
+                      <span style={{ fontFamily: "var(--font-texto)", fontSize: 12, fontWeight: 600, color: VERDE }}>
                         {formatSoles(m.value)}
                       </span>
                     </div>
@@ -609,7 +609,7 @@ export default function DashboardPage() {
           <Card titulo="Top productos hoy">
             {(data?.top_productos ?? []).length === 0 ? (
               <div className="flex items-center justify-center py-6">
-                <p style={{ fontFamily: "'Lato', sans-serif", fontSize: 13, color: "rgba(44,85,69,0.4)" }}>
+                <p style={{ fontFamily: "var(--font-texto)", fontSize: 13, color: "var(--suave)" }}>
                   Sin ventas registradas hoy
                 </p>
               </div>
@@ -622,9 +622,9 @@ export default function DashboardPage() {
                     <div key={i} className="flex items-center gap-3">
                       <span
                         style={{
-                          fontFamily: "'Playfair Display', serif",
+                          fontFamily: "var(--font-titulos)",
                           fontSize: 13, fontWeight: 600,
-                          color: i === 0 ? DORADO : "rgba(44,85,69,0.4)",
+                          color: i === 0 ? DORADO : "var(--suave)",
                           width: 18, textAlign: "center",
                         }}
                       >
@@ -632,10 +632,10 @@ export default function DashboardPage() {
                       </span>
                       <div style={{ flex: 1 }}>
                         <div className="flex items-center justify-between mb-1">
-                          <span style={{ fontFamily: "'Lato', sans-serif", fontSize: 13, color: "#333" }}>
+                          <span style={{ fontFamily: "var(--font-texto)", fontSize: 13, color: "var(--espresso)" }}>
                             {p.nombre}
                           </span>
-                          <span style={{ fontFamily: "'Lato', sans-serif", fontSize: 12, fontWeight: 600, color: VERDE }}>
+                          <span style={{ fontFamily: "var(--font-texto)", fontSize: 12, fontWeight: 600, color: VERDE }}>
                             {p.cantidad} uds.
                           </span>
                         </div>

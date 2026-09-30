@@ -1,30 +1,35 @@
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import PrivateRoute from "./PrivateRoute";
+import HomeRedirect from "./HomeRedirect";
 import { ROLES } from "../utils/constants";
 import Layout from "../components/layout/layout";
+import { LoadingSpinner } from "../components/common";
 
 // Pages
 import LoginPage from "../pages/auth/LoginPage";
-import DashboardPage from "../pages/dashboard/DashboardPage";
-import HomePage from "../pages/home/HomePage";
-import HomeRedirect from "./HomeRedirect";
-import MesasPage from "../pages/mesas/MesasPage";
-import OrdenesPage from "../pages/ordenes/OrdenesPage";
-import ComandaPage from "../pages/ordenes/ComandaPage";
-import ProductosPage from "../pages/productos/ProductosPage";
-import CajaPage from "../pages/caja/CajaPage";
-import ReportesPage from "../pages/reportes/ReportesPage";
-import InsumosPage from "../pages/insumos/InsumosPage";
-import UsuariosPage from "../pages/usuarios/UsuariosPage";
-import RolesPage from "../pages/roles/RolesPage";
-import CategoriaPage from "../pages/categorias/CategoriaPage";
-import PromocionesPage from "../pages/promociones/PromocionesPage";
-import CocinaPage from "../pages/cocina/CocinaPage";
-import PedidoQRPage from "../pages/pedido/PedidoQRPage";
+const DashboardPage = lazy(() => import("../pages/dashboard/DashboardPage"));
+const HomePage = lazy(() => import("../pages/home/HomePage"));
+const MesasPage = lazy(() => import("../pages/mesas/MesasPage"));
+const OrdenesPage = lazy(() => import("../pages/ordenes/OrdenesPage"));
+const ComandaPage = lazy(() => import("../pages/ordenes/ComandaPage"));
+const ProductosPage = lazy(() => import("../pages/productos/ProductosPage"));
+const CajaPage = lazy(() => import("../pages/caja/CajaPage"));
+const ReportesPage = lazy(() => import("../pages/reportes/ReportesPage"));
+const InsumosPage = lazy(() => import("../pages/insumos/InsumosPage"));
+const UsuariosPage = lazy(() => import("../pages/usuarios/UsuariosPage"));
+const RolesPage = lazy(() => import("../pages/roles/RolesPage"));
+const CategoriaPage = lazy(() => import("../pages/categorias/CategoriaPage"));
+const PromocionesPage = lazy(() => import("../pages/promociones/PromocionesPage"));
+const CocinaPage = lazy(() => import("../pages/cocina/CocinaPage"));
+const PedidoQRPage = lazy(() => import("../pages/pedido/PedidoQRPage"));
 
 export default function AppRouter() {
   return (
     <BrowserRouter>
+      {/* Cada pantalla se descarga al abrirla: el celular no baja los
+          gráficos de Reportes para abrir Mesas. */}
+      <Suspense fallback={<LoadingSpinner full />}>
       <Routes>
         {/* Pública */}
         <Route path="/login" element={<LoginPage />} />
@@ -82,6 +87,7 @@ export default function AppRouter() {
         <Route path="/" element={<HomeRedirect />} />
         <Route path="*" element={<HomeRedirect />} />
       </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 }

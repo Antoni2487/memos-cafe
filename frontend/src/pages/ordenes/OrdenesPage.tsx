@@ -26,21 +26,21 @@ const TIPO_TABS: { value: TipoOrden; label: string; Icon: LucideIcon }[] = [
 ];
 
 const COLOR = {
-  verde:    "#2C5545",
-  verdeOsc: "#1E4A37",
-  verdePal: "rgba(44,85,69,0.08)",
-  rojo:     "#d4183d",
-  rojoPal:  "rgba(212,24,61,0.08)",
-  dorado:   "#C9A84C",
-  gris:     "#f5f5f5",
-  borde:    "rgba(44,85,69,0.12)",
+  verde:    "var(--salvia)",
+  verdeOsc: "var(--salvia-osc)",
+  verdePal: "rgba(76,107,101,0.08)",
+  rojo:     "var(--peligro)",
+  rojoPal:  "rgba(163,58,44,0.08)",
+  dorado:   "var(--champan)",
+  gris:     "var(--arena)",
+  borde:    "rgba(76,107,101,0.12)",
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function estadoMesaColor(estado: string) {
-  if (estado === "libre")    return { bg: "#e8f5e9", color: "#2e7d32", borde: "#a5d6a7" };
-  if (estado === "ocupada")  return { bg: "#fdecea", color: "#c62828", borde: "#f5bfb7" };
-  return { bg: "#fff8e1", color: "#f57f17", borde: "#ffe082" };
+  if (estado === "libre")    return { bg: "var(--exito-fondo)", color: "var(--exito)", borde: "var(--exito-borde)" };
+  if (estado === "ocupada")  return { bg: "var(--peligro-fondo)", color: "var(--peligro)", borde: "var(--peligro-borde)" };
+  return { bg: "var(--aviso-fondo)", color: "var(--aviso)", borde: "var(--aviso-borde)" };
 }
 
 // ─── Card de mesa ─────────────────────────────────────────────────────────────
@@ -62,17 +62,17 @@ function MesaCard({ mesa, seleccionada, onClick }: { mesa: Mesa; seleccionada: b
       }}
     >
       <UtensilsCrossed size={20} color={seleccionada ? "white" : color} />
-      <span style={{ fontFamily: "'Lato',sans-serif", fontSize: 13, fontWeight: 700,
+      <span style={{ fontFamily: "var(--font-texto)", fontSize: 13, fontWeight: 700,
         color: seleccionada ? "white" : color }}>
         Mesa {mesa.numero}
       </span>
-      <span style={{ fontFamily: "'Lato',sans-serif", fontSize: 10, fontWeight: 600,
+      <span style={{ fontFamily: "var(--font-texto)", fontSize: 10, fontWeight: 600,
         color: seleccionada ? "rgba(255,255,255,0.8)" : color,
         textTransform: "uppercase", letterSpacing: "0.06em" }}>
         {mesa.estado}
       </span>
       {mesa.capacidad && (
-        <span style={{ fontFamily: "'Lato',sans-serif", fontSize: 10,
+        <span style={{ fontFamily: "var(--font-texto)", fontSize: 10,
           color: seleccionada ? "rgba(255,255,255,0.65)" : "rgba(0,0,0,0.4)" }}>
           {mesa.capacidad} personas
         </span>
@@ -96,7 +96,7 @@ function ProductoCard({ item, esPromo = false, onClick }: { item: CatalogoItem; 
     <button
       onClick={() => onClick(item, esPromo)}
       style={{
-        background: "white", border: `1.5px solid ${COLOR.borde}`,
+        background: "var(--marfil)", border: `1.5px solid ${COLOR.borde}`,
         borderRadius: 10, padding: "10px 10px 12px", cursor: "pointer",
         display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 4,
         textAlign: "left", transition: "all 0.15s", width: "100%", overflow: "hidden",
@@ -116,9 +116,9 @@ function ProductoCard({ item, esPromo = false, onClick }: { item: CatalogoItem; 
       ) : (
         <div style={{
           width: "100%", height: 72, borderRadius: 8, marginBottom: 2,
-          background: esPromo ? "rgba(201,168,76,0.14)" : COLOR.verdePal,
+          background: esPromo ? "rgba(140,108,58,0.14)" : COLOR.verdePal,
           display: "flex", alignItems: "center", justifyContent: "center",
-          fontFamily: "'Playfair Display',Georgia,serif", fontSize: 22, fontWeight: 700,
+          fontFamily: "var(--font-titulos)", fontSize: 22, fontWeight: 700,
           color: esPromo ? COLOR.dorado : COLOR.verde,
         }}>
           {item.nombre.charAt(0).toUpperCase()}
@@ -130,11 +130,11 @@ function ProductoCard({ item, esPromo = false, onClick }: { item: CatalogoItem; 
           Promo
         </span>
       )}
-      <span style={{ fontFamily: "'Lato',sans-serif", fontSize: 13, fontWeight: 600,
+      <span style={{ fontFamily: "var(--font-texto)", fontSize: 13, fontWeight: 600,
         color: COLOR.verde, lineHeight: 1.3 }}>
         {item.nombre}
       </span>
-      <span style={{ fontFamily: "'Lato',sans-serif", fontSize: 14, fontWeight: 700,
+      <span style={{ fontFamily: "var(--font-texto)", fontSize: 14, fontWeight: 700,
         color: COLOR.verde }}>
         S/ {precio.toFixed(2)}
       </span>
@@ -187,9 +187,9 @@ function CatalogoSelector({ productos, promociones, onAgregar, gridMinWidth = 15
             <button key={value} onClick={() => setTab(value as "productos" | "promociones")}
               style={{
                 padding: "6px 14px", borderRadius: 8, border: "none", cursor: "pointer",
-                fontFamily: "'Lato',sans-serif", fontSize: 12.5, fontWeight: 600,
+                fontFamily: "var(--font-texto)", fontSize: 12.5, fontWeight: 600,
                 background: tabActiva === value ? COLOR.verde : "transparent",
-                color: tabActiva === value ? "white" : "rgba(44,85,69,0.6)",
+                color: tabActiva === value ? "white" : "var(--suave)",
                 transition: "all 0.15s",
               }}>
               {label}
@@ -206,7 +206,7 @@ function CatalogoSelector({ productos, promociones, onAgregar, gridMinWidth = 15
                 <button key={cat} onClick={() => setCategFiltro(cat)}
                   style={{
                     padding: "5px 12px", borderRadius: 20, border: "none", cursor: "pointer",
-                    fontFamily: "'Lato',sans-serif", fontSize: 12, fontWeight: 600,
+                    fontFamily: "var(--font-texto)", fontSize: 12, fontWeight: 600,
                     background: categFiltro === cat ? COLOR.verde : COLOR.verdePal,
                     color: categFiltro === cat ? "white" : COLOR.verde,
                     transition: "all 0.15s",
@@ -219,7 +219,7 @@ function CatalogoSelector({ productos, promociones, onAgregar, gridMinWidth = 15
           )}
 
           {productosFiltrados.length === 0 ? (
-            <p style={{ fontFamily: "'Lato',sans-serif", fontSize: 13, color: "#999" }}>
+            <p style={{ fontFamily: "var(--font-texto)", fontSize: 13, color: "var(--tenue)" }}>
               {termino ? "Sin productos que coincidan con la búsqueda" : "Sin productos cargados aún"}
             </p>
           ) : (
@@ -233,7 +233,7 @@ function CatalogoSelector({ productos, promociones, onAgregar, gridMinWidth = 15
         </>
       ) : (
         promocionesFiltradas.length === 0 ? (
-          <p style={{ fontFamily: "'Lato',sans-serif", fontSize: 13, color: "#999" }}>
+          <p style={{ fontFamily: "var(--font-texto)", fontSize: 13, color: "var(--tenue)" }}>
             {termino ? "Sin promociones que coincidan con la búsqueda" : "Sin promociones disponibles"}
           </p>
         ) : (
@@ -519,7 +519,7 @@ export default function OrdenesPage() {
   // ── Render ────────────────────────────────────────────────────────────────────
   if (cargando) return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 300 }}>
-      <p style={{ fontFamily: "'Lato',sans-serif", color: COLOR.verde, fontSize: 14 }}>Cargando...</p>
+      <p style={{ fontFamily: "var(--font-texto)", color: COLOR.verde, fontSize: 14 }}>Cargando...</p>
     </div>
   );
 
@@ -537,10 +537,10 @@ export default function OrdenesPage() {
       <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center", justifyContent: "space-between",
         borderBottom: `1px solid ${COLOR.borde}`, paddingBottom: 16 }}>
         <div>
-          <h2 style={{ fontFamily: "'Playfair Display',Georgia,serif", fontSize: "1.5rem",
+          <h2 style={{ fontFamily: "var(--font-titulos)", fontSize: "1.5rem",
             fontWeight: 600, color: COLOR.verde, margin: 0 }}>Órdenes</h2>
-          <p style={{ fontFamily: "'Lato',sans-serif", fontSize: 13,
-            color: "rgba(44,85,69,0.6)", margin: "4px 0 0 0" }}>
+          <p style={{ fontFamily: "var(--font-texto)", fontSize: 13,
+            color: "var(--suave)", margin: "4px 0 0 0" }}>
             Creá y gestioná las órdenes del local
           </p>
         </div>
@@ -570,9 +570,9 @@ export default function OrdenesPage() {
                 style={{
                   display: "flex", alignItems: "center", gap: 6,
                   padding: "8px 16px", borderRadius: 8, border: "none", cursor: "pointer",
-                  fontFamily: "'Lato',sans-serif", fontSize: 13, fontWeight: 600,
+                  fontFamily: "var(--font-texto)", fontSize: 13, fontWeight: 600,
                   background: tipoOrden === value ? COLOR.verde : "transparent",
-                  color: tipoOrden === value ? "white" : "rgba(44,85,69,0.6)",
+                  color: tipoOrden === value ? "white" : "var(--suave)",
                   transition: "all 0.15s",
                 }}>
                 <Icon size={14} />
@@ -587,7 +587,7 @@ export default function OrdenesPage() {
               <p style={estilos.seccionLabel}>Seleccioná una mesa</p>
               {errForm.mesa && <p style={estilos.errorTxt}>{errForm.mesa}</p>}
               {mesas.length === 0 ? (
-                <p style={{ fontFamily: "'Lato',sans-serif", fontSize: 13, color: "#999" }}>
+                <p style={{ fontFamily: "var(--font-texto)", fontSize: 13, color: "var(--tenue)" }}>
                   Sin mesas disponibles
                 </p>
               ) : (
@@ -663,16 +663,16 @@ export default function OrdenesPage() {
         {/* ── Panel derecho: orden ── */}
         <div style={{
           position: isMobile ? "static" : "sticky", top: isMobile ? undefined : 20,
-          background: "white",
+          background: "var(--marfil)",
           border: `1.5px solid ${COLOR.borde}`, borderRadius: 14,
-          boxShadow: "0 4px 20px rgba(44,85,69,0.08)", overflow: "hidden"
+          boxShadow: "0 4px 20px rgba(76,107,101,0.08)", overflow: "hidden"
         }}>
 
           {/* Header panel */}
           <div style={{ background: COLOR.verde, padding: "14px 18px",
             display: "flex", alignItems: "center", gap: 8 }}>
             <ClipboardList size={16} color="white" />
-            <span style={{ fontFamily: "'Playfair Display',Georgia,serif",
+            <span style={{ fontFamily: "var(--font-titulos)",
               fontSize: 15, fontWeight: 600, color: "white" }}>
               {tipoOrden === TIPO_ORDEN.MESA && mesaSeleccionada
                 ? `Mesa ${mesaSeleccionada.numero}`
@@ -690,7 +690,7 @@ export default function OrdenesPage() {
                 const marcado = items.some((i) => i.key === key);
                 return (
                   <label key={d.id} style={{ display: "flex", alignItems: "center", gap: 6,
-                    fontFamily: "'Lato',sans-serif", fontSize: 12.5, fontWeight: 600,
+                    fontFamily: "var(--font-texto)", fontSize: 12.5, fontWeight: 600,
                     color: COLOR.verde, cursor: "pointer" }}>
                     <input type="checkbox" checked={marcado}
                       onChange={() => marcado ? quitarItem(key) : agregarItem(d, false)} />
@@ -705,9 +705,9 @@ export default function OrdenesPage() {
           <div style={{ padding: "12px 14px", minHeight: 200, maxHeight: isMobile ? "none" : 380, overflowY: isMobile ? "visible" : "auto" }}>
             {items.length === 0 ? (
               <div style={{ display: "flex", flexDirection: "column", alignItems: "center",
-                justifyContent: "center", height: 160, gap: 8, color: "rgba(44,85,69,0.35)" }}>
+                justifyContent: "center", height: 160, gap: 8, color: "var(--linea-fuerte)" }}>
                 <ShoppingBag size={32} />
-                <p style={{ fontFamily: "'Lato',sans-serif", fontSize: 13, margin: 0 }}>
+                <p style={{ fontFamily: "var(--font-texto)", fontSize: 13, margin: 0 }}>
                   Seleccioná productos del catálogo
                 </p>
               </div>
@@ -721,10 +721,10 @@ export default function OrdenesPage() {
                         <span style={{ fontSize: 9, fontWeight: 700, color: COLOR.dorado,
                           textTransform: "uppercase", letterSpacing: "0.06em" }}>Promo </span>
                       )}
-                      <p style={{ fontFamily: "'Lato',sans-serif", fontSize: 13,
+                      <p style={{ fontFamily: "var(--font-texto)", fontSize: 13,
                         fontWeight: 600, color: COLOR.verde, margin: 0 }}>{item.nombre}</p>
-                      <p style={{ fontFamily: "'Lato',sans-serif", fontSize: 12,
-                        color: "#888", margin: "2px 0 0 0" }}>
+                      <p style={{ fontFamily: "var(--font-texto)", fontSize: 12,
+                        color: "var(--tenue)", margin: "2px 0 0 0" }}>
                         S/ {item.precio.toFixed(2)} × {item.cantidad}
                       </p>
                     </div>
@@ -732,7 +732,7 @@ export default function OrdenesPage() {
                       <button onClick={() => cambiarCantidad(item.key, -1)} style={estilos.btnQty}>
                         <Minus size={12} />
                       </button>
-                      <span style={{ fontFamily: "'Lato',sans-serif", fontSize: 13,
+                      <span style={{ fontFamily: "var(--font-texto)", fontSize: 13,
                         fontWeight: 700, color: COLOR.verde, minWidth: 20, textAlign: "center" }}>
                         {item.cantidad}
                       </span>
@@ -754,24 +754,24 @@ export default function OrdenesPage() {
           <div style={{ borderTop: `1.5px solid ${COLOR.borde}`, padding: "12px 14px",
             display: "flex", flexDirection: "column", gap: 10 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontFamily: "'Lato',sans-serif", fontSize: 12,
-                fontWeight: 700, color: "rgba(44,85,69,0.6)", textTransform: "uppercase",
+              <span style={{ fontFamily: "var(--font-texto)", fontSize: 12,
+                fontWeight: 700, color: "var(--suave)", textTransform: "uppercase",
                 letterSpacing: "0.07em" }}>Total</span>
-              <span style={{ fontFamily: "'Playfair Display',Georgia,serif",
+              <span style={{ fontFamily: "var(--font-titulos)",
                 fontSize: 22, fontWeight: 700, color: COLOR.verde }}>
                 S/ {total.toFixed(2)}
               </span>
             </div>
             {errForm.api && <p style={estilos.errorTxt}>{errForm.api}</p>}
             {exitoMsg && (
-              <p style={{ fontFamily: "'Lato',sans-serif", fontSize: 12,
-                color: "#2e7d32", fontWeight: 600, margin: 0 }}>✓ {exitoMsg}</p>
+              <p style={{ fontFamily: "var(--font-texto)", fontSize: 12,
+                color: "var(--exito)", fontWeight: 600, margin: 0 }}>✓ {exitoMsg}</p>
             )}
             <button onClick={handleCrear} disabled={creando}
               style={{
                 width: "100%", padding: "12px", borderRadius: 10, border: "none",
-                background: creando ? "#aaa" : COLOR.verde, color: "white",
-                fontFamily: "'Lato',sans-serif", fontSize: 14, fontWeight: 700,
+                background: creando ? "var(--tenue)" : COLOR.verde, color: "white",
+                fontFamily: "var(--font-texto)", fontSize: 14, fontWeight: 700,
                 cursor: creando ? "not-allowed" : "pointer", transition: "background 0.15s",
               }}
               onMouseEnter={(e) => { if (!creando) e.currentTarget.style.background = COLOR.verdeOsc; }}
@@ -783,8 +783,8 @@ export default function OrdenesPage() {
               <button onClick={resetForm}
                 style={{ width: "100%", padding: "8px", borderRadius: 8,
                   border: `1px solid ${COLOR.borde}`, background: "transparent",
-                  fontFamily: "'Lato',sans-serif", fontSize: 12, fontWeight: 600,
-                  color: "rgba(44,85,69,0.5)", cursor: "pointer" }}>
+                  fontFamily: "var(--font-texto)", fontSize: 12, fontWeight: 600,
+                  color: "var(--suave)", cursor: "pointer" }}>
                 Limpiar
               </button>
             )}
@@ -793,12 +793,12 @@ export default function OrdenesPage() {
       </div>
 
       {/* ── Tabla de órdenes ── */}
-      <div style={{ background: "white", border: `1.5px solid ${COLOR.borde}`,
-        borderRadius: 14, overflow: "hidden", boxShadow: "0 2px 10px rgba(44,85,69,0.06)" }}>
+      <div style={{ background: "var(--marfil)", border: `1.5px solid ${COLOR.borde}`,
+        borderRadius: 14, overflow: "hidden", boxShadow: "0 2px 10px rgba(76,107,101,0.06)" }}>
         <div style={{ padding: "14px 20px", borderBottom: `1px solid ${COLOR.borde}`,
           display: "flex", alignItems: "center", gap: 8 }}>
           <ClipboardList size={16} color={COLOR.verde} />
-          <span style={{ fontFamily: "'Playfair Display',Georgia,serif",
+          <span style={{ fontFamily: "var(--font-titulos)",
             fontSize: 15, fontWeight: 600, color: COLOR.verde }}>
             Órdenes del día
           </span>
@@ -806,14 +806,14 @@ export default function OrdenesPage() {
 
         {ordenes.length === 0 ? (
           <div style={{ padding: 40, textAlign: "center",
-            fontFamily: "'Lato',sans-serif", fontSize: 13, color: "#999" }}>
+            fontFamily: "var(--font-texto)", fontSize: 13, color: "var(--tenue)" }}>
             Sin órdenes registradas hoy
           </div>
         ) : (
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 720 }}>
               <thead>
-                <tr style={{ background: "rgba(44,85,69,0.04)" }}>
+                <tr style={{ background: "rgba(76,107,101,0.04)" }}>
                   {[
                     { label: "#", cls: "" },
                     { label: "Tipo", cls: "" },
@@ -825,8 +825,8 @@ export default function OrdenesPage() {
                     { label: "Acciones", cls: "" },
                   ].map(({ label, cls }) => (
                     <th key={label} className={cls} style={{ padding: "10px 14px", textAlign: "left",
-                      fontFamily: "'Lato',sans-serif", fontSize: 11, fontWeight: 700,
-                      color: "rgba(44,85,69,0.6)", textTransform: "uppercase",
+                      fontFamily: "var(--font-texto)", fontSize: 11, fontWeight: 700,
+                      color: "var(--suave)", textTransform: "uppercase",
                       letterSpacing: "0.07em", borderBottom: `1px solid ${COLOR.borde}` }}>
                       {label}
                     </th>
@@ -836,29 +836,29 @@ export default function OrdenesPage() {
               <tbody>
                 {ordenes.map((orden, idx) => (
                   <tr key={orden.id}
-                    style={{ background: idx % 2 === 0 ? "white" : "rgba(44,85,69,0.015)",
+                    style={{ background: idx % 2 === 0 ? "white" : "rgba(76,107,101,0.015)",
                       borderBottom: `1px solid ${COLOR.borde}` }}>
                     <td style={estilos.td}>
-                      <span style={{ fontFamily: "'Lato',sans-serif", fontSize: 13,
+                      <span style={{ fontFamily: "var(--font-texto)", fontSize: 13,
                         fontWeight: 700, color: COLOR.verde }}>#{orden.id}</span>
                     </td>
                     <td style={estilos.td}>
-                      <span style={{ fontFamily: "'Lato',sans-serif", fontSize: 12,
-                        color: "#555" }}>{orden.tipo_orden_display || orden.tipo_orden}</span>
+                      <span style={{ fontFamily: "var(--font-texto)", fontSize: 12,
+                        color: "var(--suave)" }}>{orden.tipo_orden_display || orden.tipo_orden}</span>
                     </td>
                     <td style={estilos.td}>
-                      <span style={{ fontFamily: "'Lato',sans-serif", fontSize: 12, color: "#555" }}>
+                      <span style={{ fontFamily: "var(--font-texto)", fontSize: 12, color: "var(--suave)" }}>
                         {orden.mesa_numero ? `Mesa ${orden.mesa_numero}`
                           : orden.cliente_nombre || orden.plataforma_delivery || "—"}
                       </span>
                     </td>
                     <td className="hidden sm:table-cell" style={estilos.td}>
-                      <span style={{ fontFamily: "'Lato',sans-serif", fontSize: 12, color: "#555" }}>
+                      <span style={{ fontFamily: "var(--font-texto)", fontSize: 12, color: "var(--suave)" }}>
                         {orden.detalles?.length || 0}
                       </span>
                     </td>
                     <td style={estilos.td}>
-                      <span style={{ fontFamily: "'Lato',sans-serif", fontSize: 13,
+                      <span style={{ fontFamily: "var(--font-texto)", fontSize: 13,
                         fontWeight: 700, color: COLOR.verde }}>
                         S/ {parseFloat(String(orden.total)).toFixed(2)}
                       </span>
@@ -867,7 +867,7 @@ export default function OrdenesPage() {
                       <StatusBadge estado={orden.estado} />
                     </td>
                     <td className="hidden sm:table-cell" style={estilos.td}>
-                      <span style={{ fontFamily: "'Lato',sans-serif", fontSize: 11, color: "#888" }}>
+                      <span style={{ fontFamily: "var(--font-texto)", fontSize: 11, color: "var(--tenue)" }}>
                         {formatDateTime(orden.fecha_creacion)}
                       </span>
                     </td>
@@ -876,7 +876,7 @@ export default function OrdenesPage() {
                         <button
                           onClick={() => abrirVer(orden)}
                           title="Ver detalle"
-                          style={btnAccion("rgba(44,85,69,0.6)", "rgba(44,85,69,0.06)")}>
+                          style={btnAccion("var(--suave)", "rgba(76,107,101,0.06)")}>
                           <Eye size={13} />
                         </button>
                         {orden.estado === "abierta" && (
@@ -884,13 +884,13 @@ export default function OrdenesPage() {
                             <button
                               onClick={() => window.open(`/comanda/${orden.id}`, "_blank")}
                               title="Ver comanda"
-                              style={btnAccion(COLOR.verde, "rgba(44,85,69,0.08)")}>
+                              style={btnAccion(COLOR.verde, "rgba(76,107,101,0.08)")}>
                               <Printer size={13} />
                             </button>
                             <button
                               onClick={() => abrirEditar(orden)}
                               title="Editar orden"
-                              style={btnAccion(COLOR.dorado, "rgba(201,168,76,0.12)")}>
+                              style={btnAccion(COLOR.dorado, "rgba(140,108,58,0.12)")}>
                               <PenLine size={13} />
                             </button>
                             <button
@@ -915,18 +915,18 @@ export default function OrdenesPage() {
       {ordenEditar && (
         <div style={{
           position: "fixed", top: 0, right: 0, bottom: 0, width: drawerAncho,
-          background: "white", boxShadow: "-4px 0 30px rgba(0,0,0,0.12)",
+          background: "var(--marfil)", boxShadow: "-4px 0 30px rgba(0,0,0,0.12)",
           zIndex: 1000, display: "flex", flexDirection: "column", overflowY: "auto",
         }}>
           {/* Header drawer */}
           <div style={{ background: COLOR.verde, padding: "14px 18px",
             display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <div>
-              <p style={{ fontFamily: "'Playfair Display',Georgia,serif", fontSize: 15,
+              <p style={{ fontFamily: "var(--font-titulos)", fontSize: 15,
                 fontWeight: 600, color: "white", margin: 0 }}>
                 {drawerModo === "ver" ? "Detalle" : "Editar"} Orden #{ordenEditar.id}
               </p>
-              <p style={{ fontFamily: "'Lato',sans-serif", fontSize: 11,
+              <p style={{ fontFamily: "var(--font-texto)", fontSize: 11,
                 color: "rgba(255,255,255,0.7)", margin: "2px 0 0 0" }}>
                 {drawerModo === "ver"
                   ? `${ordenEditar.tipo_orden_display || ordenEditar.tipo_orden} · ${ordenEditar.estado}`
@@ -944,7 +944,7 @@ export default function OrdenesPage() {
           {/* Info orden en modo ver */}
           {drawerModo === "ver" && (
             <div style={{ padding: "12px 16px", borderBottom: `1px solid ${COLOR.borde}`,
-              background: "rgba(44,85,69,0.03)", display: "grid",
+              background: "rgba(76,107,101,0.03)", display: "grid",
               gridTemplateColumns: "auto 1fr", gap: "4px 12px" }}>
               {ordenEditar.mesa_numero && (
                 <>
@@ -981,7 +981,7 @@ export default function OrdenesPage() {
           <div style={{ padding: "14px 16px", borderBottom: `1px solid ${COLOR.borde}` }}>
             <p style={estilos.seccionLabel}>Ítems actuales</p>
             {ordenEditar.detalles?.length === 0 ? (
-              <p style={{ fontFamily: "'Lato',sans-serif", fontSize: 12, color: "#999" }}>Sin ítems</p>
+              <p style={{ fontFamily: "var(--font-texto)", fontSize: 12, color: "var(--tenue)" }}>Sin ítems</p>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                 {ordenEditar.detalles?.map((d) => (
@@ -989,17 +989,17 @@ export default function OrdenesPage() {
                     alignItems: "center", padding: "6px 0",
                     borderBottom: `1px solid ${COLOR.borde}` }}>
                     <div style={{ flex: 1 }}>
-                      <span style={{ fontFamily: "'Lato',sans-serif", fontSize: 12,
+                      <span style={{ fontFamily: "var(--font-texto)", fontSize: 12,
                         fontWeight: 600, color: COLOR.verde }}>
                         {d.cantidad}× {d.producto?.nombre || d.promocion?.nombre || `Ítem #${d.id}`}
                       </span>
                       {d.impreso && (
-                        <span style={{ marginLeft: 6, fontSize: 10, color: "#2e7d32",
+                        <span style={{ marginLeft: 6, fontSize: 10, color: "var(--exito)",
                           fontWeight: 700 }}>✓ enviado</span>
                       )}
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <span style={{ fontFamily: "'Lato',sans-serif", fontSize: 12, color: "#888" }}>
+                      <span style={{ fontFamily: "var(--font-texto)", fontSize: 12, color: "var(--tenue)" }}>
                         S/ {parseFloat(String(d.subtotal || 0)).toFixed(2)}
                       </span>
                       <button
@@ -1026,7 +1026,7 @@ export default function OrdenesPage() {
                   const marcado = itemsEditar.some((i) => i.key === key);
                   return (
                     <label key={d.id} style={{ display: "flex", alignItems: "center", gap: 6,
-                      fontFamily: "'Lato',sans-serif", fontSize: 12.5, fontWeight: 600,
+                      fontFamily: "var(--font-texto)", fontSize: 12.5, fontWeight: 600,
                       color: COLOR.verde, cursor: "pointer" }}>
                       <input type="checkbox" checked={marcado}
                         onChange={() => marcado ? quitarItemEditar(key) : agregarItemEditar(d, false)} />
@@ -1053,13 +1053,13 @@ export default function OrdenesPage() {
                   <div key={item.key} style={{ display: "flex", alignItems: "center",
                     gap: 8, marginBottom: 8 }}>
                     <div style={{ flex: 1 }}>
-                      <p style={{ fontFamily: "'Lato',sans-serif", fontSize: 12,
+                      <p style={{ fontFamily: "var(--font-texto)", fontSize: 12,
                         fontWeight: 600, color: COLOR.verde, margin: 0 }}>{item.nombre}</p>
                     </div>
                     <button onClick={() => cambiarCantidadEditar(item.key, -1)} style={estilos.btnQty}>
                       <Minus size={11} />
                     </button>
-                    <span style={{ fontFamily: "'Lato',sans-serif", fontSize: 13,
+                    <span style={{ fontFamily: "var(--font-texto)", fontSize: 13,
                       fontWeight: 700, color: COLOR.verde, minWidth: 18, textAlign: "center" }}>
                       {item.cantidad}
                     </span>
@@ -1076,15 +1076,15 @@ export default function OrdenesPage() {
           <div style={{ padding: "14px 16px", borderTop: `1.5px solid ${COLOR.borde}`,
             display: drawerModo === "ver" ? "none" : "flex", flexDirection: "column", gap: 8 }}>
             {editExito && (
-              <p style={{ fontFamily: "'Lato',sans-serif", fontSize: 12,
-                color: "#2e7d32", fontWeight: 600, margin: "0 0 8px 0" }}>✓ {editExito}</p>
+              <p style={{ fontFamily: "var(--font-texto)", fontSize: 12,
+                color: "var(--exito)", fontWeight: 600, margin: "0 0 8px 0" }}>✓ {editExito}</p>
             )}
             <button onClick={handleConfirmarEditar}
               disabled={agregando || itemsEditar.length === 0}
               style={{
                 width: "100%", padding: 12, borderRadius: 10, border: "none",
-                background: (agregando || itemsEditar.length === 0) ? "#aaa" : COLOR.verde,
-                color: "white", fontFamily: "'Lato',sans-serif", fontSize: 14,
+                background: (agregando || itemsEditar.length === 0) ? "var(--tenue)" : COLOR.verde,
+                color: "white", fontFamily: "var(--font-texto)", fontSize: 14,
                 fontWeight: 700, cursor: (agregando || itemsEditar.length === 0) ? "not-allowed" : "pointer",
               }}>
               {agregando ? "Agregando..." : `Agregar ${itemsEditar.length > 0 ? `(${itemsEditar.reduce((s,i)=>s+i.cantidad,0)} ítems)` : "ítems"}`}
@@ -1096,14 +1096,14 @@ export default function OrdenesPage() {
       {/* Total en modo ver */}
       {ordenEditar && drawerModo === "ver" && (
         <div style={{ position: "fixed", bottom: 0, right: 0, width: drawerAncho,
-          padding: "14px 18px", background: "white",
+          padding: "14px 18px", background: "var(--marfil)",
           borderTop: `2px solid ${COLOR.borde}`, zIndex: 1001,
           display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span style={{ fontFamily: "'Lato',sans-serif", fontSize: 11, fontWeight: 700,
-            color: "rgba(44,85,69,0.6)", textTransform: "uppercase", letterSpacing: "0.07em" }}>
+          <span style={{ fontFamily: "var(--font-texto)", fontSize: 11, fontWeight: 700,
+            color: "var(--suave)", textTransform: "uppercase", letterSpacing: "0.07em" }}>
             Total
           </span>
-          <span style={{ fontFamily: "'Playfair Display',Georgia,serif",
+          <span style={{ fontFamily: "var(--font-titulos)",
             fontSize: 22, fontWeight: 700, color: COLOR.verde }}>
             S/ {parseFloat(String(ordenEditar.total)).toFixed(2)}
           </span>
@@ -1132,36 +1132,36 @@ export default function OrdenesPage() {
 }
 
 const estilos: Record<string, CSSProperties> = {
-  seccion:      { background: "white", border: `1.5px solid rgba(44,85,69,0.12)`,
+  seccion:      { background: "var(--marfil)", border: `1.5px solid rgba(76,107,101,0.12)`,
     borderRadius: 12, padding: "16px 18px" },
-  seccionLabel: { fontFamily: "'Lato',sans-serif", fontSize: 11, fontWeight: 700,
-    color: "rgba(44,85,69,0.6)", textTransform: "uppercase", letterSpacing: "0.07em",
+  seccionLabel: { fontFamily: "var(--font-texto)", fontSize: 11, fontWeight: 700,
+    color: "var(--suave)", textTransform: "uppercase", letterSpacing: "0.07em",
     margin: "0 0 12px 0" },
-  inputLabel:   { fontFamily: "'Lato',sans-serif", fontSize: 11, fontWeight: 700,
-    color: "rgba(44,85,69,0.75)", textTransform: "uppercase", letterSpacing: "0.07em",
+  inputLabel:   { fontFamily: "var(--font-texto)", fontSize: 11, fontWeight: 700,
+    color: "var(--suave)", textTransform: "uppercase", letterSpacing: "0.07em",
     display: "block", marginBottom: 5 },
   input:        { width: "100%", padding: "9px 12px", borderRadius: 8,
-    border: "1px solid rgba(44,85,69,0.2)", fontFamily: "'Lato',sans-serif",
-    fontSize: 13.5, color: "#333", outline: "none", boxSizing: "border-box" },
+    border: "1px solid var(--linea-fuerte)", fontFamily: "var(--font-texto)",
+    fontSize: 13.5, color: "var(--espresso)", outline: "none", boxSizing: "border-box" },
   select:       { width: "100%", padding: "9px 12px", borderRadius: 8,
-    border: "1px solid rgba(44,85,69,0.2)", fontFamily: "'Lato',sans-serif",
-    fontSize: 13.5, color: "#333", outline: "none", boxSizing: "border-box",
+    border: "1px solid var(--linea-fuerte)", fontFamily: "var(--font-texto)",
+    fontSize: 13.5, color: "var(--espresso)", outline: "none", boxSizing: "border-box",
     cursor: "pointer" },
-  errorTxt:     { fontFamily: "'Lato',sans-serif", fontSize: 11.5, color: "#c62828", margin: "4px 0 0 0" },
+  errorTxt:     { fontFamily: "var(--font-texto)", fontSize: 11.5, color: "var(--peligro)", margin: "4px 0 0 0" },
   statPill:     { display: "flex", alignItems: "center", gap: 6, padding: "6px 12px",
-    background: "rgba(44,85,69,0.08)", borderRadius: 20,
-    fontFamily: "'Lato',sans-serif", fontSize: 12, fontWeight: 600, color: "rgba(44,85,69,0.8)" },
-  btnQty:       { width: 24, height: 24, borderRadius: 6, border: "1px solid rgba(44,85,69,0.2)",
-    background: "white", cursor: "pointer", display: "flex", alignItems: "center",
-    justifyContent: "center", color: "#2C5545" },
+    background: "rgba(76,107,101,0.08)", borderRadius: 20,
+    fontFamily: "var(--font-texto)", fontSize: 12, fontWeight: 600, color: "var(--suave)" },
+  btnQty:       { width: 24, height: 24, borderRadius: 6, border: "1px solid var(--linea-fuerte)",
+    background: "var(--marfil)", cursor: "pointer", display: "flex", alignItems: "center",
+    justifyContent: "center", color: "var(--salvia)" },
   btnDel:       { width: 24, height: 24, borderRadius: 6, border: "none",
-    background: "rgba(212,24,61,0.08)", cursor: "pointer", display: "flex",
-    alignItems: "center", justifyContent: "center", color: "#d4183d" },
+    background: "rgba(163,58,44,0.08)", cursor: "pointer", display: "flex",
+    alignItems: "center", justifyContent: "center", color: "var(--peligro)" },
   td:           { padding: "10px 14px", verticalAlign: "middle" },
-  infoDrawerLabel: { fontFamily: "'Lato',sans-serif", fontSize: 11, fontWeight: 700,
-    color: "rgba(44,85,69,0.6)", textTransform: "uppercase", letterSpacing: "0.06em",
+  infoDrawerLabel: { fontFamily: "var(--font-texto)", fontSize: 11, fontWeight: 700,
+    color: "var(--suave)", textTransform: "uppercase", letterSpacing: "0.06em",
     whiteSpace: "nowrap" },
-  infoDrawerVal:   { fontFamily: "'Lato',sans-serif", fontSize: 12, color: "#333" },
+  infoDrawerVal:   { fontFamily: "var(--font-texto)", fontSize: 12, color: "var(--espresso)" },
 };
 
 const btnAccion = (color: string, bg: string): CSSProperties => ({

@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { Columna } from "../../types";
+import { useIsMobile } from "../../hooks/useMediaQuery";
 import { LoadingSpinner, EmptyState } from "./LoadingSpinner-EmptyState";
 
 interface DataTableProps<T extends { id?: number | string }> {
@@ -13,6 +15,19 @@ interface DataTableProps<T extends { id?: number | string }> {
   textoVacio?: string;
 }
 
+function celda<T>(col: Columna<T>, fila: T): ReactNode {
+  if (col.render) return col.render(fila);
+  const valor = col.key ? (fila as Record<string, unknown>)[col.key] : undefined;
+  return String(valor ?? "—");
+}
+
+const esAcciones = (label: string) => label.trim() === "" || label.toLowerCase() === "acciones";
+
+/**
+ * Tabla en tablet y computadora. En el celular cada fila se vuelve una
+ * tarjeta: la primera columna es el título, las demás van como "dato: valor"
+ * y las acciones quedan abajo, a la mano.
+ */
 export default function DataTable<T extends { id?: number | string }>({
   columnas = [],
   datos = [],
@@ -23,150 +38,79 @@ export default function DataTable<T extends { id?: number | string }>({
   cargando = false,
   textoVacio = "Sin registros",
 }: DataTableProps<T>) {
+  const esMovil = useIsMobile();
   const totalPaginas = Math.ceil(total / porPagina);
 
+  const contenido = cargando ? (
+    <LoadingSpinner texto="Cargando datos…" />
+  ) : datos.length === 0 ? (
+    <EmptyState titulo={textoVacio} />
+  ) : null;
+
   return (
-    <div
-      style={{
-        backgroundColor: "white",
-        borderRadius: "12px",
-        border: "1px solid rgba(44,85,69,0.1)",
-        boxShadow: "0 2px 12px rgba(44,85,69,0.06)",
-        overflow: "hidden",
-      }}
-    >
-      {/* Tabla */}
-      <div style={{ overflowX: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
-          {/* Encabezado */}
-          <thead>
-            <tr style={{ borderBottom: "1px solid rgba(44,85,69,0.1)" }}>
-              {columnas.map((col, i) => (
-                <th
-                  key={i}
-                  style={{
-                    padding: "12px 16px",
-                    textAlign: "left",
-                    fontFamily: "'Lato', sans-serif",
-                    fontSize: "11px",
-                    fontWeight: 700,
-                    color: "rgba(44,85,69,0.7)",
-                    letterSpacing: "0.08em",
-                    textTransform: "uppercase",
-                    backgroundColor: "rgba(44,85,69,0.03)",
-                    whiteSpace: "nowrap",
-                    width: col.width ?? "auto",
-                  }}
-                >
-                  {col.label}
-                </th>
-              ))}
-            </tr>
-          </thead>
-
-          {/* Body */}
-          <tbody>
-            {cargando ? (
-              <tr>
-                <td colSpan={columnas.length} style={{ padding: 0 }}>
-                  <LoadingSpinner texto="Cargando datos..." />
-                </td>
+    <div className="overflow-hidden rounded-2xl border border-linea bg-marfil shadow-suave">
+      {esMovil ? (
+        contenido ?? <Tarjetas columnas={columnas} datos={datos} />
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-sm">
+            <thead>
+              <tr className="border-b border-linea bg-beige/60">
+                {columnas.map((col, i) => (
+                  <th
+                    key={i}
+                    scope="col"
+                    className="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold text-suave"
+                    style={{ width: col.width ?? "auto" }}
+                  >
+                    {col.label}
+                  </th>
+                ))}
               </tr>
-            ) : datos.length === 0 ? (
-              <tr>
-                <td colSpan={columnas.length} style={{ padding: 0 }}>
-                  <EmptyState titulo={textoVacio} />
-                </td>
-              </tr>
-            ) : (
-              datos.map((fila, rowIdx) => (
-                <tr
-                  key={fila.id ?? rowIdx}
-                  style={{
-                    borderBottom: "1px solid rgba(44,85,69,0.06)",
-                    transition: "background-color 0.15s",
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "rgba(44,85,69,0.025)"}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
-                >
-                  {columnas.map((col, colIdx) => (
-                    <td
-                      key={colIdx}
-                      style={{
-                        padding: "12px 16px",
-                        fontFamily: "'Lato', sans-serif",
-                        fontSize: "13.5px",
-                        color: "#333",
-                        verticalAlign: "middle",
-                      }}
-                    >
-                      {col.render ? col.render(fila) : String((col.key ? (fila as Record<string, unknown>)[col.key] : undefined) ?? "—")}
-                    </td>
-                  ))}
+            </thead>
+            <tbody>
+              {contenido ? (
+                <tr>
+                  <td colSpan={columnas.length} className="p-0">{contenido}</td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Paginación */}
-      {!cargando && totalPaginas > 1 && (
-        <div
-          className="flex items-center justify-between px-4 py-3"
-          style={{ borderTop: "1px solid rgba(44,85,69,0.08)" }}
-        >
-          <p
-            style={{
-              fontFamily: "'Lato', sans-serif",
-              fontSize: "12px",
-              color: "rgba(44,85,69,0.6)",
-              margin: 0,
-            }}
-          >
-            {total} registro{total !== 1 ? "s" : ""} — página {pagina} de {totalPaginas}
-          </p>
-
-          <div className="flex items-center gap-1">
-            {/* Anterior */}
-            <PagBtn
-              onClick={() => onPagina?.(pagina - 1)}
-              disabled={pagina === 1}
-            >
-              ‹
-            </PagBtn>
-
-            {/* Números de página */}
-            {getPaginas(pagina, totalPaginas).map((p, i) =>
-              p === "…" ? (
-                <span
-                  key={i}
-                  style={{
-                    padding: "0 6px",
-                    fontFamily: "'Lato', sans-serif",
-                    fontSize: "13px",
-                    color: "rgba(44,85,69,0.4)",
-                  }}
-                >
-                  …
-                </span>
               ) : (
-                <PagBtn
-                  key={i}
-                  onClick={() => onPagina?.(p)}
-                  activo={p === pagina}
-                >
-                  {p}
-                </PagBtn>
-              )
-            )}
+                datos.map((fila, rowIdx) => (
+                  <tr key={fila.id ?? rowIdx} className="border-b border-linea/70 last:border-b-0 transition-colors hover:bg-beige/50">
+                    {columnas.map((col, colIdx) => (
+                      <td key={colIdx} className="px-4 py-3 align-middle text-espresso">
+                        {celda(col, fila)}
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
 
-            {/* Siguiente */}
-            <PagBtn
-              onClick={() => onPagina?.(pagina + 1)}
-              disabled={pagina === totalPaginas}
-            >
-              ›
+      {!cargando && totalPaginas > 1 && (
+        <div className="flex items-center justify-between gap-3 border-t border-linea px-4 py-3">
+          <p className="text-xs text-suave">
+            <span className="hidden sm:inline">{total} registro{total !== 1 ? "s" : ""} · </span>
+            Página {pagina} de {totalPaginas}
+          </p>
+          <div className="flex items-center gap-1">
+            <PagBtn onClick={() => onPagina?.(pagina - 1)} disabled={pagina === 1} etiqueta="Página anterior">
+              <ChevronLeft className="size-4" />
+            </PagBtn>
+            {!esMovil &&
+              getPaginas(pagina, totalPaginas).map((p, i) =>
+                p === "…" ? (
+                  <span key={i} className="px-1.5 text-sm text-suave">…</span>
+                ) : (
+                  <PagBtn key={i} onClick={() => onPagina?.(p)} activo={p === pagina} etiqueta={`Página ${p}`}>
+                    {p}
+                  </PagBtn>
+                )
+              )}
+            <PagBtn onClick={() => onPagina?.(pagina + 1)} disabled={pagina === totalPaginas} etiqueta="Página siguiente">
+              <ChevronRight className="size-4" />
             </PagBtn>
           </div>
         </div>
@@ -175,40 +119,60 @@ export default function DataTable<T extends { id?: number | string }>({
   );
 }
 
-// ─── Botón de paginación ──────────────────────────────────────────────────────
+function Tarjetas<T extends { id?: number | string }>({ columnas, datos }: { columnas: Columna<T>[]; datos: T[] }) {
+  const [principal, ...resto] = columnas;
+  const acciones = resto.filter((c) => esAcciones(c.label));
+  const datosCol = resto.filter((c) => !esAcciones(c.label));
+
+  return (
+    <ul className="divide-y divide-linea">
+      {datos.map((fila, i) => (
+        <li key={fila.id ?? i} className="flex flex-col gap-2.5 px-4 py-3.5">
+          {principal && <div className="font-medium text-espresso">{celda(principal, fila)}</div>}
+          {datosCol.length > 0 && (
+            <dl className="grid grid-cols-[auto_1fr] items-center gap-x-4 gap-y-1.5 text-sm">
+              {datosCol.map((col, j) => (
+                <div key={j} className="contents">
+                  <dt className="text-suave">{col.label}</dt>
+                  <dd className="min-w-0 text-right text-espresso">{celda(col, fila)}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
+          {acciones.map((col, j) => (
+            <div key={j} className="flex justify-end">{celda(col, fila)}</div>
+          ))}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 interface PagBtnProps {
   children: ReactNode;
   onClick: () => void;
   disabled?: boolean;
   activo?: boolean;
+  etiqueta: string;
 }
 
-function PagBtn({ children, onClick, disabled, activo }: PagBtnProps) {
+function PagBtn({ children, onClick, disabled, activo, etiqueta }: PagBtnProps) {
   return (
     <button
+      type="button"
       onClick={onClick}
       disabled={disabled}
-      style={{
-        minWidth: 30,
-        height: 30,
-        padding: "0 6px",
-        borderRadius: "6px",
-        border: activo ? "1px solid #2C5545" : "1px solid transparent",
-        backgroundColor: activo ? "#2C5545" : "transparent",
-        color: activo ? "white" : disabled ? "rgba(44,85,69,0.25)" : "#2C5545",
-        fontFamily: "'Lato', sans-serif",
-        fontSize: "13px",
-        fontWeight: activo ? 600 : 400,
-        cursor: disabled ? "not-allowed" : "pointer",
-        transition: "all 0.15s",
-      }}
+      aria-label={etiqueta}
+      aria-current={activo ? "page" : undefined}
+      className={`grid h-9 min-w-9 place-items-center rounded-lg px-2 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-35 ${
+        activo ? "bg-salvia font-semibold text-marfil" : "text-espresso hover:bg-arena"
+      }`}
     >
       {children}
     </button>
   );
 }
 
-// ─── Genera array de páginas con elipsis ─────────────────────────────────────
 function getPaginas(actual: number, total: number): (number | "…")[] {
   if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
   if (actual <= 4) return [1, 2, 3, 4, 5, "…", total];

@@ -44,7 +44,7 @@ function ItemCatalogo({
   return (
     <button
       onClick={onAgregar}
-      className="flex w-full flex-col items-start gap-1 overflow-hidden rounded-xl border border-brand/15 bg-white p-2.5 text-left shadow-card transition active:scale-[0.98]"
+      className="flex w-full flex-col items-start gap-1 overflow-hidden rounded-xl border border-brand/15 bg-marfil p-2.5 text-left shadow-card transition active:scale-[0.98]"
     >
       {imagen ? (
         <img src={imagen} alt={nombre} className="h-20 w-full rounded-lg object-cover" />
@@ -248,7 +248,7 @@ export default function PedidoQRPage() {
         {tuvoSesionActiva ? (
           <>
             <p className="font-display text-lg font-semibold text-brand">¡Gracias por tu visita!</p>
-            <p className="font-body text-sm text-brand/60">Esperamos que hayas disfrutado tu pedido en Memo's Café.</p>
+            <p className="font-body text-sm text-brand/60">Esperamos que hayas disfrutado tu pedido en Memo's Coffee.</p>
           </>
         ) : (
           <>
@@ -263,16 +263,16 @@ export default function PedidoQRPage() {
   return (
     <div className="min-h-screen bg-cream pb-28">
       <header className="sticky top-0 z-20 bg-brand px-4 py-3.5 shadow-card">
-        <p className="font-display text-lg font-semibold text-white">Mesa {mesaNumero} · Memo's Café</p>
+        <p className="font-display text-lg font-semibold text-white">Mesa {mesaNumero} · Memo's Coffee</p>
       </header>
 
       <main className="flex flex-col gap-5 px-4 py-4">
         {error && (
-          <div className="rounded-lg bg-red-50 px-3 py-2.5 font-body text-sm text-red-700">{error}</div>
+          <div className="rounded-lg bg-destructive/10 px-3 py-2.5 font-body text-sm text-destructive">{error}</div>
         )}
 
         {ordenActual && ordenActual.detalles.length > 0 && (
-          <section className="flex flex-col gap-2 rounded-xl bg-white p-3.5 shadow-card">
+          <section className="flex flex-col gap-2 rounded-xl bg-marfil p-3.5 shadow-card">
             <p className="font-display text-sm font-semibold text-brand">Tu pedido</p>
             {ordenActual.detalles.map((d) => (
               <div key={d.id} className="flex items-center justify-between gap-2 border-b border-brand/8 pb-2 last:border-0 last:pb-0">
@@ -311,7 +311,7 @@ export default function PedidoQRPage() {
                       className={`rounded-lg border py-1.5 font-body text-xs font-semibold ${
                         metodoPago === m.value
                           ? "border-brand bg-brand text-white"
-                          : "border-brand/20 bg-white text-brand"
+                          : "border-brand/20 bg-marfil text-brand"
                       }`}
                     >
                       {m.label}
@@ -337,7 +337,7 @@ export default function PedidoQRPage() {
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
             placeholder="Buscar producto o promoción..."
-            className="w-full rounded-lg border border-brand/20 bg-white px-3 py-2.5 font-body text-sm text-brand placeholder:text-brand/40 focus:border-brand focus:outline-none"
+            className="w-full rounded-lg border border-brand/20 bg-marfil px-3 py-2.5 font-body text-sm text-brand placeholder:text-brand/40 focus:border-brand focus:outline-none"
           />
 
           {promociones.length > 0 && (
@@ -404,7 +404,7 @@ export default function PedidoQRPage() {
 
       {/* Carrito — barra fija abajo, patrón de apps de delivery */}
       {carrito.length > 0 && (
-        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-brand/10 bg-white px-4 pb-[calc(env(safe-area-inset-bottom)+12px)] pt-3 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
+        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-brand/10 bg-marfil px-4 pb-[calc(env(safe-area-inset-bottom)+12px)] pt-3 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
           {carritoAbierto && (
             <div className="mb-3 flex max-h-[40vh] flex-col gap-2 overflow-y-auto">
               {carrito.map((i) => (

@@ -17,9 +17,9 @@ import type { MesaFormData } from "../../services/mesasService";
 const POR_PAGINA = 10;
 
 const ESTADO_COLOR: Record<string, { color: string; bg: string; label: string }> = {
-  libre:     { color: "#2e7d32", bg: "#e8f5e9", label: "Libre" },
-  ocupada:   { color: "#c62828", bg: "#fdecea", label: "Ocupada" },
-  reservada: { color: "#f57f17", bg: "#fff8e1", label: "Reservada" },
+  libre:     { color: "var(--exito)", bg: "var(--exito-fondo)", label: "Libre" },
+  ocupada:   { color: "var(--peligro)", bg: "var(--peligro-fondo)", label: "Ocupada" },
+  reservada: { color: "var(--aviso)", bg: "var(--aviso-fondo)", label: "Reservada" },
 };
 
 export default function MesasPage() {
@@ -141,8 +141,8 @@ export default function MesasPage() {
       label: "Mesa",
       width: "100px",
       render: (m) => (
-        <span style={{ fontFamily: "'Lato', sans-serif", fontSize: 13.5,
-          fontWeight: 600, color: "#2C5545" }}>
+        <span style={{ fontFamily: "var(--font-texto)", fontSize: 13.5,
+          fontWeight: 600, color: "var(--salvia)" }}>
           Mesa {m.numero}
         </span>
       ),
@@ -151,7 +151,7 @@ export default function MesasPage() {
       label: "Capacidad",
       width: "110px",
       render: (m) => (
-        <span style={{ fontFamily: "'Lato', sans-serif", fontSize: 13, color: "#555" }}>
+        <span style={{ fontFamily: "var(--font-texto)", fontSize: 13, color: "var(--suave)" }}>
           {m.capacidad} personas
         </span>
       ),
@@ -168,7 +168,7 @@ export default function MesasPage() {
             style={{
               backgroundColor: cfg.bg, color: cfg.color,
               border: `1px solid ${cfg.color}33`, borderRadius: 6,
-              padding: "5px 10px", fontFamily: "'Lato', sans-serif",
+              padding: "5px 10px", fontFamily: "var(--font-texto)",
               fontSize: 12, fontWeight: 600, cursor: "pointer",
             }}
           >
@@ -184,47 +184,47 @@ export default function MesasPage() {
       render: (m) => (
         <div className="flex items-center gap-1">
           <button onClick={() => setMesaVerQR(m)} title="Ver / imprimir el código QR de la mesa"
-            style={{ width: 30, height: 30, borderRadius: 6, border: "1px solid rgba(44,85,69,0.2)",
-              backgroundColor: "white", cursor: "pointer", display: "flex",
-              alignItems: "center", justifyContent: "center", color: "#2C5545" }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "rgba(44,85,69,0.08)"}
+            style={{ width: 30, height: 30, borderRadius: 6, border: "1px solid var(--linea-fuerte)",
+              backgroundColor: "var(--marfil)", cursor: "pointer", display: "flex",
+              alignItems: "center", justifyContent: "center", color: "var(--salvia)" }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "rgba(76,107,101,0.08)"}
             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "white"}>
             <ScanLine size={13} strokeWidth={2} />
           </button>
           {m.estado === "libre" && (
             <button onClick={() => handleAbrirQR(m)} title="Abrir para pedido por QR"
               disabled={abriendoQR === m.id}
-              style={{ width: 30, height: 30, borderRadius: 6, border: "1px solid rgba(201,168,76,0.4)",
-                backgroundColor: "white", cursor: abriendoQR === m.id ? "wait" : "pointer", display: "flex",
-                alignItems: "center", justifyContent: "center", color: "#9a7a1a" }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "rgba(201,168,76,0.1)"}
+              style={{ width: 30, height: 30, borderRadius: 6, border: "1px solid rgba(140,108,58,0.4)",
+                backgroundColor: "var(--marfil)", cursor: abriendoQR === m.id ? "wait" : "pointer", display: "flex",
+                alignItems: "center", justifyContent: "center", color: "var(--champan)" }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "rgba(140,108,58,0.1)"}
               onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "white"}>
               <QrCode size={13} strokeWidth={2} />
             </button>
           )}
           {m.estado === "ocupada" && (
             <button onClick={() => setMesaCancelarQR(m)} title="Cancelar sesión de QR (si no hay pedido en curso)"
-              style={{ width: 30, height: 30, borderRadius: 6, border: "1px solid rgba(201,168,76,0.4)",
-                backgroundColor: "white", cursor: "pointer", display: "flex",
-                alignItems: "center", justifyContent: "center", color: "#9a7a1a" }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "rgba(201,168,76,0.1)"}
+              style={{ width: 30, height: 30, borderRadius: 6, border: "1px solid rgba(140,108,58,0.4)",
+                backgroundColor: "var(--marfil)", cursor: "pointer", display: "flex",
+                alignItems: "center", justifyContent: "center", color: "var(--champan)" }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "rgba(140,108,58,0.1)"}
               onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "white"}>
               <XCircle size={13} strokeWidth={2} />
             </button>
           )}
           <button onClick={() => { setMesaEditar(m); setShowForm(true); }} title="Editar"
-            style={{ width: 30, height: 30, borderRadius: 6, border: "1px solid rgba(44,85,69,0.2)",
-              backgroundColor: "white", cursor: "pointer", display: "flex",
-              alignItems: "center", justifyContent: "center", color: "#2C5545" }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "rgba(44,85,69,0.08)"}
+            style={{ width: 30, height: 30, borderRadius: 6, border: "1px solid var(--linea-fuerte)",
+              backgroundColor: "var(--marfil)", cursor: "pointer", display: "flex",
+              alignItems: "center", justifyContent: "center", color: "var(--salvia)" }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "rgba(76,107,101,0.08)"}
             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "white"}>
             <Pencil size={13} strokeWidth={2} />
           </button>
           <button onClick={() => setMesaBaja(m)} title="Dar de baja"
-            style={{ width: 30, height: 30, borderRadius: 6, border: "1px solid rgba(198,40,40,0.2)",
-              backgroundColor: "white", cursor: "pointer", display: "flex",
-              alignItems: "center", justifyContent: "center", color: "#c62828" }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "rgba(198,40,40,0.06)"}
+            style={{ width: 30, height: 30, borderRadius: 6, border: "1px solid rgba(163,58,44,0.2)",
+              backgroundColor: "var(--marfil)", cursor: "pointer", display: "flex",
+              alignItems: "center", justifyContent: "center", color: "var(--peligro)" }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "rgba(163,58,44,0.06)"}
             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "white"}>
             <Trash2 size={13} strokeWidth={2} />
           </button>
@@ -240,8 +240,8 @@ export default function MesasPage() {
         descripcion="Administra las mesas del café y su disponibilidad"
         accion={
           <button onClick={() => { setMesaEditar(null); setShowForm(true); }}
-            style={{ backgroundColor: "#2C5545", color: "white", border: "none",
-              borderRadius: 8, padding: "9px 16px", fontFamily: "'Lato', sans-serif",
+            style={{ backgroundColor: "var(--salvia)", color: "white", border: "none",
+              borderRadius: 8, padding: "9px 16px", fontFamily: "var(--font-texto)",
               fontSize: 13, fontWeight: 600, cursor: "pointer",
               display: "flex", alignItems: "center", gap: 6 }}>
             <Plus size={15} strokeWidth={2.5} /> Nueva Mesa
@@ -250,7 +250,7 @@ export default function MesasPage() {
       />
 
       {errorQR && (
-        <div className="mb-4 rounded-lg bg-red-50 px-4 py-2.5 font-body text-sm text-red-700">
+        <div className="mb-4 rounded-lg bg-destructive/10 px-4 py-2.5 font-body text-sm text-destructive">
           {errorQR}
         </div>
       )}
@@ -305,7 +305,7 @@ export default function MesasPage() {
         titulo={`Mesa ${linkQR?.mesaNumero} lista para pedir por QR`}
         onCerrar={() => setLinkQR(null)}
       >
-        <p className="font-body text-sm text-[#555]">
+        <p className="font-body text-sm text-[var(--suave)]">
           El QR físico de esta mesa ya funciona. Para probarlo sin escanear, usá este link:
         </p>
         <div className="flex items-center gap-2 rounded-lg border border-brand/20 bg-cream px-3 py-2.5">

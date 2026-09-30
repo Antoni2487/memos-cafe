@@ -90,7 +90,7 @@ export default function ComandaPage() {
         {/* Encabezado */}
         <div style={estilos.encabezado}>
           <h1 style={estilos.titulo}>COMANDA</h1>
-          <p style={estilos.subtitulo}>Memos Café</p>
+          <p style={estilos.subtitulo}>Memo's Coffee</p>
           <div style={estilos.separador} />
           <div style={estilos.infoGrid}>
             <span style={estilos.infoLabel}>Orden</span>
@@ -186,24 +186,24 @@ export default function ComandaPage() {
 
 const estilos: Record<string, CSSProperties> = {
   pagina:          { maxWidth: "380px", margin: "0 auto", padding: "24px 16px", fontFamily: "'Courier New', Courier, monospace" },
-  centrado:        { textAlign: "center", padding: "40px", fontFamily: "'Lato', sans-serif", fontSize: "14px", color: "#666" },
+  centrado:        { textAlign: "center", padding: "40px", fontFamily: "var(--font-texto)", fontSize: "14px", color: "var(--suave)" },
   accionesPrint:   { marginBottom: "20px", display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" },
-  botonImprimir:   { padding: "12px 24px", borderRadius: "8px", border: "none", backgroundColor: "#2C5545", color: "white", fontFamily: "'Lato', sans-serif", fontSize: "14px", fontWeight: 700 },
-  botonVolver:     { padding: "8px 18px", borderRadius: "8px", border: "1px solid rgba(44,85,69,0.25)", backgroundColor: "transparent", color: "#2C5545", fontFamily: "'Lato', sans-serif", fontSize: "13px", fontWeight: 600, cursor: "pointer" },
-  avisoTodo:       { fontFamily: "'Lato', sans-serif", fontSize: "12px", color: "#888", margin: 0 },
+  botonImprimir:   { padding: "12px 24px", borderRadius: "8px", border: "none", backgroundColor: "var(--salvia)", color: "white", fontFamily: "var(--font-texto)", fontSize: "14px", fontWeight: 700 },
+  botonVolver:     { padding: "8px 18px", borderRadius: "8px", border: "1px solid var(--linea-fuerte)", backgroundColor: "transparent", color: "var(--salvia)", fontFamily: "var(--font-texto)", fontSize: "13px", fontWeight: 600, cursor: "pointer" },
+  avisoTodo:       { fontFamily: "var(--font-texto)", fontSize: "12px", color: "var(--tenue)", margin: 0 },
   comanda:         { border: "1px dashed #ccc", padding: "20px", borderRadius: "4px" },
   encabezado:      { textAlign: "center" },
   titulo:          { fontSize: "22px", fontWeight: 700, margin: "0 0 4px 0", letterSpacing: "0.1em" },
-  subtitulo:       { fontSize: "13px", margin: "0 0 12px 0", color: "#555" },
-  separador:       { borderTop: "1px dashed #aaa", margin: "12px 0" },
+  subtitulo:       { fontSize: "13px", margin: "0 0 12px 0", color: "var(--suave)" },
+  separador:       { borderTop: "1px dashed var(--tenue)", margin: "12px 0" },
   infoGrid:        { display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px 12px", textAlign: "left", fontSize: "12px" },
   infoLabel:       { fontWeight: 700, whiteSpace: "nowrap" },
-  infoValor:       { color: "#333" },
+  infoValor:       { color: "var(--espresso)" },
   seccionLabel:    { fontSize: "11px", fontWeight: 700, letterSpacing: "0.1em", margin: "0 0 8px 0" },
-  seccionLabelGris:{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.1em", margin: "0 0 8px 0", color: "#999" },
+  seccionLabelGris:{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.1em", margin: "0 0 8px 0", color: "var(--tenue)" },
   itemFila:        { display: "flex", alignItems: "flex-start", gap: "8px", marginBottom: "8px" },
   itemCantidad:    { fontWeight: 700, minWidth: "28px", fontSize: "14px" },
   itemNombre:      { fontSize: "14px", fontWeight: 600 },
-  itemNota:        { fontSize: "11px", color: "#666", margin: "2px 0 0 0" },
-  pie:             { textAlign: "center", fontSize: "11px", color: "#aaa", margin: 0 },
+  itemNota:        { fontSize: "11px", color: "var(--suave)", margin: "2px 0 0 0" },
+  pie:             { textAlign: "center", fontSize: "11px", color: "var(--tenue)", margin: 0 },
 };

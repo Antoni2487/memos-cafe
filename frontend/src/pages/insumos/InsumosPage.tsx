@@ -17,17 +17,17 @@ const inputStyle: CSSProperties = {
     width: "100%",
     padding: "9px 12px",
     borderRadius: "8px",
-    border: "1px solid rgba(44,85,69,0.2)",
-    fontFamily: "'Lato', sans-serif",
+    border: "1px solid var(--linea-fuerte)",
+    fontFamily: "var(--font-texto)",
     fontSize: "13.5px",
-    color: "#333",
+    color: "var(--espresso)",
     outline: "none",
 };
 const labelStyle: CSSProperties = {
-    fontFamily: "'Lato', sans-serif",
+    fontFamily: "var(--font-texto)",
     fontSize: "12px",
     fontWeight: 600,
-    color: "rgba(44,85,69,0.7)",
+    color: "var(--suave)",
     marginBottom: "4px",
     display: "block",
 };
@@ -45,12 +45,12 @@ function TabBtn({ activo, onClick, children }: TabBtnProps) {
             style={{
                 padding: "10px 18px",
                 border: "none",
-                borderBottom: activo ? "2px solid #2C5545" : "2px solid transparent",
+                borderBottom: activo ? "2px solid var(--salvia)" : "2px solid transparent",
                 backgroundColor: "transparent",
-                fontFamily: "'Lato', sans-serif",
+                fontFamily: "var(--font-texto)",
                 fontSize: "13.5px",
                 fontWeight: activo ? 700 : 500,
-                color: activo ? "#2C5545" : "rgba(44,85,69,0.55)",
+                color: activo ? "var(--salvia)" : "var(--suave)",
                 cursor: "pointer",
             }}
         >
@@ -213,8 +213,8 @@ export default function InsumosPage() {
             render: (i) => (
                 <span style={{
                     padding: "3px 10px", borderRadius: "999px", fontSize: "11.5px", fontWeight: 700,
-                    backgroundColor: i.stock_bajo ? "rgba(198,40,40,0.1)" : "rgba(44,85,69,0.1)",
-                    color: i.stock_bajo ? "#c62828" : "#2C5545",
+                    backgroundColor: i.stock_bajo ? "rgba(163,58,44,0.1)" : "rgba(76,107,101,0.1)",
+                    color: i.stock_bajo ? "var(--peligro)" : "var(--salvia)",
                 }}>
                     {i.stock_bajo ? "Stock bajo" : "OK"}
                 </span>
@@ -224,7 +224,7 @@ export default function InsumosPage() {
             key: "activo",
             label: "Activo",
             render: (i) => (
-                <span style={{ color: i.activo ? "#2e7d32" : "#999", fontWeight: 600, fontSize: "12.5px" }}>
+                <span style={{ color: i.activo ? "var(--exito)" : "var(--tenue)", fontWeight: 600, fontSize: "12.5px" }}>
                     {i.activo ? "Sí" : "No"}
                 </span>
             ),
@@ -236,13 +236,13 @@ export default function InsumosPage() {
                 <div className="flex gap-2">
                     <button
                         onClick={() => abrirEditarInsumo(i)}
-                        style={{ border: "none", background: "none", color: "#2C5545", fontSize: "12.5px", fontWeight: 600, cursor: "pointer" }}
+                        style={{ border: "none", background: "none", color: "var(--salvia)", fontSize: "12.5px", fontWeight: 600, cursor: "pointer" }}
                     >
                         Editar
                     </button>
                     <button
                         onClick={() => setInsumoAccion({ insumo: i, tipo: i.activo ? "desactivar" : "activar" })}
-                        style={{ border: "none", background: "none", color: i.activo ? "#c62828" : "#2e7d32", fontSize: "12.5px", fontWeight: 600, cursor: "pointer" }}
+                        style={{ border: "none", background: "none", color: i.activo ? "var(--peligro)" : "var(--exito)", fontSize: "12.5px", fontWeight: 600, cursor: "pointer" }}
                     >
                         {i.activo ? "Desactivar" : "Activar"}
                     </button>
@@ -263,19 +263,19 @@ export default function InsumosPage() {
     return (
         <div className="p-6 space-y-6">
             <div className="flex items-center justify-between">
-                <h1 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "24px", fontWeight: 600, color: "#2C5545" }}>
+                <h1 style={{ fontFamily: "var(--font-titulos)", fontSize: "24px", fontWeight: 600, color: "var(--espresso)" }}>
                     Gastos e Insumos
                 </h1>
                 <div className="flex gap-2">
                     <button
                         onClick={abrirCrearInsumo}
-                        style={{ padding: "9px 16px", borderRadius: "8px", border: "1px solid rgba(44,85,69,0.2)", backgroundColor: "white", fontFamily: "'Lato', sans-serif", fontSize: "13px", fontWeight: 600, color: "#2C5545", cursor: "pointer" }}
+                        style={{ padding: "9px 16px", borderRadius: "8px", border: "1px solid var(--linea-fuerte)", backgroundColor: "var(--marfil)", fontFamily: "var(--font-texto)", fontSize: "13px", fontWeight: 600, color: "var(--salvia)", cursor: "pointer" }}
                     >
                         + Nuevo insumo
                     </button>
                     <button
                         onClick={() => setModalGasto(true)}
-                        style={{ padding: "9px 16px", borderRadius: "8px", border: "none", backgroundColor: "#2C5545", fontFamily: "'Lato', sans-serif", fontSize: "13px", fontWeight: 600, color: "white", cursor: "pointer" }}
+                        style={{ padding: "9px 16px", borderRadius: "8px", border: "none", backgroundColor: "var(--salvia)", fontFamily: "var(--font-texto)", fontSize: "13px", fontWeight: 600, color: "white", cursor: "pointer" }}
                     >
                         + Registrar gasto
                     </button>
@@ -295,7 +295,7 @@ export default function InsumosPage() {
             </div>
 
             {/* Tabs */}
-            <div style={{ borderBottom: "1px solid rgba(44,85,69,0.1)" }} className="flex gap-1">
+            <div style={{ borderBottom: "1px solid rgba(76,107,101,0.1)" }} className="flex gap-1">
                 <TabBtn activo={tab === "catalogo"} onClick={() => setTab("catalogo")}>Catálogo</TabBtn>
                 <TabBtn activo={tab === "historial"} onClick={() => setTab("historial")}>Historial de gastos</TabBtn>
             </div>
@@ -349,7 +349,7 @@ export default function InsumosPage() {
                 cargando={guardando}
                 textoGuardar="Registrar"
             >
-                {error && <p style={{ color: "#c62828", fontSize: "13px", margin: 0 }}>{error}</p>}
+                {error && <p style={{ color: "var(--peligro)", fontSize: "13px", margin: 0 }}>{error}</p>}
 
                 <div>
                     <label style={labelStyle}>Insumo</label>
@@ -382,7 +382,7 @@ export default function InsumosPage() {
                     <input value={form.proveedor} onChange={(e) => setForm({ ...form, proveedor: e.target.value })}
                         onBlur={(e) => setErroresGasto((p) => ({ ...p, proveedor: validarCampoLibre(e.target.value) }))}
                         maxLength={LIMITES.PROVEEDOR} style={inputStyle} />
-                    {erroresGasto.proveedor && <p style={{ color: "#c62828", fontSize: "11.5px", margin: "3px 0 0" }}>{erroresGasto.proveedor}</p>}
+                    {erroresGasto.proveedor && <p style={{ color: "var(--peligro)", fontSize: "11.5px", margin: "3px 0 0" }}>{erroresGasto.proveedor}</p>}
                 </div>
 
                 <div>
@@ -390,7 +390,7 @@ export default function InsumosPage() {
                     <input value={form.observaciones} onChange={(e) => setForm({ ...form, observaciones: e.target.value })}
                         onBlur={(e) => setErroresGasto((p) => ({ ...p, observaciones: validarCampoLibre(e.target.value) }))}
                         maxLength={LIMITES.OBSERVACIONES} style={inputStyle} />
-                    {erroresGasto.observaciones && <p style={{ color: "#c62828", fontSize: "11.5px", margin: "3px 0 0" }}>{erroresGasto.observaciones}</p>}
+                    {erroresGasto.observaciones && <p style={{ color: "var(--peligro)", fontSize: "11.5px", margin: "3px 0 0" }}>{erroresGasto.observaciones}</p>}
                 </div>
             </FormModal>
 
@@ -404,7 +404,7 @@ export default function InsumosPage() {
                 textoGuardar={insumoEditando ? "Guardar cambios" : "Crear"}
                 maxWidth="400px"
             >
-                {error && <p style={{ color: "#c62828", fontSize: "13px", margin: 0 }}>{error}</p>}
+                {error && <p style={{ color: "var(--peligro)", fontSize: "13px", margin: 0 }}>{error}</p>}
                 <div>
                     <label style={labelStyle}>Nombre</label>
                     <input
@@ -416,7 +416,7 @@ export default function InsumosPage() {
                         maxLength={LIMITES.NOMBRE}
                         style={inputStyle}
                     />
-                    {erroresInsumo.nombre && <p style={{ color: "#c62828", fontSize: "11.5px", margin: "3px 0 0" }}>{erroresInsumo.nombre}</p>}
+                    {erroresInsumo.nombre && <p style={{ color: "var(--peligro)", fontSize: "11.5px", margin: "3px 0 0" }}>{erroresInsumo.nombre}</p>}
                 </div>
                 <div>
                     <label style={labelStyle}>Unidad</label>

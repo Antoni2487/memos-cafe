@@ -52,7 +52,7 @@ function TicketCard({ ticket, ahora, onAvanzar }: TicketCardProps) {
   const rondas = agruparPorRonda(ticket.detalles);
 
   return (
-    <div className="bg-white rounded-2xl shadow-card overflow-hidden flex flex-col">
+    <div className="bg-marfil rounded-2xl shadow-card overflow-hidden flex flex-col">
       <div className="flex items-center justify-between px-4 py-3 bg-brand">
         <div className="flex items-center gap-2 text-white font-body">
           <Icono size={18} strokeWidth={2} />
@@ -108,9 +108,9 @@ function TicketCard({ ticket, ahora, onAvanzar }: TicketCardProps) {
 }
 
 const ESTADO_CONEXION: Record<string, { color: string; label: string }> = {
-  conectado: { color: "#2e7d32", label: "En vivo" },
-  conectando: { color: "#f57f17", label: "Conectando…" },
-  reconectando: { color: "#c62828", label: "Reconectando…" },
+  conectado: { color: "var(--exito)", label: "En vivo" },
+  conectando: { color: "var(--aviso)", label: "Conectando…" },
+  reconectando: { color: "var(--peligro)", label: "Reconectando…" },
 };
 
 export default function CocinaPage() {
@@ -124,7 +124,7 @@ export default function CocinaPage() {
         titulo="Cocina"
         descripcion="Pedidos por preparar, en vivo"
         accion={
-          <div className="flex items-center gap-2 font-body text-xs" style={{ color: "#2C5545" }}>
+          <div className="flex items-center gap-2 font-body text-xs" style={{ color: "var(--salvia)" }}>
             <span
               className="inline-block h-2 w-2 rounded-full"
               style={{ backgroundColor: conexion.color }}
@@ -135,7 +135,7 @@ export default function CocinaPage() {
       />
 
       {error && (
-        <div className="mb-4 rounded-lg bg-red-50 px-4 py-2.5 font-body text-sm text-red-700">
+        <div className="mb-4 rounded-lg bg-destructive/10 px-4 py-2.5 font-body text-sm text-destructive">
           {error}
         </div>
       )}

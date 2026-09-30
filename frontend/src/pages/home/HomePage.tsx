@@ -4,9 +4,9 @@ import useHome from "../../hooks/useHome";
 import authService from "../../services/authService";
 
 const ESTADO_COLORES: Record<string, { bg: string; color: string; label: string }> = {
-  libre:     { bg: "rgba(44,85,69,0.1)",   color: "#2C5545",  label: "Libre" },
-  ocupada:   { bg: "rgba(198,40,40,0.1)",  color: "#c62828",  label: "Ocupada" },
-  reservada: { bg: "rgba(201,168,76,0.15)", color: "#9a7a1a", label: "Reservada" },
+  libre:     { bg: "rgba(76,107,101,0.1)",   color: "var(--salvia)",  label: "Libre" },
+  ocupada:   { bg: "rgba(163,58,44,0.1)",  color: "var(--peligro)",  label: "Ocupada" },
+  reservada: { bg: "rgba(140,108,58,0.15)", color: "var(--champan)", label: "Reservada" },
 };
 
 export default function HomePage() {
@@ -25,10 +25,10 @@ export default function HomePage() {
             onClick={cargar}
             style={{
               display: "flex", alignItems: "center", gap: 6,
-              backgroundColor: "white", color: "#2C5545",
-              border: "1px solid rgba(44,85,69,0.25)",
+              backgroundColor: "var(--marfil)", color: "var(--salvia)",
+              border: "1px solid var(--linea-fuerte)",
               borderRadius: "8px", padding: "8px 14px",
-              fontFamily: "'Lato', sans-serif", fontSize: "13px",
+              fontFamily: "var(--font-texto)", fontSize: "13px",
               fontWeight: 600, cursor: "pointer",
             }}
           >
@@ -40,11 +40,11 @@ export default function HomePage() {
 
       {error && (
         <div style={{
-          backgroundColor: "rgba(198,40,40,0.08)",
-          border: "1px solid rgba(198,40,40,0.25)",
+          backgroundColor: "rgba(163,58,44,0.08)",
+          border: "1px solid rgba(163,58,44,0.25)",
           borderRadius: "8px", padding: "10px 14px",
-          marginBottom: 16, fontFamily: "'Lato', sans-serif",
-          fontSize: "13px", color: "#c62828",
+          marginBottom: 16, fontFamily: "var(--font-texto)",
+          fontSize: "13px", color: "var(--peligro)",
         }}>
           ⚠ {error}
         </div>
@@ -71,13 +71,13 @@ export default function HomePage() {
 
       {/* Grid de mesas */}
       <div style={{
-        backgroundColor: "white", borderRadius: "12px",
-        border: "1px solid rgba(44,85,69,0.12)",
+        backgroundColor: "var(--marfil)", borderRadius: "12px",
+        border: "1px solid rgba(76,107,101,0.12)",
         padding: "20px",
       }}>
         <p style={{
-          fontFamily: "'Lato', sans-serif", fontSize: 13,
-          fontWeight: 700, color: "rgba(44,85,69,0.6)",
+          fontFamily: "var(--font-texto)", fontSize: 13,
+          fontWeight: 700, color: "var(--suave)",
           letterSpacing: "0.07em", textTransform: "uppercase",
           margin: "0 0 16px 0",
         }}>
@@ -92,10 +92,10 @@ export default function HomePage() {
                 borderRadius: "10px", padding: "12px 8px",
                 textAlign: "center",
               }}>
-                <p style={{ margin: 0, fontFamily: "'Lato', sans-serif", fontSize: 13, fontWeight: 700, color: c.color }}>
+                <p style={{ margin: 0, fontFamily: "var(--font-texto)", fontSize: 13, fontWeight: 700, color: c.color }}>
                   {mesa.numero ?? `#${mesa.id}`}
                 </p>
-                <p style={{ margin: "4px 0 0", fontFamily: "'Lato', sans-serif", fontSize: 10, color: c.color, opacity: 0.8, textTransform: "capitalize" }}>
+                <p style={{ margin: "4px 0 0", fontFamily: "var(--font-texto)", fontSize: 10, color: c.color, opacity: 0.8, textTransform: "capitalize" }}>
                   {c.label}
                 </p>
               </div>

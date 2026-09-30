@@ -15,15 +15,15 @@ import type { Orden, Pago, TipoComprobante, TipoMovimiento } from "../../types";
 const fmt = (n: number | string | undefined | null) => `S/ ${Number(n ?? 0).toFixed(2)}`;
 
 const C = {
-    verde: "#2C5545",
-    verdeOsc: "#1E4A37",
-    verdePal: "rgba(44,85,69,0.08)",
-    rojo: "#c62828",
-    rojoPal: "rgba(198,40,40,0.08)",
-    gris: "#6b7280",
-    amarillo: "#f59e0b",
-    bg: "rgba(44,85,69,0.06)",
-    borde: "rgba(44,85,69,0.2)",
+    verde: "var(--salvia)",
+    verdeOsc: "var(--salvia-osc)",
+    verdePal: "rgba(76,107,101,0.08)",
+    rojo: "var(--peligro)",
+    rojoPal: "rgba(163,58,44,0.08)",
+    gris: "var(--suave)",
+    amarillo: "var(--aviso)",
+    bg: "rgba(76,107,101,0.06)",
+    borde: "var(--linea-fuerte)",
 };
 
 const METODOS: { value: string; label: string; Icon: LucideIcon }[] = [
@@ -89,13 +89,13 @@ function Campo({ label, type = "text", value, onChange, onBlur, placeholder, rea
                 readOnly={readOnly} placeholder={placeholder} maxLength={maxLength}
                 style={{
                     width: "100%", padding: "9px 12px", borderRadius: 8, fontSize: 13,
-                    border: `1px solid ${error ? "#c62828" : C.borde}`, outline: "none", boxSizing: "border-box",
+                    border: `1px solid ${error ? "var(--peligro)" : C.borde}`, outline: "none", boxSizing: "border-box",
                     background: readOnly ? C.bg : "white",
                 }}
             />
             {error
-                ? <p style={{ margin: "3px 0 0", fontSize: 11, color: "#c62828" }}>{error}</p>
-                : hint && <p style={{ margin: "3px 0 0", fontSize: 11, color: "#888" }}>{hint}</p>}
+                ? <p style={{ margin: "3px 0 0", fontSize: 11, color: "var(--peligro)" }}>{error}</p>
+                : hint && <p style={{ margin: "3px 0 0", fontSize: 11, color: "var(--tenue)" }}>{hint}</p>}
         </div>
     );
 }
@@ -115,7 +115,7 @@ function Modal({ titulo, onCerrar, children, ancho = 520 }: ModalProps) {
             padding: 16,
         }}>
             <div style={{
-                background: "white", borderRadius: 16, width: "100%", maxWidth: ancho,
+                background: "var(--marfil)", borderRadius: 16, width: "100%", maxWidth: ancho,
                 maxHeight: "90vh", overflowY: "auto",
                 boxShadow: "0 24px 64px rgba(0,0,0,0.18)",
             }}>
@@ -124,7 +124,7 @@ function Modal({ titulo, onCerrar, children, ancho = 520 }: ModalProps) {
                     padding: "20px 24px 0",
                 }}>
                     <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: C.verde }}>{titulo}</h3>
-                    <button onClick={onCerrar} style={{ background: "none", border: "none", cursor: "pointer", color: "#999" }}>
+                    <button onClick={onCerrar} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--tenue)" }}>
                         <X size={18} />
                     </button>
                 </div>
@@ -149,15 +149,15 @@ interface MetricaProps {
 function Metrica({ label, valor, color, sub }: MetricaProps) {
     return (
         <div style={{
-            background: "white", borderRadius: 12, padding: "14px 18px",
+            background: "var(--marfil)", borderRadius: 12, padding: "14px 18px",
             border: `1px solid ${C.borde}`, flex: 1, minWidth: 130,
         }}>
             <p style={{
-                margin: 0, fontSize: 11, fontWeight: 700, color: "rgba(44,85,69,0.5)",
+                margin: 0, fontSize: 11, fontWeight: 700, color: "var(--suave)",
                 textTransform: "uppercase", letterSpacing: "0.06em"
             }}>{label}</p>
             <p style={{ margin: "6px 0 0", fontSize: 20, fontWeight: 700, color: color ?? C.verde }}>{valor}</p>
-            {sub && <p style={{ margin: "2px 0 0", fontSize: 11, color: "#999" }}>{sub}</p>}
+            {sub && <p style={{ margin: "2px 0 0", fontSize: 11, color: "var(--tenue)" }}>{sub}</p>}
         </div>
     );
 }
@@ -175,7 +175,7 @@ function OrdenCard({ orden, onCobrar }: { orden: Orden; onCobrar: (orden: Orden)
 
     return (
         <div style={{
-            background: "white", border: `1px solid ${C.borde}`,
+            background: "var(--marfil)", border: `1px solid ${C.borde}`,
             borderRadius: 12, overflow: "hidden",
         }}>
             <div style={{
@@ -186,7 +186,7 @@ function OrdenCard({ orden, onCobrar }: { orden: Orden; onCobrar: (orden: Orden)
                     <p style={{ margin: 0, fontWeight: 700, fontSize: 14, color: C.verde }}>
                         Orden #{orden.id}
                     </p>
-                    <p style={{ margin: "3px 0 0", fontSize: 12, color: "#777" }}>
+                    <p style={{ margin: "3px 0 0", fontSize: 12, color: "var(--tenue)" }}>
                         {tipo}{orden.mesa_numero ? ` · Mesa ${orden.mesa_numero}` : ""}
                         {orden.cliente_nombre ? ` · ${orden.cliente_nombre}` : ""}
                     </p>
@@ -221,12 +221,12 @@ function OrdenCard({ orden, onCobrar }: { orden: Orden; onCobrar: (orden: Orden)
             {abierto && (
                 <div style={{
                     borderTop: `1px solid ${C.borde}`, padding: "10px 16px 14px",
-                    background: "rgba(44,85,69,0.02)"
+                    background: "rgba(76,107,101,0.02)"
                 }}>
                     <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
                         <thead>
                             <tr style={{
-                                color: "rgba(44,85,69,0.55)", fontWeight: 700,
+                                color: "var(--suave)", fontWeight: 700,
                                 textTransform: "uppercase", letterSpacing: "0.05em"
                             }}>
                                 <th style={{ textAlign: "left", paddingBottom: 6 }}>Ítem</th>
@@ -239,8 +239,8 @@ function OrdenCard({ orden, onCobrar }: { orden: Orden; onCobrar: (orden: Orden)
                                 const nombre = d.producto?.nombre ?? d.promocion?.nombre ?? `Ítem #${d.id}`;
                                 return (
                                     <tr key={d.id} style={{ borderTop: `1px solid ${C.borde}` }}>
-                                        <td style={{ padding: "6px 0", color: "#444" }}>{nombre}</td>
-                                        <td style={{ textAlign: "center", color: "#666" }}>{d.cantidad}</td>
+                                        <td style={{ padding: "6px 0", color: "var(--espresso)" }}>{nombre}</td>
+                                        <td style={{ textAlign: "center", color: "var(--suave)" }}>{d.cantidad}</td>
                                         <td style={{ textAlign: "right", fontWeight: 600, color: C.verde }}>
                                             {fmt(d.subtotal)}
                                         </td>
@@ -252,7 +252,7 @@ function OrdenCard({ orden, onCobrar }: { orden: Orden; onCobrar: (orden: Orden)
                             <tr>
                                 <td colSpan={2} style={{
                                     paddingTop: 8, fontWeight: 700,
-                                    color: "rgba(44,85,69,0.6)", fontSize: 11,
+                                    color: "var(--suave)", fontSize: 11,
                                     textTransform: "uppercase", letterSpacing: "0.06em"
                                 }}>
                                     Total
@@ -335,7 +335,7 @@ function ModalCobrar({ orden, onCerrar, onPagado }: { orden: Orden; onCerrar: ()
 
             {/* Resumen de la orden */}
             <div style={{ background: C.bg, borderRadius: 10, padding: "12px 14px", marginBottom: 16 }}>
-                <p style={{ margin: 0, fontSize: 12, color: "#666" }}>
+                <p style={{ margin: 0, fontSize: 12, color: "var(--suave)" }}>
                     {TIPO_LABEL[orden.tipo_orden] ?? orden.tipo_orden}
                     {orden.mesa_numero ? ` · Mesa ${orden.mesa_numero}` : ""}
                     {orden.cliente_nombre ? ` · ${orden.cliente_nombre}` : ""}
@@ -346,7 +346,7 @@ function ModalCobrar({ orden, onCerrar, onPagado }: { orden: Orden; onCerrar: ()
                             const nombre = d.producto?.nombre ?? d.promocion?.nombre ?? `Ítem #${d.id}`;
                             return (
                                 <tr key={d.id}>
-                                    <td style={{ padding: "3px 0", color: "#444" }}>
+                                    <td style={{ padding: "3px 0", color: "var(--espresso)" }}>
                                         {d.cantidad}× {nombre}
                                     </td>
                                     <td style={{ textAlign: "right", fontWeight: 600, color: C.verde }}>
@@ -361,7 +361,7 @@ function ModalCobrar({ orden, onCerrar, onPagado }: { orden: Orden; onCerrar: ()
                     borderTop: `1px solid ${C.borde}`, marginTop: 8, paddingTop: 8,
                     display: "flex", justifyContent: "space-between"
                 }}>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: "rgba(44,85,69,0.6)" }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: "var(--suave)" }}>
                         Total orden
                     </span>
                     <span style={{ fontSize: 17, fontWeight: 700, color: C.verde }}>
@@ -371,7 +371,7 @@ function ModalCobrar({ orden, onCerrar, onPagado }: { orden: Orden; onCerrar: ()
                 {pagadoPrevio > 0 && (
                     <>
                         <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
-                            <span style={{ fontSize: 12, color: "#888" }}>Ya pagado</span>
+                            <span style={{ fontSize: 12, color: "var(--tenue)" }}>Ya pagado</span>
                             <span style={{ fontSize: 12, color: C.amarillo, fontWeight: 600 }}>
                                 − {fmt(pagadoPrevio)}
                             </span>
@@ -397,7 +397,7 @@ function ModalCobrar({ orden, onCerrar, onPagado }: { orden: Orden; onCerrar: ()
                             background: metodo === value ? C.bg : "white",
                             display: "flex", alignItems: "center", gap: 8,
                             fontWeight: 600, fontSize: 13,
-                            color: metodo === value ? C.verde : "#555",
+                            color: metodo === value ? C.verde : "var(--suave)",
                         }}>
                         <Icon size={15} /> {label}
                     </button>
@@ -518,7 +518,7 @@ function ModalComprobante({ pago, onCerrar, onEmitido }: { pago: Pago; onCerrar:
             {/* Resumen del pago */}
             <div style={{
                 background: C.bg, borderRadius: 8, padding: "10px 12px", marginBottom: 16,
-                fontSize: 12, color: "#555"
+                fontSize: 12, color: "var(--suave)"
             }}>
                 <p style={{ margin: 0 }}>
                     Orden #{pago.orden?.id} · {pago.metodo_pago_display} · <strong>{fmt(pago.monto)}</strong>
@@ -536,7 +536,7 @@ function ModalComprobante({ pago, onCerrar, onEmitido }: { pago: Pago; onCerrar:
                         border: `2px solid ${tipo === t ? C.verde : C.borde}`,
                         background: tipo === t ? C.bg : "white",
                         fontWeight: 600, fontSize: 13,
-                        color: tipo === t ? C.verde : "#777",
+                        color: tipo === t ? C.verde : "var(--tenue)",
                         textTransform: "capitalize",
                     }}>{t}</button>
                 ))}
@@ -594,7 +594,7 @@ function FilaPago({ pago, esAdmin, onAnular, onEmitirComprobante }: FilaPagoProp
     return (
         <>
             <tr style={{
-                background: anulado ? "rgba(198,40,40,0.03)" : "white",
+                background: anulado ? "rgba(163,58,44,0.03)" : "white",
                 borderBottom: `1px solid ${C.borde}`,
                 opacity: anulado ? 0.7 : 1,
             }}>
@@ -611,12 +611,12 @@ function FilaPago({ pago, esAdmin, onAnular, onEmitirComprobante }: FilaPagoProp
                     <span style={{ fontWeight: 700, fontSize: 13, color: C.verde }}>#{pago.id}</span>
                 </td>
                 <td style={td}>
-                    <span style={{ fontSize: 12, color: "#555" }}>
+                    <span style={{ fontSize: 12, color: "var(--suave)" }}>
                         Orden #{pago.orden?.id ?? "—"}
                     </span>
                 </td>
                 <td style={td}>
-                    <span style={{ fontSize: 12, color: "#555", textTransform: "capitalize" }}>
+                    <span style={{ fontSize: 12, color: "var(--suave)", textTransform: "capitalize" }}>
                         {pago.metodo_pago_display ?? pago.metodo_pago}
                         {pago.numero_operacion ? ` · Op. ${pago.numero_operacion}` : ""}
                     </span>
@@ -642,7 +642,7 @@ function FilaPago({ pago, esAdmin, onAnular, onEmitirComprobante }: FilaPagoProp
                     </span>
                 </td>
                 <td style={td}>
-                    <span style={{ fontSize: 11, color: "#888" }}>
+                    <span style={{ fontSize: 11, color: "var(--tenue)" }}>
                         {new Date(pago.fecha).toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" })}
                     </span>
                 </td>
@@ -679,11 +679,11 @@ function FilaPago({ pago, esAdmin, onAnular, onEmitirComprobante }: FilaPagoProp
 
             {/* Fila expandida con detalles de la orden */}
             {expandido && (
-                <tr style={{ background: "rgba(44,85,69,0.02)", borderBottom: `1px solid ${C.borde}` }}>
+                <tr style={{ background: "rgba(76,107,101,0.02)", borderBottom: `1px solid ${C.borde}` }}>
                     <td colSpan={9} style={{ padding: "10px 16px" }}>
                         <p style={{
                             margin: "0 0 6px", fontSize: 11, fontWeight: 700,
-                            color: "rgba(44,85,69,0.55)", textTransform: "uppercase",
+                            color: "var(--suave)", textTransform: "uppercase",
                             letterSpacing: "0.06em"
                         }}>
                             Detalle de la orden #{pago.orden?.id}
@@ -694,9 +694,9 @@ function FilaPago({ pago, esAdmin, onAnular, onEmitirComprobante }: FilaPagoProp
                                     const nombre = d.producto?.nombre ?? d.promocion?.nombre ?? `Ítem #${d.id}`;
                                     return (
                                         <tr key={d.id}>
-                                            <td style={{ padding: "3px 0", color: "#444" }}>
+                                            <td style={{ padding: "3px 0", color: "var(--espresso)" }}>
                                                 {d.cantidad}× {nombre}
-                                                {d.nota ? <span style={{ color: "#999" }}> · {d.nota}</span> : ""}
+                                                {d.nota ? <span style={{ color: "var(--tenue)" }}> · {d.nota}</span> : ""}
                                             </td>
                                             <td style={{ textAlign: "right", fontWeight: 600, color: C.verde }}>
                                                 {fmt(d.subtotal)}
@@ -709,7 +709,7 @@ function FilaPago({ pago, esAdmin, onAnular, onEmitirComprobante }: FilaPagoProp
                                 <tr>
                                     <td style={{
                                         paddingTop: 6, fontWeight: 700, fontSize: 12,
-                                        color: "rgba(44,85,69,0.6)"
+                                        color: "var(--suave)"
                                     }}>Total orden</td>
                                     <td style={{
                                         paddingTop: 6, textAlign: "right",
@@ -866,7 +866,7 @@ export default function CajaPage() {
             <div style={{ display: "flex", justifyContent: "center", marginTop: 40 }}>
                 <div style={{ textAlign: "center" }}>
                     <DollarSign size={52} color={C.verde} style={{ opacity: 0.35 }} />
-                    <p style={{ color: "#777", margin: "12px 0 24px", fontSize: 14 }}>
+                    <p style={{ color: "var(--tenue)", margin: "12px 0 24px", fontSize: 14 }}>
                         Abre un turno para empezar a registrar ventas.
                     </p>
                     <Btn onClick={() => setModalAbrir(true)}>Abrir turno</Btn>
@@ -925,14 +925,14 @@ export default function CajaPage() {
 
                 {/* Órdenes por cobrar */}
                 <div style={{
-                    background: "white", borderRadius: 12,
+                    background: "var(--marfil)", borderRadius: 12,
                     border: `1px solid ${C.borde}`, padding: 20
                 }}>
                     <h3 style={{ margin: "0 0 16px", fontSize: 14, fontWeight: 700, color: C.verde }}>
                         Órdenes por cobrar ({ordenesAbiertas.length})
                     </h3>
                     {ordenesAbiertas.length === 0 ? (
-                        <p style={{ color: "#999", fontSize: 13 }}>No hay órdenes abiertas.</p>
+                        <p style={{ color: "var(--tenue)", fontSize: 13 }}>No hay órdenes abiertas.</p>
                     ) : (
                         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                             {ordenesAbiertas.map((o) => (
@@ -944,14 +944,14 @@ export default function CajaPage() {
 
                 {/* Movimientos */}
                 <div style={{
-                    background: "white", borderRadius: 12,
+                    background: "var(--marfil)", borderRadius: 12,
                     border: `1px solid ${C.borde}`, padding: 20
                 }}>
                     <h3 style={{ margin: "0 0 14px", fontSize: 14, fontWeight: 700, color: C.verde }}>
                         Movimientos
                     </h3>
                     {movimientos.length === 0 ? (
-                        <p style={{ color: "#999", fontSize: 13 }}>Sin movimientos.</p>
+                        <p style={{ color: "var(--tenue)", fontSize: 13 }}>Sin movimientos.</p>
                     ) : (
                         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                             {movimientos.map((m) => (
@@ -962,13 +962,13 @@ export default function CajaPage() {
                                 }}>
                                     <div>
                                         <span style={{
-                                            background: m.tipo === "entrada" ? "rgba(44,85,69,0.1)" : C.rojoPal,
+                                            background: m.tipo === "entrada" ? "rgba(76,107,101,0.1)" : C.rojoPal,
                                             color: m.tipo === "entrada" ? C.verde : C.rojo,
                                             padding: "2px 8px", borderRadius: 6, fontSize: 11, fontWeight: 600,
                                         }}>
                                             {m.tipo === "entrada" ? "↑" : "↓"} {m.tipo}
                                         </span>
-                                        <p style={{ margin: "3px 0 0", fontSize: 12, color: "#666" }}>{m.motivo}</p>
+                                        <p style={{ margin: "3px 0 0", fontSize: 12, color: "var(--suave)" }}>{m.motivo}</p>
                                     </div>
                                     <span style={{
                                         fontWeight: 700, fontSize: 13,
@@ -985,7 +985,7 @@ export default function CajaPage() {
 
             {/* Tabla de pagos */}
             <div style={{
-                background: "white", borderRadius: 12,
+                background: "var(--marfil)", borderRadius: 12,
                 border: `1px solid ${C.borde}`, overflow: "hidden"
             }}>
                 <div style={{
@@ -994,7 +994,7 @@ export default function CajaPage() {
                 }}>
                     <FileText size={16} color={C.verde} />
                     <span style={{
-                        fontFamily: "'Playfair Display',Georgia,serif",
+                        fontFamily: "var(--font-titulos)",
                         fontSize: 15, fontWeight: 600, color: C.verde
                     }}>
                         Pagos del turno
@@ -1004,19 +1004,19 @@ export default function CajaPage() {
                 {pagos.length === 0 ? (
                     <div style={{
                         padding: 40, textAlign: "center",
-                        fontFamily: "'Lato',sans-serif", fontSize: 13, color: "#999"
+                        fontFamily: "var(--font-texto)", fontSize: 13, color: "var(--tenue)"
                     }}>
                         Sin pagos registrados aún
                     </div>
                 ) : (
                     <table style={{ width: "100%", borderCollapse: "collapse" }}>
                         <thead>
-                            <tr style={{ background: "rgba(44,85,69,0.04)" }}>
+                            <tr style={{ background: "rgba(76,107,101,0.04)" }}>
                                 {["", "#", "Orden", "Método", "Monto", "Vuelto", "Estado", "Hora", "Acciones"]
                                     .map(h => (
                                         <th key={h} style={{
                                             padding: "10px 12px", textAlign: "left",
-                                            fontSize: 11, fontWeight: 700, color: "rgba(44,85,69,0.6)",
+                                            fontSize: 11, fontWeight: 700, color: "var(--suave)",
                                             textTransform: "uppercase", letterSpacing: "0.07em",
                                             borderBottom: `1px solid ${C.borde}`
                                         }}>
@@ -1060,7 +1060,7 @@ export default function CajaPage() {
             {/* Confirm anular pago */}
             {pagoAnular && (
                 <Modal titulo="¿Anular pago?" onCerrar={() => setPagoAnular(null)} ancho={380}>
-                    <p style={{ fontSize: 13, color: "#555", marginBottom: 16 }}>
+                    <p style={{ fontSize: 13, color: "var(--suave)", marginBottom: 16 }}>
                         Se anulará el pago <strong>#{pagoAnular.id}</strong> de{" "}
                         <strong>{fmt(pagoAnular.monto)}</strong> (Orden #{pagoAnular.orden?.id}).
                         Se registrará automáticamente una salida de caja por devolución.
@@ -1121,7 +1121,7 @@ export default function CajaPage() {
                                     ? (t === "entrada" ? C.bg : C.rojoPal) : "white",
                                 fontWeight: 600, fontSize: 13,
                                 color: tipoMov === t
-                                    ? (t === "entrada" ? C.verde : C.rojo) : "#777",
+                                    ? (t === "entrada" ? C.verde : C.rojo) : "var(--tenue)",
                             }}>
                                 {t === "entrada" ? "↑ Entrada" : "↓ Salida"}
                             </button>
@@ -1144,10 +1144,10 @@ export default function CajaPage() {
                 <Modal titulo="Cerrar turno"
                     onCerrar={() => { setModalCerrar(false); limpiar(); }}>
                     <div style={{ background: C.bg, borderRadius: 8, padding: 12, marginBottom: 16 }}>
-                        <p style={{ margin: 0, fontSize: 12, color: "#555" }}>
+                        <p style={{ margin: 0, fontSize: 12, color: "var(--suave)" }}>
                             Monto inicial: <strong>{fmt(caja.monto_inicial)}</strong>
                         </p>
-                        <p style={{ margin: "4px 0 0", fontSize: 12, color: "#555" }}>
+                        <p style={{ margin: "4px 0 0", fontSize: 12, color: "var(--suave)" }}>
                             Total ventas: <strong>{fmt(totalVentas)}</strong>
                         </p>
                         <p style={{ margin: "4px 0 0", fontSize: 13, fontWeight: 700, color: C.verde }}>

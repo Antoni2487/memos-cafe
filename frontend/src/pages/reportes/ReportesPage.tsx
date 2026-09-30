@@ -5,12 +5,12 @@ import { getErrorMessage } from "../../utils/errors";
 import type { ReporteCaja, ReporteProductos, ReporteVentas } from "../../types";
 
 const COLOR = {
-  verde:    "#2C5545",
-  verdeOsc: "#1E4A37",
-  verdePal: "rgba(44,85,69,0.08)",
-  borde:    "rgba(44,85,69,0.12)",
-  dorado:   "#C9A84C",
-  rojo:     "#c62828",
+  verde:    "var(--salvia)",
+  verdeOsc: "var(--salvia-osc)",
+  verdePal: "rgba(76,107,101,0.08)",
+  borde:    "rgba(76,107,101,0.12)",
+  dorado:   "var(--champan)",
+  rojo:     "var(--peligro)",
 };
 
 // ── Helpers de fecha ──────────────────────────────────────────────────────────
@@ -31,21 +31,21 @@ interface StatCardProps {
 function StatCard({ label, value, sub }: StatCardProps) {
   return (
     <div style={{
-      background: "white", border: `1.5px solid ${COLOR.borde}`,
+      background: "var(--marfil)", border: `1.5px solid ${COLOR.borde}`,
       borderRadius: 12, padding: "16px 20px", flex: 1, minWidth: 140,
     }}>
       <p style={{
-        fontFamily: "'Lato',sans-serif", fontSize: 11, fontWeight: 700,
-        color: "rgba(44,85,69,0.6)", textTransform: "uppercase",
+        fontFamily: "var(--font-texto)", fontSize: 11, fontWeight: 700,
+        color: "var(--suave)", textTransform: "uppercase",
         letterSpacing: "0.07em", margin: "0 0 6px 0",
       }}>{label}</p>
       <p style={{
-        fontFamily: "'Playfair Display',Georgia,serif",
+        fontFamily: "var(--font-titulos)",
         fontSize: 24, fontWeight: 700, color: COLOR.verde, margin: 0,
       }}>{value}</p>
       {sub && (
-        <p style={{ fontFamily: "'Lato',sans-serif", fontSize: 12,
-          color: "rgba(44,85,69,0.55)", margin: "4px 0 0 0" }}>{sub}</p>
+        <p style={{ fontFamily: "var(--font-texto)", fontSize: 12,
+          color: "var(--suave)", margin: "4px 0 0 0" }}>{sub}</p>
       )}
     </div>
   );
@@ -63,10 +63,10 @@ function TabBtn({ activo, onClick, Icon, children }: TabBtnProps) {
     <button onClick={onClick} style={{
       display: "flex", alignItems: "center", gap: 6,
       padding: "8px 16px", borderRadius: 8, border: "1px solid",
-      borderColor: activo ? COLOR.verde : "rgba(44,85,69,0.2)",
+      borderColor: activo ? COLOR.verde : "var(--linea-fuerte)",
       backgroundColor: activo ? COLOR.verde : "white",
       color: activo ? "white" : COLOR.verde,
-      fontFamily: "'Lato',sans-serif", fontSize: 13, fontWeight: 600,
+      fontFamily: "var(--font-texto)", fontSize: 13, fontWeight: 600,
       cursor: "pointer",
     }}>
       <Icon size={14} strokeWidth={2} />
@@ -78,8 +78,8 @@ function TabBtn({ activo, onClick, Icon, children }: TabBtnProps) {
 function SeccionLabel({ children }: { children: ReactNode }) {
   return (
     <p style={{
-      fontFamily: "'Lato',sans-serif", fontSize: 11, fontWeight: 700,
-      color: "rgba(44,85,69,0.6)", textTransform: "uppercase",
+      fontFamily: "var(--font-texto)", fontSize: 11, fontWeight: 700,
+      color: "var(--suave)", textTransform: "uppercase",
       letterSpacing: "0.08em", margin: "0 0 10px 0",
     }}>{children}</p>
   );
@@ -92,7 +92,7 @@ interface TablaProps {
 
 function Tabla({ headers, rows }: TablaProps) {
   return (
-    <div style={{ background: "white", border: `1.5px solid ${COLOR.borde}`,
+    <div style={{ background: "var(--marfil)", border: `1.5px solid ${COLOR.borde}`,
       borderRadius: 12, overflow: "hidden" }}>
       <table style={{ width: "100%", borderCollapse: "collapse" }}>
         <thead>
@@ -106,7 +106,7 @@ function Tabla({ headers, rows }: TablaProps) {
           {rows.length === 0 ? (
             <tr>
               <td colSpan={headers.length} style={{
-                ...estilos.td, textAlign: "center", color: "#999", padding: 24,
+                ...estilos.td, textAlign: "center", color: "var(--tenue)", padding: 24,
               }}>
                 Sin datos en este período
               </td>
@@ -204,19 +204,19 @@ export default function ReportesPage() {
       <div style={{ display: "flex", justifyContent: "space-between",
         alignItems: "center", borderBottom: `1px solid ${COLOR.borde}`, paddingBottom: 16 }}>
         <div>
-          <h2 style={{ fontFamily: "'Playfair Display',Georgia,serif", fontSize: "1.5rem",
+          <h2 style={{ fontFamily: "var(--font-titulos)", fontSize: "1.5rem",
             fontWeight: 600, color: COLOR.verde, margin: 0 }}>Reportes</h2>
-          <p style={{ fontFamily: "'Lato',sans-serif", fontSize: 13,
-            color: "rgba(44,85,69,0.6)", margin: "4px 0 0 0" }}>
+          <p style={{ fontFamily: "var(--font-texto)", fontSize: 13,
+            color: "var(--suave)", margin: "4px 0 0 0" }}>
             Consulta y exporta reportes de ventas, productos y caja
           </p>
         </div>
         <button onClick={handleExportar} disabled={exportando} style={{
           display: "flex", alignItems: "center", gap: 6,
           padding: "9px 16px", borderRadius: 8,
-          border: `1px solid rgba(44,85,69,0.25)`,
-          background: "white", color: COLOR.verde,
-          fontFamily: "'Lato',sans-serif", fontSize: 13, fontWeight: 600,
+          border: `1px solid var(--linea-fuerte)`,
+          background: "var(--marfil)", color: COLOR.verde,
+          fontFamily: "var(--font-texto)", fontSize: 13, fontWeight: 600,
           cursor: exportando ? "not-allowed" : "pointer",
           opacity: exportando ? 0.7 : 1,
         }}>
@@ -235,7 +235,7 @@ export default function ReportesPage() {
       </div>
 
       {/* Filtro período */}
-      <div style={{ background: "white", border: `1.5px solid ${COLOR.borde}`,
+      <div style={{ background: "var(--marfil)", border: `1.5px solid ${COLOR.borde}`,
         borderRadius: 12, padding: "16px 20px" }}>
         <SeccionLabel>Período</SeccionLabel>
         <div style={{ display: "flex", gap: 12, alignItems: "flex-end", flexWrap: "wrap" }}>
@@ -251,7 +251,7 @@ export default function ReportesPage() {
           </div>
           <button onClick={handleConsultar} disabled={cargando} style={{
             ...estilos.btn,
-            background: cargando ? "#aaa" : COLOR.verde,
+            background: cargando ? "var(--tenue)" : COLOR.verde,
             cursor: cargando ? "not-allowed" : "pointer",
           }}>
             <TrendingUp size={14} />
@@ -259,7 +259,7 @@ export default function ReportesPage() {
           </button>
         </div>
         {error && (
-          <p style={{ fontFamily: "'Lato',sans-serif", fontSize: 12,
+          <p style={{ fontFamily: "var(--font-texto)", fontSize: 12,
             color: COLOR.rojo, margin: "12px 0 0 0" }}>⚠ {error}</p>
         )}
       </div>
@@ -350,7 +350,7 @@ export default function ReportesPage() {
               r.diferencia !== null
                 ? (
                   <span style={{
-                    color: Number(r.diferencia) >= 0 ? "#2e7d32" : COLOR.rojo,
+                    color: Number(r.diferencia) >= 0 ? "var(--exito)" : COLOR.rojo,
                     fontWeight: 600,
                   }}>
                     {Number(r.diferencia) >= 0 ? "+" : ""}S/ {parseFloat(String(r.diferencia)).toFixed(2)}
@@ -365,7 +365,7 @@ export default function ReportesPage() {
       {/* Estado vacío inicial */}
       {!cargando && !dataVentas && !dataProductos && !dataCaja && !error && (
         <div style={{ textAlign: "center", padding: "60px 0",
-          color: "rgba(44,85,69,0.45)", fontFamily: "'Lato',sans-serif", fontSize: 14 }}>
+          color: "var(--suave)", fontFamily: "var(--font-texto)", fontSize: 14 }}>
           Selecciona un período y presiona <strong>Consultar</strong> para ver el reporte.
         </div>
       )}
@@ -375,28 +375,28 @@ export default function ReportesPage() {
 
 const estilos = {
   inputLabel: {
-    fontFamily: "'Lato',sans-serif", fontSize: 11, fontWeight: 700,
-    color: "rgba(44,85,69,0.75)", textTransform: "uppercase",
+    fontFamily: "var(--font-texto)", fontSize: 11, fontWeight: 700,
+    color: "var(--suave)", textTransform: "uppercase",
     letterSpacing: "0.07em", display: "block", marginBottom: 5,
   },
   input: {
     padding: "9px 12px", borderRadius: 8,
-    border: "1px solid rgba(44,85,69,0.2)",
-    fontFamily: "'Lato',sans-serif", fontSize: 13, color: "#333", outline: "none",
+    border: "1px solid var(--linea-fuerte)",
+    fontFamily: "var(--font-texto)", fontSize: 13, color: "var(--espresso)", outline: "none",
   },
   btn: {
     display: "flex", alignItems: "center", gap: 6,
     padding: "10px 16px", borderRadius: 8, border: "none",
-    color: "white", fontFamily: "'Lato',sans-serif",
+    color: "white", fontFamily: "var(--font-texto)",
     fontSize: 13, fontWeight: 600,
   },
   th: {
     padding: "10px 16px", textAlign: "left",
-    fontFamily: "'Lato',sans-serif", fontSize: 11, fontWeight: 700,
-    color: "rgba(44,85,69,0.6)", textTransform: "uppercase", letterSpacing: "0.07em",
+    fontFamily: "var(--font-texto)", fontSize: 11, fontWeight: 700,
+    color: "var(--suave)", textTransform: "uppercase", letterSpacing: "0.07em",
   },
   td: {
-    padding: "10px 16px", fontFamily: "'Lato',sans-serif",
-    fontSize: 13, color: "#444",
+    padding: "10px 16px", fontFamily: "var(--font-texto)",
+    fontSize: 13, color: "var(--espresso)",
   },
 } satisfies Record<string, CSSProperties>;

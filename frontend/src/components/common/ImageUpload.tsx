@@ -55,10 +55,10 @@ export default function ImageUpload({ label = "Imagen", value, onChange, error }
     <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
       <label
         style={{
-          fontFamily: "'Lato', sans-serif",
+          fontFamily: "var(--font-texto)",
           fontSize: 11,
           fontWeight: 700,
-          color: "rgba(44,85,69,0.75)",
+          color: "var(--suave)",
           letterSpacing: "0.07em",
           textTransform: "uppercase",
         }}
@@ -75,9 +75,9 @@ export default function ImageUpload({ label = "Imagen", value, onChange, error }
           position: "relative",
           borderRadius: 10,
           border: `1.5px dashed ${
-            mensajeError ? "#c62828" : arrastrando ? "#2C5545" : "rgba(44,85,69,0.25)"
+            mensajeError ? "var(--peligro)" : arrastrando ? "var(--salvia)" : "var(--linea-fuerte)"
           }`,
-          backgroundColor: arrastrando ? "rgba(44,85,69,0.04)" : "#fafafa",
+          backgroundColor: arrastrando ? "rgba(76,107,101,0.04)" : "var(--marfil)",
           cursor: "pointer",
           overflow: "hidden",
           transition: "border-color 0.15s, background-color 0.15s",
@@ -123,9 +123,9 @@ export default function ImageUpload({ label = "Imagen", value, onChange, error }
               <span
                 style={{
                   display: "flex", alignItems: "center", gap: 6,
-                  backgroundColor: "white", borderRadius: 7,
-                  padding: "6px 12px", fontFamily: "'Lato', sans-serif",
-                  fontSize: 12, fontWeight: 600, color: "#2C5545",
+                  backgroundColor: "var(--marfil)", borderRadius: 7,
+                  padding: "6px 12px", fontFamily: "var(--font-texto)",
+                  fontSize: 12, fontWeight: 600, color: "var(--salvia)",
                 }}
               >
                 <Upload size={13} strokeWidth={2} /> Cambiar
@@ -136,7 +136,7 @@ export default function ImageUpload({ label = "Imagen", value, onChange, error }
                 title="Quitar imagen"
                 style={{
                   width: 30, height: 30, borderRadius: 7, border: "none",
-                  backgroundColor: "white", color: "#c62828", cursor: "pointer",
+                  backgroundColor: "var(--marfil)", color: "var(--peligro)", cursor: "pointer",
                   display: "flex", alignItems: "center", justifyContent: "center",
                 }}
               >
@@ -152,18 +152,18 @@ export default function ImageUpload({ label = "Imagen", value, onChange, error }
             <div
               style={{
                 width: 36, height: 36, borderRadius: "50%",
-                backgroundColor: "rgba(44,85,69,0.08)",
+                backgroundColor: "rgba(76,107,101,0.08)",
                 display: "flex", alignItems: "center", justifyContent: "center",
-                color: "#2C5545",
+                color: "var(--salvia)",
               }}
             >
               <ImagePlus size={17} strokeWidth={1.8} />
             </div>
-            <p style={{ margin: 0, fontFamily: "'Lato', sans-serif", fontSize: 12.5, color: "#555" }}>
+            <p style={{ margin: 0, fontFamily: "var(--font-texto)", fontSize: 12.5, color: "var(--suave)" }}>
               Arrastra una imagen o{" "}
-              <span style={{ color: "#2C5545", fontWeight: 600 }}>haz clic para elegir</span>
+              <span style={{ color: "var(--salvia)", fontWeight: 600 }}>haz clic para elegir</span>
             </p>
-            <p style={{ margin: 0, fontFamily: "'Lato', sans-serif", fontSize: 11, color: "rgba(44,85,69,0.45)" }}>
+            <p style={{ margin: 0, fontFamily: "var(--font-texto)", fontSize: 11, color: "var(--suave)" }}>
               PNG, JPG hasta {MAX_MB}MB
             </p>
           </div>
@@ -171,7 +171,7 @@ export default function ImageUpload({ label = "Imagen", value, onChange, error }
       </div>
 
       {mensajeError && (
-        <p style={{ fontFamily: "'Lato', sans-serif", fontSize: 11.5, color: "#c62828", margin: 0 }}>
+        <p style={{ fontFamily: "var(--font-texto)", fontSize: 11.5, color: "var(--peligro)", margin: 0 }}>
           {mensajeError}
         </p>
       )}

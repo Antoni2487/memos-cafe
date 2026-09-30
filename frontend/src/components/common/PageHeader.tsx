@@ -6,40 +6,21 @@ interface PageHeaderProps {
   accion?: ReactNode;
 }
 
+/**
+ * Encabezado de cada sección. En el celular el título ya está en la barra
+ * superior, así que aquí solo queda la descripción y la acción principal
+ * (que ocupa todo el ancho, fácil de tocar).
+ */
 export default function PageHeader({ titulo, descripcion, accion }: PageHeaderProps) {
   return (
-    <div
-      className="flex items-start justify-between mb-6"
-      style={{ borderBottom: "1px solid rgba(44,85,69,0.1)", paddingBottom: "16px" }}
-    >
-      <div>
-        <h2
-          style={{
-            fontFamily: "'Playfair Display', Georgia, serif",
-            fontSize: "1.5rem",
-            fontWeight: 600,
-            color: "#2C5545",
-            margin: 0,
-            lineHeight: 1.2,
-          }}
-        >
+    <div className="mb-5 md:mb-7 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+      <div className="min-w-0">
+        <h2 className="hidden md:block font-display text-[26px] font-semibold leading-tight text-espresso">
           {titulo}
         </h2>
-        {descripcion && (
-          <p
-            style={{
-              fontFamily: "'Lato', sans-serif",
-              fontSize: "13px",
-              color: "rgba(44,85,69,0.6)",
-              margin: "4px 0 0 0",
-            }}
-          >
-            {descripcion}
-          </p>
-        )}
+        {descripcion && <p className="text-sm text-suave md:mt-1">{descripcion}</p>}
       </div>
-
-      {accion && <div className="shrink-0 ml-4">{accion}</div>}
+      {accion && <div className="shrink-0 [&>button]:w-full sm:[&>button]:w-auto">{accion}</div>}
     </div>
   );
 }

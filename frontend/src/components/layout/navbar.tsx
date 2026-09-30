@@ -1,12 +1,14 @@
 import { useLocation } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
-import { Bell, ShoppingBag, Receipt, Menu, Check } from "lucide-react";
+import { Bell, ShoppingBag, Receipt, Check, Wallet } from "lucide-react";
 import authService from "../../services/authService";
 import { useReloj } from "../../hooks/useReloj";
 import useStaffSocket from "../../hooks/useStaffSocket";
 import api from "../../services/api";
 import ordenesService from "../../services/ordenesService";
 import type { Alerta } from "../../types";
+import { tituloDeRuta } from "./navegacion";
+import { Marca } from "./sidebar";
 
 // Alertas en vivo (plato listo / pidió la cuenta) además llevan un id
 // propio para poder quitarlas de la lista tras una acción, y opcionalmente
@@ -16,24 +18,10 @@ interface AlertaLocal extends Alerta {
   accion?: { ordenId: number; detalleId: number };
 }
 
-// Mapeo de ruta → título de página
-const PAGE_TITLES: Record<string, string> = {
-  "/dashboard": "Dashboard",
-  "/mesas": "Mesas",
-  "/ordenes": "Órdenes",
-  "/caja": "Caja",
-  "/productos": "Productos",
-  "/promociones": "Promociones",
-  "/insumos": "Insumos",
-  "/reportes": "Reportes",
-  "/usuarios": "Usuarios",
-  "/roles": "Roles y Permisos",
-};
-
 const ICONO_CONFIG: Record<string, { color: string; bg: string }> = {
-  caja: { color: "#2C5545", bg: "rgba(44,85,69,0.1)" },
-  orden: { color: "#1565c0", bg: "rgba(21,101,192,0.1)" },
-  venta: { color: "#C9A84C", bg: "rgba(201,168,76,0.1)" },
+  caja: { color: "var(--salvia-osc)", bg: "var(--salvia-clara)" },
+  orden: { color: "var(--info)", bg: "var(--info-fondo)" },
+  venta: { color: "var(--champan)", bg: "var(--champan-claro)" },
 };
 
 function formatHora(iso: string) {
@@ -47,11 +35,7 @@ if (!localStorage.getItem("notif_ultima_lectura")) {
   localStorage.setItem("notif_ultima_lectura", new Date().toISOString());
 }
 
-interface NavbarProps {
-  onMenuClick?: () => void;
-}
-
-export default function Navbar({ onMenuClick }: NavbarProps) {
+export default function Navbar() {
   const location = useLocation();
   const user = authService.getUser();
   const ahora = useReloj();
@@ -59,7 +43,10 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
   const esMesero = user?.roles?.includes("mesero");
   const esCajero = user?.roles?.includes("cajero");
   const puedeVerCampana = esAdmin || esMesero || esCajero;
-  const titulo = PAGE_TITLES[location.pathname] || "Memo's Café";
+  const titulo = tituloDeRuta(location.pathname);
+  const fecha = ahora.toLocaleDateString("es-PE", { weekday: "long", day: "numeric", month: "long" });
+  const fechaLarga = fecha.charAt(0).toUpperCase() + fecha.slice(1);
+  const hora = ahora.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit", hour12: true });
 
   const [alertas, setAlertas] = useState<Alerta[]>([]);
   const [alertasListo, setAlertasListo] = useState<AlertaLocal[]>([]);
@@ -69,10 +56,6 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
     () => localStorage.getItem("notif_ultima_lectura") ?? new Date().toISOString()
   );
   const dropdownRef = useRef<HTMLDivElement>(null);
-
-  const initials = user?.nombre
-    ? user.nombre.split(" ").slice(0, 2).map((n) => n[0]).join("").toUpperCase()
-    : "U";
 
   // ── Polling cada 30 segundos ──────────────────────────────────────────────
   useEffect(() => {
@@ -175,163 +158,90 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
   ).length;
 
   return (
-    <header
-      className="flex items-center justify-between px-3 sm:px-5 md:px-8 shrink-0"
-      style={{
-        backgroundColor: "#F8F4EE",
-        borderBottom: "1px solid rgba(44,85,69,0.12)",
-        height: "64px",
-        position: "relative",
-        zIndex: 100,
-      }}
+    <header className="relative z-30 flex h-14 md:h-16 shrink-0 items-center justify-between gap-3 border-b border-linea bg-beige/95 backdrop-blur px-4 md:px-6 lg:px-8"
+      style={{ paddingTop: "env(safe-area-inset-top)", boxSizing: "content-box" }}
     >
-      <div className="flex items-center gap-2 min-w-0">
-        {/* Hamburguesa — solo móvil */}
-        <button
-          onClick={onMenuClick}
-          className="md:hidden rounded-lg flex items-center justify-center shrink-0"
-          style={{ width: 36, height: 36, backgroundColor: "rgba(44,85,69,0.08)" }}
-        >
-          <Menu size={19} strokeWidth={1.8} style={{ color: "#2C5545" }} />
-        </button>
-
-        <h1
-          className="truncate"
-          style={{
-            fontFamily: "'Playfair Display', serif",
-            fontSize: "22px",
-            fontWeight: 600,
-            color: "#2C5545",
-            lineHeight: 1,
-            margin: 0,
-          }}
-        >
+      <div className="flex min-w-0 items-center gap-2.5">
+        {/* En el celular no hay menú lateral: el logo orienta, como en una app */}
+        {/* En el celular hace de barra de app (logo + sección). En pantallas
+            grandes la sección ya la dice el menú lateral y el encabezado de
+            la página: aquí va la fecha, para no repetir el título. */}
+        <span className="md:hidden"><Marca compacta /></span>
+        <h1 className="md:hidden truncate font-display text-xl font-semibold text-espresso leading-none">
           {titulo}
         </h1>
+        <p className="hidden md:block text-sm text-suave">
+          <span className="font-medium text-espresso">{fechaLarga}</span>
+          <span className="mx-2 text-linea-fuerte">·</span>
+          <span className="tabular-nums">{hora}</span>
+        </p>
       </div>
 
-      <div className="flex items-center gap-2 sm:gap-4 shrink-0">
-        {/* Fecha y hora — se oculta en móvil, se compacta en tablet */}
-        <div className="text-right hidden sm:block">
-          <p
-            className="hidden md:block"
-            style={{ fontFamily: "'Lato', sans-serif", fontSize: 12.5, color: "#2C5545", fontWeight: 500, margin: 0, textTransform: "capitalize" }}
-          >
-            {ahora.toLocaleDateString("es-PE", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
-          </p>
-          <p style={{ fontFamily: "'Lato', sans-serif", fontSize: 11.5, color: "rgba(44,85,69,0.6)", margin: 0 }}>
-            <span className="hidden md:inline">Lima, Perú — </span>
-            {ahora.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit", hour12: true })}
-          </p>
-        </div>
+      <div className="flex shrink-0 items-center gap-3 md:gap-5">
+        <span className="hidden sm:block md:hidden text-xs text-suave tabular-nums">{hora}</span>
 
-        {/* ── Campana ── */}
         {puedeVerCampana && (
-          <div ref={dropdownRef} style={{ position: "relative" }}>
+          <div ref={dropdownRef} className="relative">
             <button
+              type="button"
               onClick={() => {
                 const next = !abierto;
                 setAbierto(next);
                 if (next) marcarTodasLeidas();
               }}
-              className="relative rounded-full items-center justify-center hidden xs:flex sm:flex"
-              style={{ width: 38, height: 38, backgroundColor: "rgba(44,85,69,0.07)", border: "none", cursor: "pointer" }}
+              aria-label={noLeidas > 0 ? `Notificaciones, ${noLeidas} sin leer` : "Notificaciones"}
+              aria-expanded={abierto}
+              className="relative grid size-10 place-items-center rounded-full border border-linea bg-marfil text-espresso transition-colors hover:bg-arena"
             >
-              <Bell size={17} strokeWidth={1.8} style={{ color: "#2C5545" }} />
+              <Bell className="size-4.5" strokeWidth={1.8} />
               {noLeidas > 0 && (
-                <span style={{
-                  position: "absolute", top: 6, right: 6,
-                  width: 16, height: 16, borderRadius: "50%",
-                  backgroundColor: "#c62828", color: "white",
-                  fontFamily: "'Lato', sans-serif", fontSize: 9,
-                  fontWeight: 700, display: "flex",
-                  alignItems: "center", justifyContent: "center",
-                }}>
+                <span className="absolute -top-0.5 -right-0.5 grid min-w-5 h-5 place-items-center rounded-full bg-peligro px-1 text-[10px] font-bold text-marfil ring-2 ring-beige">
                   {noLeidas > 9 ? "9+" : noLeidas}
                 </span>
               )}
             </button>
 
-            {/* Dropdown */}
             {abierto && (
-              <div style={{
-                position: "absolute", top: 46, right: 0,
-                width: 340, backgroundColor: "white",
-                borderRadius: 12, boxShadow: "0 8px 32px rgba(0,0,0,0.14)",
-                border: "1px solid rgba(44,85,69,0.1)",
-                overflow: "hidden", zIndex: 200,
-              }}>
-                <div style={{
-                  padding: "12px 16px",
-                  borderBottom: "1px solid rgba(44,85,69,0.08)",
-                  display: "flex", alignItems: "center", justifyContent: "space-between",
-                }}>
-                  <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 14, fontWeight: 600, color: "#2C5545" }}>
-                    Notificaciones
-                  </span>
-                  <span style={{ fontFamily: "'Lato', sans-serif", fontSize: 11, color: "rgba(44,85,69,0.5)" }}>
-                    {esAdmin ? "Últimas 8 horas" : "En vivo"}
-                  </span>
+              <div className="fixed inset-x-3 top-[calc(3.5rem+env(safe-area-inset-top)+8px)] md:absolute md:inset-x-auto md:right-0 md:top-12 md:w-90 overflow-hidden rounded-2xl border border-linea bg-marfil shadow-alta">
+                <div className="flex items-center justify-between border-b border-linea px-4 py-3">
+                  <span className="font-display text-[15px] font-semibold text-espresso">Notificaciones</span>
+                  <span className="text-xs text-suave">{esAdmin ? "Últimas 8 horas" : "En vivo"}</span>
                 </div>
 
-                <div style={{ maxHeight: 380, overflowY: "auto" }}>
+                <div className="max-h-[60vh] md:max-h-96 overflow-y-auto">
                   {alertasCombinadas.length === 0 ? (
-                    <div style={{
-                      padding: "32px 16px", textAlign: "center",
-                      fontFamily: "'Lato', sans-serif", fontSize: 13,
-                      color: "rgba(44,85,69,0.4)",
-                    }}>
-                      Sin notificaciones recientes
+                    <div className="px-4 py-10 text-center text-sm text-suave">
+                      Todo tranquilo por ahora
                     </div>
                   ) : (
                     alertasCombinadas.map((alerta, i) => {
                       const cfg = ICONO_CONFIG[alerta.icono] ?? ICONO_CONFIG.orden;
                       const leida = new Date(alerta.fecha) <= new Date(ultimaLectura);
                       return (
-                        <div key={alerta.id ?? i} style={{
-                          padding: "10px 16px",
-                          borderBottom: "1px solid rgba(44,85,69,0.06)",
-                          display: "flex", alignItems: "flex-start", gap: 10,
-                          backgroundColor: leida ? "white" : "rgba(44,85,69,0.025)",
-                        }}>
-                          <div style={{
-                            width: 32, height: 32, borderRadius: "50%",
-                            backgroundColor: cfg.bg, flexShrink: 0,
-                            display: "flex", alignItems: "center", justifyContent: "center",
-                          }}>
-                            {alerta.icono === "orden" && <ShoppingBag size={14} color={cfg.color} />}
-                            {alerta.icono === "venta" && <Receipt size={14} color={cfg.color} />}
-                            {alerta.icono === "caja" && <span style={{ fontSize: 14 }}>💰</span>}
-                          </div>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <p style={{
-                              fontFamily: "'Lato', sans-serif", fontSize: 12.5,
-                              fontWeight: leida ? 400 : 600,
-                              color: "#333", margin: 0, lineHeight: 1.4,
-                            }}>
+                        <div
+                          key={alerta.id ?? i}
+                          className={`flex items-start gap-3 border-b border-linea/70 px-4 py-3 last:border-b-0 ${leida ? "" : "bg-salvia-clara/40"}`}
+                        >
+                          <span className="grid size-8 shrink-0 place-items-center rounded-full" style={{ backgroundColor: cfg.bg, color: cfg.color }}>
+                            {alerta.icono === "orden" && <ShoppingBag className="size-3.5" />}
+                            {alerta.icono === "venta" && <Receipt className="size-3.5" />}
+                            {alerta.icono === "caja" && <Wallet className="size-3.5" />}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className={`text-[13px] leading-snug text-espresso ${leida ? "" : "font-semibold"}`}>
                               {alerta.mensaje}
                             </p>
-                            <p style={{
-                              fontFamily: "'Lato', sans-serif", fontSize: 11,
-                              color: "rgba(44,85,69,0.5)", margin: "2px 0 0 0",
-                            }}>
-                              {formatHora(alerta.fecha)}
-                            </p>
+                            <p className="mt-0.5 text-xs text-suave">{formatHora(alerta.fecha)}</p>
                           </div>
                           {alerta.accion && (esMesero || esAdmin) && (
                             <button
+                              type="button"
                               onClick={() => marcarEntregado(alerta)}
                               disabled={entregando === alerta.id}
-                              className="shrink-0 flex items-center gap-1 rounded-md"
-                              style={{
-                                padding: "4px 8px", border: "1px solid rgba(44,85,69,0.25)",
-                                backgroundColor: "white", color: "#2C5545",
-                                fontFamily: "'Lato', sans-serif", fontSize: 10.5, fontWeight: 700,
-                                cursor: entregando === alerta.id ? "not-allowed" : "pointer",
-                              }}
+                              className="flex shrink-0 items-center gap-1 rounded-lg border border-linea-fuerte bg-marfil px-2.5 h-8 text-xs font-semibold text-salvia-osc hover:bg-salvia-clara disabled:opacity-60"
                             >
-                              <Check size={11} strokeWidth={2.5} />
-                              {entregando === alerta.id ? "..." : "Entregado"}
+                              <Check className="size-3.5" strokeWidth={2.5} />
+                              {entregando === alerta.id ? "…" : "Entregado"}
                             </button>
                           )}
                         </div>
@@ -343,22 +253,6 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
             )}
           </div>
         )}
-
-        {/* Chip del usuario — nombre se oculta en móvil, solo avatar */}
-        <div className="flex items-center gap-2 rounded-full px-2 sm:px-3 py-1.5" style={{ backgroundColor: "#2C5545" }}>
-          <div
-            className="rounded-full flex items-center justify-center shrink-0"
-            style={{ width: 22, height: 22, backgroundColor: "#1E4A37", fontFamily: "'Lato', sans-serif", fontSize: 10, fontWeight: 700, color: "white" }}
-          >
-            {initials}
-          </div>
-          <span
-            className="hidden sm:inline"
-            style={{ fontFamily: "'Lato', sans-serif", fontSize: 12.5, fontWeight: 500, color: "white" }}
-          >
-            {user?.nombre?.split(" ")[0] || "Usuario"}
-          </span>
-        </div>
       </div>
     </header>
   );

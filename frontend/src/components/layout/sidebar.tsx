@@ -1,156 +1,114 @@
-import { NavLink, useNavigate } from "react-router-dom";
-import {
-  LayoutDashboard,
-  Table2,
-  ClipboardList,
-  ChefHat,
-  Receipt,
-  Package,
-  BarChart3,
-  Boxes,
-  Users,
-  ShieldCheck,
-  Tag,
-  LogOut,
-  X,
-  type LucideIcon,
-} from "lucide-react";
+import { NavLink } from "react-router-dom";
+import { LogOut } from "lucide-react";
 import authService from "../../services/authService";
+import { GRUPOS, iniciales, itemsVisibles, nombreRol } from "./navegacion";
 
-interface NavItem {
-  icon: LucideIcon;
-  label: string;
-  path: string;
-  roles: string[] | null;
-  modulo: string | null;
+export function Marca({ compacta = false }: { compacta?: boolean }) {
+  return (
+    <div className="flex items-center gap-2.5 min-w-0">
+      <img
+        src="/logo-memos.png"
+        alt="Memo's Coffee"
+        width={38}
+        height={38}
+        className="size-9.5 shrink-0 rounded-full"
+      />
+      {!compacta && (
+        <div className="min-w-0 leading-tight">
+          <p className="font-display text-[17px] font-semibold text-espresso truncate">Memo's Coffee</p>
+          <p className="text-[11.5px] text-suave truncate">Coffee, postres &amp; champagne</p>
+        </div>
+      )}
+    </div>
+  );
 }
 
-const getNavItems = (userRoles: string[]): NavItem[] => [
-  {
-    icon: LayoutDashboard,
-    label: "Panel",
-    path: userRoles.includes("admin") ? "/dashboard" : "/home",
-    // Cocina no tiene "Panel": su pantalla principal es "Cocina" (ver abajo),
-    // /home muestra mesas/órdenes que ese rol no puede leer.
-    roles: ["admin", "cajero", "mesero"],
-    modulo: null,
-  },
-  { icon: Table2, label: "Mesas", path: "/mesas", roles: null, modulo: "mesas" },
-  { icon: ClipboardList, label: "Órdenes", path: "/ordenes", roles: null, modulo: "ordenes" },
-  { icon: ChefHat, label: "Cocina", path: "/cocina", roles: null, modulo: "ordenes_cocina" },
-  { icon: Receipt, label: "Caja", path: "/caja", roles: ["admin", "cajero"], modulo: "caja" },
-  { icon: Package, label: "Productos", path: "/productos", roles: ["admin"], modulo: null },
-  { icon: Tag, label: "Promociones", path: "/promociones", roles: ["admin"], modulo: null },
-  { icon: Tag, label: "Categorias", path: "/categorias", roles: ["admin"], modulo: null },
-  { icon: Boxes, label: "Insumos", path: "/insumos", roles: ["admin"], modulo: null },
-  { icon: BarChart3, label: "Reportes", path: "/reportes", roles: ["admin"], modulo: null },
-  { icon: Users, label: "Usuarios", path: "/usuarios", roles: ["admin"], modulo: null },
-  { icon: ShieldCheck, label: "Roles y Permisos", path: "/roles", roles: ["admin"], modulo: null },
-];
-
-interface SidebarProps {
-  open?: boolean;
-  onClose?: () => void;
-}
-
-export default function Sidebar({ open = false, onClose }: SidebarProps) {
-  const navigate = useNavigate();
+/**
+ * Menú lateral claro. En computadora se ve completo; en tablet (md) se
+ * reduce a una columna de íconos para dejarle espacio al contenido. En el
+ * celular no se muestra: ahí manda la barra inferior (ver bottomNav).
+ */
+export default function Sidebar() {
   const user = authService.getUser();
-
-  const visibleItems = getNavItems(user.roles).filter(({ roles, modulo }) => {
-    if (roles && !roles.some((role) => authService.hasRole(role))) return false;
-    if (modulo && !authService.tieneModulo(modulo)) return false;
-    return true;
-  });
-
-  const handleLogout = () => {
-    authService.logout();
-    navigate("/login");
-  };
-
-  const initials = user.nombre
-    ? user.nombre.split(" ").slice(0, 2).map((n) => n[0]).join("").toUpperCase()
-    : "U";
+  const visibles = itemsVisibles();
+  const grupos = GRUPOS.map((grupo) => ({
+    grupo,
+    items: visibles.filter((i) => i.grupo === grupo),
+  })).filter((g) => g.items.length > 0);
+  const mostrarTitulos = grupos.length > 1;
 
   return (
     <aside
-      className={`
-        flex flex-col h-full shrink-0 fixed md:static inset-y-0 left-0 z-50
-        transition-transform duration-200 ease-in-out
-        ${open ? "translate-x-0" : "-translate-x-full"} md:translate-x-0
-      `}
-      style={{ backgroundColor: "#2C5545", width: "220px" }}
+      aria-label="Menú principal"
+      className="hidden md:flex flex-col shrink-0 h-full bg-arena border-r border-linea md:w-19 lg:w-58 transition-[width]"
     >
-      {/* Logo + cerrar (móvil) */}
-      <div
-        className="flex flex-col items-center py-7 px-5 border-b relative"
-        style={{ borderColor: "rgba(255,255,255,0.12)" }}
-      >
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 md:hidden"
-          style={{ color: "rgba(255,255,255,0.7)" }}
-        >
-          <X size={20} />
-        </button>
-        <img
-          src="/logomemos.png"
-          alt="Memo's Café"
-          style={{
-            width: 150,
-            objectFit: "contain",
-          }}
-        />
+      <div className="flex items-center justify-center lg:justify-start px-3 lg:px-4 h-16 shrink-0">
+        <span className="lg:hidden"><Marca compacta /></span>
+        <span className="hidden lg:block min-w-0"><Marca /></span>
       </div>
-      {/* Navegación */}
-      <nav className="flex-1 py-4 px-3 flex flex-col gap-0.5 overflow-y-auto">
-        {visibleItems.map(({ icon: Icon, label, path }) => (
-          <NavLink
-            key={path}
-            to={path}
-            onClick={onClose}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg w-full text-left transition-colors"
-            style={({ isActive }) => ({
-              backgroundColor: isActive ? "#1E4A37" : "transparent",
-              color: "white",
-              fontFamily: "'Lato', sans-serif",
-              fontSize: "13.5px",
-              fontWeight: isActive ? 500 : 400,
-              opacity: isActive ? 1 : 0.82,
-              textDecoration: "none",
-            })}
-          >
-            <Icon size={17} strokeWidth={1.8} />
-            {label}
-          </NavLink>
+
+      <nav className="flex-1 overflow-y-auto px-2.5 lg:px-3 pt-2 pb-4 flex flex-col gap-5">
+        {grupos.map(({ grupo, items }) => (
+          <div key={grupo} className="flex flex-col gap-0.5">
+            {mostrarTitulos && (
+              <p className="hidden lg:block px-2.5 pb-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-suave">
+                {grupo}
+              </p>
+            )}
+            {items.map(({ icon: Icon, label, path }) => (
+              <NavLink
+                key={path}
+                to={path}
+                title={label}
+                className={({ isActive }) =>
+                  [
+                    "group flex items-center gap-2.5 rounded-lg text-[13.5px] font-medium transition-colors",
+                    "justify-center lg:justify-start h-11 lg:h-9.5 px-0 lg:px-2.5",
+                    "focus-visible:outline-2 focus-visible:outline-salvia",
+                    isActive
+                      ? "bg-salvia-clara text-salvia-osc font-semibold"
+                      : "text-suave hover:bg-marfil/70 hover:text-espresso",
+                  ].join(" ")
+                }
+              >
+                <Icon className="size-4.5 shrink-0" strokeWidth={1.8} aria-hidden />
+                <span className="hidden lg:inline truncate">{label}</span>
+              </NavLink>
+            ))}
+          </div>
         ))}
       </nav>
 
-      {/* Usuario + Logout */}
-      <div className="px-4 py-5 border-t" style={{ borderColor: "rgba(255,255,255,0.12)" }}>
-        <div className="flex items-center gap-2.5 mb-3">
-          <div
-            className="rounded-full flex items-center justify-center text-white shrink-0"
-            style={{ width: 34, height: 34, backgroundColor: "#1E4A37", fontFamily: "'Lato', sans-serif", fontSize: 13, fontWeight: 600 }}
+      <div className="p-2.5 lg:p-3 border-t border-linea">
+        <div className="flex items-center gap-2.5 rounded-xl lg:bg-marfil lg:border lg:border-linea p-1.5 lg:p-2 justify-center lg:justify-start">
+          <span
+            className="size-8 shrink-0 rounded-full bg-champan-claro text-champan grid place-items-center text-xs font-semibold"
+            title={user.nombre || user.email}
           >
-            {initials}
+            {iniciales(user.nombre || user.email)}
+          </span>
+          <div className="hidden lg:block min-w-0 flex-1">
+            <p className="text-[13px] font-semibold text-espresso truncate">{user.nombre || user.email}</p>
+            <p className="text-xs text-suave truncate">{nombreRol(user.roles)}</p>
           </div>
-          <div className="min-w-0">
-            <p className="text-white truncate" style={{ fontFamily: "'Lato', sans-serif", fontSize: 12.5, fontWeight: 500 }}>
-              {user.nombre || user.email}
-            </p>
-            <p className="truncate" style={{ fontFamily: "'Lato', sans-serif", fontSize: 11, color: "rgba(255,255,255,0.55)" }}>
-              {user.roles?.[0] || "Usuario"}
-            </p>
-          </div>
+          <button
+            type="button"
+            onClick={() => authService.logout()}
+            title="Cerrar sesión"
+            aria-label="Cerrar sesión"
+            className="hidden lg:grid size-8 place-items-center rounded-lg text-suave hover:bg-arena hover:text-peligro transition-colors"
+          >
+            <LogOut className="size-4" strokeWidth={1.8} />
+          </button>
         </div>
         <button
-          onClick={handleLogout}
-          className="flex items-center gap-2 w-full rounded-lg px-3 py-2 transition-colors"
-          style={{ backgroundColor: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.75)", fontFamily: "'Lato', sans-serif", fontSize: 12.5 }}
+          type="button"
+          onClick={() => authService.logout()}
+          title="Cerrar sesión"
+          aria-label="Cerrar sesión"
+          className="lg:hidden mt-1 w-full h-10 grid place-items-center rounded-lg text-suave hover:bg-marfil hover:text-peligro transition-colors"
         >
-          <LogOut size={14} strokeWidth={1.8} />
-          Cerrar sesión
+          <LogOut className="size-4" strokeWidth={1.8} />
         </button>
       </div>
     </aside>

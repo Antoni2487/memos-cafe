@@ -13,14 +13,14 @@ import { ROLES } from "../../utils/constants";
 import type { Columna, Usuario } from "../../types";
 
 const ROL_COLORES: Record<string, { bg: string; color: string }> = {
-  [ROLES.ADMIN]: { bg: "rgba(44,85,69,0.12)", color: "#2C5545" },
-  [ROLES.CAJERO]: { bg: "rgba(201,168,76,0.15)", color: "#9a7a1a" },
-  [ROLES.MESERO]: { bg: "rgba(33,150,243,0.12)", color: "#1565c0" },
+  [ROLES.ADMIN]: { bg: "rgba(76,107,101,0.12)", color: "var(--salvia)" },
+  [ROLES.CAJERO]: { bg: "rgba(140,108,58,0.15)", color: "var(--champan)" },
+  [ROLES.MESERO]: { bg: "rgba(33,150,243,0.12)", color: "var(--info)" },
 };
 
 const BTN_BASE: CSSProperties = {
   width: 30, height: 30, borderRadius: "6px",
-  backgroundColor: "white", cursor: "pointer",
+  backgroundColor: "var(--marfil)", cursor: "pointer",
   display: "flex", alignItems: "center", justifyContent: "center",
   transition: "all 0.15s",
 };
@@ -44,18 +44,18 @@ export default function UsuariosPage() {
         <div className="flex items-center gap-2.5">
           <div style={{
             width: 32, height: 32, borderRadius: "50%",
-            backgroundColor: "rgba(44,85,69,0.12)",
+            backgroundColor: "rgba(76,107,101,0.12)",
             display: "flex", alignItems: "center", justifyContent: "center",
-            fontFamily: "'Lato', sans-serif", fontSize: 11,
-            fontWeight: 700, color: "#2C5545", flexShrink: 0,
+            fontFamily: "var(--font-texto)", fontSize: 11,
+            fontWeight: 700, color: "var(--salvia)", flexShrink: 0,
           }}>
             {(u.name || u.email).charAt(0).toUpperCase()}
           </div>
           <div>
-            <p style={{ margin: 0, fontFamily: "'Lato', sans-serif", fontSize: 13.5, fontWeight: 500, color: "#2C5545" }}>
+            <p style={{ margin: 0, fontFamily: "var(--font-texto)", fontSize: 13.5, fontWeight: 500, color: "var(--salvia)" }}>
               {u.name || "—"}
             </p>
-            <p style={{ margin: 0, fontFamily: "'Lato', sans-serif", fontSize: 11.5, color: "rgba(44,85,69,0.55)" }}>
+            <p style={{ margin: 0, fontFamily: "var(--font-texto)", fontSize: 11.5, color: "var(--suave)" }}>
               {u.email}
             </p>
           </div>
@@ -68,12 +68,12 @@ export default function UsuariosPage() {
       width: "120px",
       render: (u) => {
         const rol = u.groups?.[0]?.name ?? "Sin rol";
-        const c = ROL_COLORES[rol] ?? { bg: "rgba(120,120,120,0.1)", color: "#666" };
+        const c = ROL_COLORES[rol] ?? { bg: "rgba(120,120,120,0.1)", color: "var(--suave)" };
         return (
           <span style={{
             display: "inline-flex", alignItems: "center",
             backgroundColor: c.bg, color: c.color,
-            borderRadius: "999px", fontFamily: "'Lato', sans-serif",
+            borderRadius: "999px", fontFamily: "var(--font-texto)",
             fontSize: "11px", fontWeight: 700,
             padding: "3px 10px", letterSpacing: "0.04em",
             textTransform: "capitalize",
@@ -105,8 +105,8 @@ export default function UsuariosPage() {
           <button
             onClick={() => abrirEditar(u)}
             title="Editar"
-            style={{ ...BTN_BASE, border: "1px solid rgba(44,85,69,0.2)", color: "#2C5545" }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "rgba(44,85,69,0.08)"}
+            style={{ ...BTN_BASE, border: "1px solid var(--linea-fuerte)", color: "var(--salvia)" }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "rgba(76,107,101,0.08)"}
             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "white"}
           >
             <Pencil size={13} strokeWidth={2} />
@@ -114,8 +114,8 @@ export default function UsuariosPage() {
           <button
             onClick={() => setUsuarioToggle(u)}
             title={u.is_active ? "Desactivar" : "Activar"}
-            style={{ ...BTN_BASE, border: "1px solid rgba(245,127,23,0.3)", color: "#f57f17" }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "rgba(245,127,23,0.08)"}
+            style={{ ...BTN_BASE, border: "1px solid rgba(138,90,12,0.3)", color: "var(--aviso)" }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "rgba(138,90,12,0.08)"}
             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "white"}
           >
             <PowerOff size={13} strokeWidth={2} />
@@ -123,8 +123,8 @@ export default function UsuariosPage() {
           <button
             onClick={() => setUsuarioEliminar(u)}
             title="Eliminar"
-            style={{ ...BTN_BASE, border: "1px solid rgba(198,40,40,0.2)", color: "#c62828" }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "rgba(198,40,40,0.06)"}
+            style={{ ...BTN_BASE, border: "1px solid rgba(163,58,44,0.2)", color: "var(--peligro)" }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "rgba(163,58,44,0.06)"}
             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "white"}
           >
             <Trash2 size={13} strokeWidth={2} />
@@ -143,9 +143,9 @@ export default function UsuariosPage() {
           <button
             onClick={abrirNuevo}
             style={{
-              backgroundColor: "#2C5545", color: "white",
+              backgroundColor: "var(--salvia)", color: "white",
               border: "none", borderRadius: "8px",
-              padding: "9px 16px", fontFamily: "'Lato', sans-serif",
+              padding: "9px 16px", fontFamily: "var(--font-texto)",
               fontSize: "13px", fontWeight: 600, cursor: "pointer",
             }}
           >
@@ -158,12 +158,12 @@ export default function UsuariosPage() {
         <div
           onClick={() => setError(null)}
           style={{
-            backgroundColor: "rgba(198,40,40,0.08)",
-            border: "1px solid rgba(198,40,40,0.25)",
+            backgroundColor: "rgba(163,58,44,0.08)",
+            border: "1px solid rgba(163,58,44,0.25)",
             borderRadius: "8px", padding: "10px 14px",
             marginBottom: 16, cursor: "pointer",
-            fontFamily: "'Lato', sans-serif",
-            fontSize: "13px", color: "#c62828",
+            fontFamily: "var(--font-texto)",
+            fontSize: "13px", color: "var(--peligro)",
           }}
         >
           ⚠ {error} — <span style={{textDecoration:"underline"}}>Cerrar</span>
