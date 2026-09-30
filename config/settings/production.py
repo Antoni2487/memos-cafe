@@ -81,9 +81,18 @@ SECURE_CONTENT_TYPE_NOSNIFF = env.bool(
 
 # STATIC & MEDIA
 # ------------------------
+# Fotos de productos y promociones: el disco de Render se borra en cada
+# despliegue y Django no sirve /media/ con DEBUG=False. Con CLOUDINARY_URL
+# (cloudinary://<api_key>:<api_secret>@<cloud_name>, del panel de Cloudinary)
+# se guardan alla y se sirven desde su CDN. Sin la variable, queda el disco.
+CLOUDINARY_URL = env("CLOUDINARY_URL", default="")
 STORAGES = {
     "default": {
-        "BACKEND": "django.core.files.storage.FileSystemStorage",
+        "BACKEND": (
+            "cloudinary_storage.storage.MediaCloudinaryStorage"
+            if CLOUDINARY_URL
+            else "django.core.files.storage.FileSystemStorage"
+        ),
     },
     "staticfiles": {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
@@ -115,6 +124,8 @@ ADMIN_URL = env("DJANGO_ADMIN_URL")
 # ------------------------------------------------------------------------------
 # https://anymail.readthedocs.io/en/stable/installation/#installing-anymail
 INSTALLED_APPS += ["anymail"]
+if CLOUDINARY_URL:
+    INSTALLED_APPS += ["cloudinary_storage", "cloudinary"]
 # https://docs.djangoproject.com/en/dev/ref/settings/#email-backend
 # https://anymail.readthedocs.io/en/stable/installation/#anymail-settings-reference
 # https://anymail.readthedocs.io/en/stable/esps

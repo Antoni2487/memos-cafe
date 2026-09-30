@@ -157,6 +157,9 @@ npm run lint
 | `DJANGO_CORS_ALLOWED_ORIGINS` | URL del frontend desplegado |
 | `DJANGO_ADMIN_URL` | ruta del admin de Django |
 | `DB_POOL_MIN_SIZE` / `DB_POOL_MAX_SIZE` | opcionales: tamaño del pool de conexiones (por defecto 1 y 4) |
+| `CLOUDINARY_URL` | fotos de productos y promociones en Cloudinary (`cloudinary://<api_key>:<api_secret>@<cloud_name>`). Sin ella se guardan en el disco del servidor, que en Render se borra en cada despliegue |
+
+Frontend (Vercel): `VITE_API_URL`, y opcionales `VITE_WEB_URL` e `VITE_INSTAGRAM_URL` para los enlaces de "Conoce Memo's" en la carta del cliente.
 
 ## Documentación adicional
 

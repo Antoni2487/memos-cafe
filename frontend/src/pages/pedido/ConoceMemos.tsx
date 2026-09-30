@@ -1,9 +1,10 @@
 import { AtSign, ExternalLink, Globe } from "lucide-react";
 
-// Enlaces configurables en Vercel (Settings → Environment Variables). Si no
-// están definidos, el botón no aparece.
+// Enlaces configurables en Vercel (Settings → Environment Variables). La web
+// no aparece hasta que se defina VITE_WEB_URL.
 const WEB = import.meta.env.VITE_WEB_URL as string | undefined;
-const INSTAGRAM = import.meta.env.VITE_INSTAGRAM_URL as string | undefined;
+const INSTAGRAM =
+  (import.meta.env.VITE_INSTAGRAM_URL as string | undefined) || "https://www.instagram.com/memos.coffeecix/";
 
 export default function ConoceMemos({ onVerCarta }: { onVerCarta: () => void }) {
   return (
