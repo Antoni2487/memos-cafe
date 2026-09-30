@@ -12,8 +12,8 @@ export default function useProductos() {
   // (react-hooks/set-state-in-effect).
   const cargar = useCallback(() =>
     productoService.listar()
-      .then(({ data }) => {
-        setProductos((Array.isArray(data) ? data : data.results).slice().sort((a, b) => a.id - b.id));
+      .then((lista) => {
+        setProductos(lista.slice().sort((a, b) => a.id - b.id));
         setError(null);
       })
       .catch(() => setError("Error al cargar productos"))

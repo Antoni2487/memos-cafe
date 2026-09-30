@@ -1,4 +1,5 @@
 import axios, { AxiosHeaders } from "axios";
+import type { Paginated } from "../types";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/api";
 
@@ -57,5 +58,27 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+/**
+ * GET de un listado completo. La API pagina de a 20 (PAGE_SIZE en
+ * config/settings/base.py) y leer solo `results` dejaba fuera todo lo que
+ * no entrara en la primera pagina. Si la respuesta es paginada, pide las
+ * paginas siguientes con ?page=N (no sigue la URL absoluta de `next`,
+ * que detras de un proxy puede venir con http:// y el navegador la
+ * bloquearia como mixed content). Tambien acepta endpoints sin paginar.
+ */
+export async function getAll<T>(url: string, params?: Record<string, unknown>): Promise<T[]> {
+  const { data } = await api.get<Paginated<T> | T[]>(url, { params });
+  if (Array.isArray(data)) return data;
+
+  const items = [...data.results];
+  let hayMas = data.next !== null;
+  for (let page = 2; hayMas; page++) {
+    const { data: pagina } = await api.get<Paginated<T>>(url, { params: { ...params, page } });
+    items.push(...pagina.results);
+    hayMas = pagina.next !== null;
+  }
+  return items;
+}
 
 export default api;

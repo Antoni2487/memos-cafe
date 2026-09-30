@@ -38,8 +38,8 @@ export default function ProductoForm({ abierto, producto, onGuardar, onCerrar, c
   const [errores, setErrores] = useState<Partial<Record<keyof FormState, string>>>({});
 
   useEffect(() => {
-    categoriaService.listar().then(({ data }) => {
-      const lista = (Array.isArray(data) ? data : data.results).filter((c) => c.activo);
+    categoriaService.listar().then((todas) => {
+      const lista = todas.filter((c) => c.activo);
       setCategorias(lista);
     });
   }, []);

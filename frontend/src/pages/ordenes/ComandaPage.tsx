@@ -16,8 +16,7 @@ export default function ComandaPage() {
   // (react-hooks/set-state-in-effect).
   useEffect(() => {
     ordenesService.listar()
-      .then(({ data }) => {
-        const ordenes = Array.isArray(data) ? data : (data.results ?? []);
+      .then((ordenes) => {
         const found = ordenes.find((o) => o.id === parseInt(ordenId ?? "", 10));
         if (found) setOrden(found);
         else setError("Orden no encontrada.");

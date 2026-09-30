@@ -14,8 +14,7 @@ interface EstadoCaja {
 
 // Un 404 en /caja/sesiones/estado/ significa "no hay sesion abierta", no un error.
 async function fetchEstadoCaja(): Promise<EstadoCaja> {
-    const ordenesRes = await ordenesService.listar();
-    const todas = "results" in ordenesRes.data ? ordenesRes.data.results : ordenesRes.data;
+    const todas = await ordenesService.listar();
     const ordenesAbiertas = todas.filter((o) => o.estado === "abierta");
 
     let caja: CajaSesion;
@@ -28,15 +27,15 @@ async function fetchEstadoCaja(): Promise<EstadoCaja> {
         throw err;
     }
 
-    const [movRes, pagRes] = await Promise.all([
+    const [movimientos, pagos] = await Promise.all([
         cajaService.listarMovimientos(),
-        cajaService.listarPagos(),
+        cajaService.listarPagos(caja.id),
     ]);
     return {
         ordenesAbiertas,
         caja,
-        movimientos: "results" in movRes.data ? movRes.data.results : movRes.data,
-        pagos: "results" in pagRes.data ? pagRes.data.results : pagRes.data,
+        movimientos,
+        pagos,
     };
 }
 
@@ -76,8 +75,7 @@ export default function useCaja() {
     // Patrón idéntico al setInterval de OrdenesPage.jsx.
     const actualizarOrdenesAbiertas = useCallback(async () => {
         try {
-            const ordenesRes = await ordenesService.listar();
-            const todas = "results" in ordenesRes.data ? ordenesRes.data.results : ordenesRes.data;
+            const todas = await ordenesService.listar();
             setOrdenesAbiertas(todas.filter((o) => o.estado === "abierta"));
         } catch { /* silencioso — no interrumpe el estado actual */ }
     }, []);

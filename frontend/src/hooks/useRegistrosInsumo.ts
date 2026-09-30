@@ -12,8 +12,8 @@ export default function useRegistrosInsumo() {
     // (react-hooks/set-state-in-effect).
     const cargar = useCallback(() =>
         registroInsumoService.listar()
-            .then(({ data }) => {
-                setRegistros("results" in data ? data.results : data);
+            .then((lista) => {
+                setRegistros(lista);
                 setError(null);
             })
             .catch(() => setError("Error al cargar el historial de gastos"))

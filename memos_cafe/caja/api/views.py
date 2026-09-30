@@ -1,23 +1,29 @@
-﻿from rest_framework import mixins, status
+from rest_framework import mixins
+from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
-from memos_cafe.caja.models import Caja, Comprobante, MovimientoCaja, Pago
-from memos_cafe.caja.services import CajaService, ComprobanteService, PagoService
-from memos_cafe.caja.api.serializers import (
-    AbrirCajaSerializer,
-    CajaReadSerializer,
-    CerrarCajaSerializer,
-    ComprobanteReadSerializer,
-    ComprobanteWriteSerializer,
-    MovimientoCajaReadSerializer,
-    MovimientoCajaSerializer,
-    NotaCreditoWriteSerializer,
-    PagoReadSerializer,
-    PagoWriteSerializer,
-)
-from memos_cafe.utils.permissions import EsAdmin, EsAdminOCajero, modulo_requerido
+from memos_cafe.caja.api.serializers import AbrirCajaSerializer
+from memos_cafe.caja.api.serializers import CajaReadSerializer
+from memos_cafe.caja.api.serializers import CerrarCajaSerializer
+from memos_cafe.caja.api.serializers import ComprobanteReadSerializer
+from memos_cafe.caja.api.serializers import ComprobanteWriteSerializer
+from memos_cafe.caja.api.serializers import MovimientoCajaReadSerializer
+from memos_cafe.caja.api.serializers import MovimientoCajaSerializer
+from memos_cafe.caja.api.serializers import NotaCreditoWriteSerializer
+from memos_cafe.caja.api.serializers import PagoReadSerializer
+from memos_cafe.caja.api.serializers import PagoWriteSerializer
+from memos_cafe.caja.models import Caja
+from memos_cafe.caja.models import Comprobante
+from memos_cafe.caja.models import MovimientoCaja
+from memos_cafe.caja.models import Pago
+from memos_cafe.caja.services import CajaService
+from memos_cafe.caja.services import ComprobanteService
+from memos_cafe.caja.services import PagoService
+from memos_cafe.utils.permissions import EsAdmin
+from memos_cafe.utils.permissions import EsAdminOCajero
+from memos_cafe.utils.permissions import modulo_requerido
 
 
 class CajaViewSet(GenericViewSet):
@@ -25,6 +31,7 @@ class CajaViewSet(GenericViewSet):
     Gestión de sesiones de caja.
     El ViewSet solo maneja HTTP — delega toda la lógica a CajaService.
     """
+
     permission_classes = [EsAdminOCajero, modulo_requerido("caja")]
     queryset = Caja.objects.all()
 
@@ -74,6 +81,7 @@ class MovimientoCajaViewSet(
     GenericViewSet,
 ):
     """Movimientos de efectivo dentro de una sesión de caja."""
+
     permission_classes = [EsAdminOCajero, modulo_requerido("caja")]
 
     def get_serializer_class(self):
@@ -113,7 +121,11 @@ class PagoViewSet(
     Gestión de pagos.
     El create va en un action separado para mayor control.
     """
+
     permission_classes = [EsAdminOCajero, modulo_requerido("caja")]
+    # ?caja=<id> limita el listado a los pagos de una sesion: sin el filtro
+    # se devuelve el historial completo (paginado), no solo el turno actual.
+    filterset_fields = ["caja", "estado"]
 
     def get_queryset(self):
         return Pago.objects.con_orden_completa()
@@ -138,7 +150,12 @@ class PagoViewSet(
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(PagoReadSerializer(pago).data, status=status.HTTP_201_CREATED)
 
-    @action(detail=True, methods=["post"], url_path="anular", permission_classes=[EsAdmin])
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="anular",
+        permission_classes=[EsAdmin],
+    )
     def anular(self, request, pk=None):
         """POST /api/pagos/{id}/anular/ — solo admin. Requiere motivo
         (genera nota de credito interna; la orden NO se reabre)."""
@@ -163,6 +180,7 @@ class ComprobanteViewSet(
     GenericViewSet,
 ):
     """Emisión y consulta de comprobantes."""
+
     permission_classes = [EsAdminOCajero, modulo_requerido("caja")]
     queryset = Comprobante.objects.select_related("pago").all()
 

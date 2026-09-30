@@ -14,8 +14,8 @@ export function useOrdenes() {
   // (react-hooks/set-state-in-effect).
   const obtener = useCallback(() =>
     ordenesService.listar()
-      .then(({ data }) => {
-        setOrdenes(Array.isArray(data) ? data : (data.results ?? []));
+      .then((lista) => {
+        setOrdenes(lista);
         setError(null);
       })
       .catch((err) => setError(getErrorMessage(err, "Error al cargar órdenes")))

@@ -12,8 +12,8 @@ export default function usePromociones() {
     // (react-hooks/set-state-in-effect).
     const cargar = useCallback(() =>
         promocionService.getAll()
-            .then(({ data }) => {
-                setPromociones((Array.isArray(data) ? data : data.results).slice().sort((a, b) => a.id - b.id));
+            .then((lista) => {
+                setPromociones(lista.slice().sort((a, b) => a.id - b.id));
                 setError(null);
             })
             .catch(() => setError("Error al cargar promociones"))

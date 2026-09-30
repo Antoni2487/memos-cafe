@@ -297,8 +297,7 @@ export default function OrdenesPage() {
   // ── Carga inicial ────────────────────────────────────────────────────────────
   const cargarOrdenes = async () => {
     try {
-      const { data } = await ordenesService.listar();
-      setOrdenes("results" in data ? data.results : data);
+      setOrdenes(await ordenesService.listar());
     } catch { /* silencioso */ }
   };
 
@@ -306,21 +305,20 @@ export default function OrdenesPage() {
     const init = async () => {
       setCargando(true);
       try {
-        const [resO, resM, resP, resPr] = await Promise.all([
+        const [listaOrdenes, listaMesas, listaProductos, listaPromociones] = await Promise.all([
           ordenesService.listar(),
           mesasService.listar(),
           productoService.listar(),
           productoService.listarPromociones(),
         ]);
-        setOrdenes("results" in resO.data ? resO.data.results : resO.data);
-        setMesas("results" in resM.data ? resM.data.results : resM.data);
+        setOrdenes(listaOrdenes);
+        setMesas(listaMesas);
         // /api/productos/ devuelve TODOS los productos para admin (incluidos los
         // no disponibles, para que los pueda gestionar). El catálogo de la orden
         // solo debe ofrecer los disponibles: el backend rechaza con 400 un
         // producto no disponible al crear la orden.
-        const listaProductos = "results" in resP.data ? resP.data.results : resP.data;
         setProductos(listaProductos.filter((p) => p.disponible));
-        setPromociones("results" in resPr.data ? resPr.data.results : resPr.data);
+        setPromociones(listaPromociones);
       } catch {
         // el estado de error visual se maneja con exitoMsg/errForm en las acciones puntuales
       } finally {
@@ -428,8 +426,7 @@ export default function OrdenesPage() {
       setOrdenes((prev) => prev.map((o) => o.id === data.id ? data : o));
       setAnularTarget(null);
       // refrescar mesas para reflejar la liberación
-      const resMesas = await mesasService.listar();
-      setMesas("results" in resMesas.data ? resMesas.data.results : resMesas.data);
+      setMesas(await mesasService.listar());
     } catch (e) {
       alert(e && typeof e === "object" && "response" in e
         ? (e as { response?: { data?: { detail?: string } } }).response?.data?.detail || "Error al anular"

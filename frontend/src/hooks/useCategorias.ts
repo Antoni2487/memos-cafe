@@ -19,8 +19,8 @@ export function useCategorias() {
   // (react-hooks/set-state-in-effect).
   const obtener = useCallback(() =>
     categoriaService.listar()
-      .then(({ data }) => {
-        setCategorias(Array.isArray(data) ? data : (data.results ?? []));
+      .then((lista) => {
+        setCategorias(lista);
         setError(null);
       })
       .catch((err) => setError(getErrorMessage(err, "Error al cargar categorías")))

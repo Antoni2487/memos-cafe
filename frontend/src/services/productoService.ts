@@ -1,5 +1,5 @@
-import api from "./api";
-import type { Paginated, Producto, Promocion } from "../types";
+import api, { getAll } from "./api";
+import type { Producto, Promocion } from "../types";
 
 export interface ProductoFormData {
   nombre: string;
@@ -22,8 +22,8 @@ function toFormData(data: ProductoFormData): FormData {
 }
 
 const productoService = {
-  listar: () => api.get<Paginated<Producto> | Producto[]>("/productos/"),
-  listarPromociones: () => api.get<Paginated<Promocion> | Promocion[]>("/productos/promociones/"),
+  listar: () => getAll<Producto>("/productos/"),
+  listarPromociones: () => getAll<Promocion>("/productos/promociones/"),
   crear: (data: ProductoFormData) => api.post<Producto>("/productos/crear/", toFormData(data)),
   editar: (id: number, data: ProductoFormData) => api.patch<Producto>(`/productos/${id}/editar/`, toFormData(data)),
   activar: (id: number) => api.post<Producto>(`/productos/${id}/activar/`),

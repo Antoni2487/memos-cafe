@@ -19,7 +19,7 @@ export default function useRoles() {
   // (react-hooks/set-state-in-effect).
   useEffect(() => {
     rolesService.getAll()
-      .then(({ data }) => setPermisos("results" in data ? data.results : data))
+      .then(setPermisos)
       .catch(() => setError("Error al cargar los permisos."))
       .finally(() => setCargando(false));
   }, []);

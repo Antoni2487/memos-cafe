@@ -13,9 +13,9 @@ export default function useHome() {
   // (react-hooks/set-state-in-effect).
   const obtener = useCallback(() =>
     Promise.all([homeService.getMesas(), homeService.getOrdenes()])
-      .then(([resMesas, resOrdenes]) => {
-        setMesas("results" in resMesas.data ? resMesas.data.results : resMesas.data);
-        setOrdenes("results" in resOrdenes.data ? resOrdenes.data.results : resOrdenes.data);
+      .then(([listaMesas, listaOrdenes]) => {
+        setMesas(listaMesas);
+        setOrdenes(listaOrdenes);
         setError(null);
       })
       .catch(() => setError("Error al cargar la información."))

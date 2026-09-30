@@ -12,8 +12,8 @@ export default function useMesas() {
   // (react-hooks/set-state-in-effect).
   const cargar = useCallback(() =>
     mesasService.listar()
-      .then(({ data }) => {
-        setMesas("results" in data ? data.results : data);
+      .then((lista) => {
+        setMesas(lista);
         setError(null);
       })
       .catch(() => setError("Error al cargar mesas"))

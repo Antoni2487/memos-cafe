@@ -1,4 +1,4 @@
-import api from "./api";
+import api, { getAll } from "./api";
 import type { CajaSesion, Movimiento, Pago } from "../types";
 
 export interface AbrirSesionPayload {
@@ -46,11 +46,11 @@ const cajaService = {
   cerrarSesion: (datos: CerrarSesionPayload) => api.post<CajaSesion>("/caja/sesiones/cerrar/", datos),
 
   // Movimientos
-  listarMovimientos: () => api.get<Movimiento[] | { results: Movimiento[] }>("/caja/movimientos/"),
+  listarMovimientos: () => getAll<Movimiento>("/caja/movimientos/"),
   registrarMovimiento: (datos: MovimientoPayload) => api.post<Movimiento>("/caja/movimientos/", datos),
 
   // Pagos
-  listarPagos: () => api.get<Pago[] | { results: Pago[] }>("/caja/pagos/"),
+  listarPagos: (cajaId: number) => getAll<Pago>("/caja/pagos/", { caja: cajaId }),
   procesarPago: (datos: ProcesarPagoPayload) => api.post<Pago>("/caja/pagos/procesar/", datos),
   anularPago: (id: number, payload: AnularPagoPayload) => api.post<Pago>(`/caja/pagos/${id}/anular/`, payload),
 
