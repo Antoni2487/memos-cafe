@@ -8,24 +8,26 @@ export default function useHome() {
   const [cargando, setCargando] = useState(true);
   const [error, setError]     = useState<string | null>(null);
 
-  const cargar = useCallback(async () => {
-    try {
-      setCargando(true);
-      setError(null);
-      const [resMesas, resOrdenes] = await Promise.all([
-        homeService.getMesas(),
-        homeService.getOrdenes(),
-      ]);
-      setMesas("results" in resMesas.data ? resMesas.data.results : resMesas.data);
-      setOrdenes("results" in resOrdenes.data ? resOrdenes.data.results : resOrdenes.data);
-    } catch {
-      setError("Error al cargar la información.");
-    } finally {
-      setCargando(false);
-    }
-  }, []);
+  // Todos los setState van dentro de callbacks de la promesa, asi el
+  // efecto de montaje no actualiza estado de forma sincrona
+  // (react-hooks/set-state-in-effect).
+  const obtener = useCallback(() =>
+    Promise.all([homeService.getMesas(), homeService.getOrdenes()])
+      .then(([listaMesas, listaOrdenes]) => {
+        setMesas(listaMesas);
+        setOrdenes(listaOrdenes);
+        setError(null);
+      })
+      .catch(() => setError("Error al cargar la información."))
+      .finally(() => setCargando(false)),
+  []);
 
-  useEffect(() => { cargar(); }, [cargar]);
+  const cargar = useCallback(() => {
+    setCargando(true);
+    return obtener();
+  }, [obtener]);
+
+  useEffect(() => { obtener(); }, [obtener]);
 
   const mesasLibres   = mesas.filter((m) => m.estado === "libre").length;
   const mesasOcupadas = mesas.filter((m) => m.estado === "ocupada").length;

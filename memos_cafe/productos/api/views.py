@@ -1,21 +1,29 @@
-from rest_framework import mixins, status
+from decimal import Decimal
+
+from rest_framework import mixins
+from rest_framework import status
 from rest_framework.decorators import action
-from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
+from rest_framework.parsers import FormParser
+from rest_framework.parsers import JSONParser
+from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
-from memos_cafe.productos.models import Categoria, Producto, Promocion
-from memos_cafe.productos.services import CategoriaService, ProductoService, PromocionService
-from memos_cafe.productos.api.serializers import (
-    CategoriaSerializer,
-    ProductoSerializer,
-    ProductoWriteSerializer,
-    ProductoEditarSerializer,
-    PromocionSerializer,
-    PromocionWriteSerializer,
-    PromocionEditarSerializer,
-)
-from memos_cafe.utils.permissions import EsAdmin, TodosAutenticados
+from memos_cafe.productos.api.serializers import CategoriaSerializer
+from memos_cafe.productos.api.serializers import ProductoEditarSerializer
+from memos_cafe.productos.api.serializers import ProductoSerializer
+from memos_cafe.productos.api.serializers import ProductoWriteSerializer
+from memos_cafe.productos.api.serializers import PromocionEditarSerializer
+from memos_cafe.productos.api.serializers import PromocionSerializer
+from memos_cafe.productos.api.serializers import PromocionWriteSerializer
+from memos_cafe.productos.models import Categoria
+from memos_cafe.productos.models import Producto
+from memos_cafe.productos.models import Promocion
+from memos_cafe.productos.services import CategoriaService
+from memos_cafe.productos.services import ProductoService
+from memos_cafe.productos.services import PromocionService
+from memos_cafe.utils.permissions import EsAdmin
+from memos_cafe.utils.permissions import TodosAutenticados
 from memos_cafe.utils.throttles import CatalogoPublicoThrottle
 
 
@@ -36,20 +44,33 @@ class CategoriaViewSet(
             return [TodosAutenticados()]
         return [EsAdmin()]
 
-    @action(detail=False, methods=["post"], url_path="crear", permission_classes=[EsAdmin])
+    @action(
+        detail=False,
+        methods=["post"],
+        url_path="crear",
+        permission_classes=[EsAdmin],
+    )
     def crear(self, request):
         """POST /api/productos/categorias/crear/"""
         serializer = CategoriaSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         try:
             categoria = CategoriaService.crear(
-                nombre=serializer.validated_data["nombre"]
+                nombre=serializer.validated_data["nombre"],
             )
         except ValueError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        return Response(CategoriaSerializer(categoria).data, status=status.HTTP_201_CREATED)
+        return Response(
+            CategoriaSerializer(categoria).data,
+            status=status.HTTP_201_CREATED,
+        )
 
-    @action(detail=True, methods=["patch"], url_path="editar", permission_classes=[EsAdmin])
+    @action(
+        detail=True,
+        methods=["patch"],
+        url_path="editar",
+        permission_classes=[EsAdmin],
+    )
     def editar(self, request, pk=None):
         """PATCH /api/productos/categorias/{id}/editar/"""
         categoria = self.get_object()
@@ -60,14 +81,24 @@ class CategoriaViewSet(
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(CategoriaSerializer(categoria).data)
 
-    @action(detail=True, methods=["post"], url_path="activar", permission_classes=[EsAdmin])
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="activar",
+        permission_classes=[EsAdmin],
+    )
     def activar(self, request, pk=None):
         """POST /api/productos/categorias/{id}/activar/"""
         categoria = self.get_object()
         CategoriaService.activar(categoria)
         return Response(CategoriaSerializer(categoria).data)
 
-    @action(detail=True, methods=["post"], url_path="desactivar", permission_classes=[EsAdmin])
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="desactivar",
+        permission_classes=[EsAdmin],
+    )
     def desactivar(self, request, pk=None):
         """POST /api/productos/categorias/{id}/desactivar/"""
         categoria = self.get_object()
@@ -100,7 +131,12 @@ class ProductoViewSet(
     def get_serializer_class(self):
         return ProductoSerializer
 
-    @action(detail=False, methods=["post"], url_path="crear", permission_classes=[EsAdmin])
+    @action(
+        detail=False,
+        methods=["post"],
+        url_path="crear",
+        permission_classes=[EsAdmin],
+    )
     def crear(self, request):
         """POST /api/productos/crear/"""
         serializer = ProductoWriteSerializer(data=request.data)
@@ -109,9 +145,17 @@ class ProductoViewSet(
             producto = ProductoService.crear(**serializer.validated_data)
         except ValueError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        return Response(ProductoSerializer(producto).data, status=status.HTTP_201_CREATED)
+        return Response(
+            ProductoSerializer(producto).data,
+            status=status.HTTP_201_CREATED,
+        )
 
-    @action(detail=True, methods=["patch"], url_path="editar", permission_classes=[EsAdmin])
+    @action(
+        detail=True,
+        methods=["patch"],
+        url_path="editar",
+        permission_classes=[EsAdmin],
+    )
     def editar(self, request, pk=None):
         """PATCH /api/productos/{id}/editar/"""
         producto = self.get_object()
@@ -123,7 +167,12 @@ class ProductoViewSet(
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(ProductoSerializer(producto).data)
 
-    @action(detail=True, methods=["patch"], url_path="precio", permission_classes=[EsAdmin])
+    @action(
+        detail=True,
+        methods=["patch"],
+        url_path="precio",
+        permission_classes=[EsAdmin],
+    )
     def actualizar_precio(self, request, pk=None):
         """PATCH /api/productos/{id}/precio/"""
         producto = self.get_object()
@@ -134,20 +183,29 @@ class ProductoViewSet(
                 status=status.HTTP_400_BAD_REQUEST,
             )
         try:
-            from decimal import Decimal
             ProductoService.actualizar_precio(producto, Decimal(str(precio)))
         except ValueError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(ProductoSerializer(producto).data)
 
-    @action(detail=True, methods=["post"], url_path="activar", permission_classes=[EsAdmin])
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="activar",
+        permission_classes=[EsAdmin],
+    )
     def activar(self, request, pk=None):
         """POST /api/productos/{id}/activar/"""
         producto = self.get_object()
         producto.activar()
         return Response(ProductoSerializer(producto).data)
 
-    @action(detail=True, methods=["post"], url_path="desactivar", permission_classes=[EsAdmin])
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="desactivar",
+        permission_classes=[EsAdmin],
+    )
     def desactivar(self, request, pk=None):
         """POST /api/productos/{id}/desactivar/"""
         producto = self.get_object()
@@ -190,7 +248,12 @@ class PromocionViewSet(
     def get_serializer_class(self):
         return PromocionSerializer
 
-    @action(detail=False, methods=["post"], url_path="crear", permission_classes=[EsAdmin])
+    @action(
+        detail=False,
+        methods=["post"],
+        url_path="crear",
+        permission_classes=[EsAdmin],
+    )
     def crear(self, request):
         """POST /api/productos/promociones/crear/"""
         serializer = PromocionWriteSerializer(data=request.data)
@@ -199,9 +262,17 @@ class PromocionViewSet(
             promocion = PromocionService.crear(**serializer.validated_data)
         except ValueError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        return Response(PromocionSerializer(promocion).data, status=status.HTTP_201_CREATED)
+        return Response(
+            PromocionSerializer(promocion).data,
+            status=status.HTTP_201_CREATED,
+        )
 
-    @action(detail=True, methods=["patch"], url_path="editar", permission_classes=[EsAdmin])
+    @action(
+        detail=True,
+        methods=["patch"],
+        url_path="editar",
+        permission_classes=[EsAdmin],
+    )
     def editar(self, request, pk=None):
         """PATCH /api/productos/promociones/{id}/editar/"""
         promocion = self.get_object()
@@ -213,14 +284,24 @@ class PromocionViewSet(
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(PromocionSerializer(promocion).data)
 
-    @action(detail=True, methods=["post"], url_path="activar", permission_classes=[EsAdmin])
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="activar",
+        permission_classes=[EsAdmin],
+    )
     def activar(self, request, pk=None):
         """POST /api/productos/promociones/{id}/activar/"""
         promocion = self.get_object()
         PromocionService.activar(promocion)
         return Response(PromocionSerializer(promocion).data)
 
-    @action(detail=True, methods=["post"], url_path="desactivar", permission_classes=[EsAdmin])
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="desactivar",
+        permission_classes=[EsAdmin],
+    )
     def desactivar(self, request, pk=None):
         """POST /api/productos/promociones/{id}/desactivar/"""
         promocion = self.get_object()

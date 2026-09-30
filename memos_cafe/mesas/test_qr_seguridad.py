@@ -54,8 +54,8 @@ def _pedido(producto):
 class TestCodigoSecreto:
     def test_cada_mesa_tiene_un_codigo_distinto_e_impredecible(self):
         codigos = {MesaFactory().codigo_qr for _ in range(20)}
-        assert len(codigos) == 20  # noqa: PLR2004
-        assert all(len(c) == 12 for c in codigos)  # noqa: PLR2004
+        assert len(codigos) == 20
+        assert all(len(c) == 12 for c in codigos)
 
     def test_la_url_con_el_id_de_la_mesa_ya_no_sirve(self, mesa_abierta):
         prod = ProductoFactory(precio=Decimal("15.00"))
@@ -96,8 +96,8 @@ class TestCodigoSecreto:
         assert r.status_code == HTTPStatus.OK
         nuevo = r.data["codigo_qr"]
         assert nuevo != viejo
-        assert _cliente().get(f"/api/mesas/qr/{viejo}/").status_code == 404  # noqa: PLR2004
-        assert _cliente().get(f"/api/mesas/qr/{nuevo}/").status_code == 200  # noqa: PLR2004
+        assert _cliente().get(f"/api/mesas/qr/{viejo}/").status_code == 404
+        assert _cliente().get(f"/api/mesas/qr/{nuevo}/").status_code == 200
 
     def test_un_mesero_no_puede_regenerar_el_codigo(self, mesa_abierta):
         mesero = UserFactory()

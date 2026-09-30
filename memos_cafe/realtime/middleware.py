@@ -11,25 +11,25 @@ from urllib.parse import parse_qs
 
 from channels.db import database_sync_to_async
 from channels.middleware import BaseMiddleware
+from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
-from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
+from rest_framework_simplejwt.exceptions import InvalidToken
+from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import AccessToken
 
 
 @database_sync_to_async
 def _usuario_desde_token(token_str):
-    from django.contrib.auth import get_user_model
-
     try:
         access_token = AccessToken(token_str)
         user_id = access_token["user_id"]
     except (InvalidToken, TokenError, KeyError):
         return AnonymousUser()
 
-    User = get_user_model()
+    user_model = get_user_model()
     try:
-        return User.objects.get(pk=user_id)
-    except User.DoesNotExist:
+        return user_model.objects.get(pk=user_id)
+    except user_model.DoesNotExist:
         return AnonymousUser()
 
 
@@ -41,5 +41,5 @@ class JWTAuthMiddleware(BaseMiddleware):
         return await super().__call__(scope, receive, send)
 
 
-def JWTAuthMiddlewareStack(inner):
+def JWTAuthMiddlewareStack(inner):  # noqa: N802 -- como AuthMiddlewareStack de Channels
     return JWTAuthMiddleware(inner)

@@ -4,6 +4,7 @@ import uuid
 from auditlog.registry import auditlog
 from django.conf import settings
 from django.db import models
+from django.utils import timezone
 
 
 def generar_codigo_qr() -> str:
@@ -54,7 +55,8 @@ class Mesa(models.Model):
         Puede ocuparse tanto una mesa libre como una reservada
         (el cliente de la reserva llega y se le crea la orden)."""
         if self.estado not in (self.Estado.LIBRE, self.Estado.RESERVADA):
-            raise ValueError(f"La mesa {self.numero} no está disponible para ocupar.")
+            msg = f"La mesa {self.numero} no está disponible para ocupar."
+            raise ValueError(msg)
         self.estado = self.Estado.OCUPADA
         self.save(update_fields=["estado"])
 
@@ -69,14 +71,12 @@ class Mesa(models.Model):
         """
         self.estado = self.Estado.LIBRE
         self.save(update_fields=["estado"])
-        from django.utils import timezone
         SesionMesaQR.objects.filter(mesa=self, cerrada_en__isnull=True).update(
-            cerrada_en=timezone.now()
+            cerrada_en=timezone.now(),
         )
 
     def dar_de_baja(self):
         """El admin desactiva una mesa (ej: mantenimiento)."""
-        from django.utils import timezone
         self.activo = False
         self.estado = self.Estado.LIBRE
         self.fecha_baja = timezone.now()
@@ -92,10 +92,13 @@ class SesionMesaQR(models.Model):
     Orden.usuario sea nullable para pedidos originados por QR."""
 
     mesa = models.ForeignKey(
-        Mesa, on_delete=models.PROTECT, related_name="sesiones_qr",
+        Mesa,
+        on_delete=models.PROTECT,
+        related_name="sesiones_qr",
     )
     mesero = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
         related_name="sesiones_mesa_abiertas",
     )
     token = models.UUIDField(unique=True, default=uuid.uuid4, editable=False)

@@ -29,7 +29,10 @@ class _StaffConsumer(AsyncJsonWebsocketConsumer):
 
     async def disconnect(self, close_code):
         if self.channel_layer:
-            await self.channel_layer.group_discard(self.grupo_channel_layer, self.channel_name)
+            await self.channel_layer.group_discard(
+                self.grupo_channel_layer,
+                self.channel_name,
+            )
 
     @database_sync_to_async
     def _tiene_rol(self, user):

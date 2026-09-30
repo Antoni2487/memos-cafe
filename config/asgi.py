@@ -15,7 +15,8 @@ import os
 import sys
 from pathlib import Path
 
-from channels.routing import ProtocolTypeRouter, URLRouter
+from channels.routing import ProtocolTypeRouter
+from channels.routing import URLRouter
 from django.core.asgi import get_asgi_application
 
 BASE_DIR = Path(__file__).resolve(strict=True).parent.parent
@@ -31,5 +32,5 @@ application = ProtocolTypeRouter(
     {
         "http": django_asgi_app,
         "websocket": JWTAuthMiddlewareStack(URLRouter(websocket_urlpatterns)),
-    }
+    },
 )

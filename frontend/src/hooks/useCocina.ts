@@ -12,19 +12,23 @@ export function useCocina() {
   const [error, setError] = useState<string | null>(null);
   const cargandoRef = useRef(false);
 
-  const cargar = useCallback(async () => {
-    if (cargandoRef.current) return;
+  // setState solo dentro de callbacks de la promesa
+  // (react-hooks/set-state-in-effect). cargandoRef evita pedidos solapados
+  // cuando llegan varios eventos del WebSocket seguidos.
+  const cargar = useCallback(() => {
+    if (cargandoRef.current) return Promise.resolve();
     cargandoRef.current = true;
-    try {
-      const { data } = await ordenesService.cocina();
-      setTickets(data);
-      setError(null);
-    } catch (err) {
-      setError(getErrorMessage(err, "No se pudo cargar el tablero de cocina"));
-    } finally {
-      cargandoRef.current = false;
-      setCargando(false);
-    }
+    return ordenesService
+      .cocina()
+      .then(({ data }) => {
+        setTickets(data);
+        setError(null);
+      })
+      .catch((err) => setError(getErrorMessage(err, "No se pudo cargar el tablero de cocina")))
+      .finally(() => {
+        cargandoRef.current = false;
+        setCargando(false);
+      });
   }, []);
 
   useEffect(() => {

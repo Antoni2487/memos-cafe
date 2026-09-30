@@ -1,5 +1,5 @@
-import api from "./api";
-import type { EstadoPreparacion, Orden, Paginated, TicketCocina, TipoOrden } from "../types";
+import api, { getAll } from "./api";
+import type { EstadoPreparacion, Orden, TicketCocina, TipoOrden } from "../types";
 
 export interface DetalleOrdenPayload {
   producto: number | null;
@@ -20,7 +20,8 @@ export interface CrearOrdenPayload {
 }
 
 const ordenesService = {
-  listar:          ()                                        => api.get<Paginated<Orden> | Orden[]>("/ordenes/"),
+  listar:          ()                                        => getAll<Orden>("/ordenes/"),
+  listarAbiertas:  ()                                        => getAll<Orden>("/ordenes/", { estado: "abierta" }),
   crear:           (payload: CrearOrdenPayload)              => api.post<Orden>("/ordenes/crear/", payload),
   agregarDetalle:  (ordenId: number, payload: DetalleOrdenPayload) => api.post<Orden>(`/ordenes/${ordenId}/detalles/`, payload),
   eliminarDetalle: (ordenId: number, detalleId: number)      => api.delete<Orden>(`/ordenes/${ordenId}/detalles/${detalleId}/`),

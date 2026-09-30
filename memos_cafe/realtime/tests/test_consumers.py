@@ -14,11 +14,14 @@ from channels.testing import WebsocketCommunicator
 from django.contrib.auth.models import Group
 from rest_framework_simplejwt.tokens import AccessToken
 
-from memos_cafe.caja.tests.factories import CajaFactory, MesaFactory, OrdenFactory
+from memos_cafe.caja.tests.factories import CajaFactory
+from memos_cafe.caja.tests.factories import MesaFactory
+from memos_cafe.caja.tests.factories import OrdenFactory
 from memos_cafe.mesas.models import Mesa
 from memos_cafe.mesas.services import SesionMesaService
 from memos_cafe.ordenes.models import DetalleOrden
-from memos_cafe.ordenes.services import DetalleOrdenService, OrdenService
+from memos_cafe.ordenes.services import DetalleOrdenService
+from memos_cafe.ordenes.services import OrdenService
 from memos_cafe.productos.tests.factories import ProductoFactory
 from memos_cafe.realtime.middleware import JWTAuthMiddlewareStack
 from memos_cafe.realtime.routing import websocket_urlpatterns
@@ -42,7 +45,11 @@ def _crear_detalle_pendiente():
     CajaFactory()
     orden = OrdenFactory(mesa=MesaFactory())
     producto = ProductoFactory(precio=Decimal("10.00"))
-    return DetalleOrdenService._crear_detalle(orden=orden, cantidad=1, producto=producto)
+    return DetalleOrdenService._crear_detalle(
+        orden=orden,
+        cantidad=1,
+        producto=producto,
+    )
 
 
 @pytest.mark.django_db(transaction=True)
@@ -102,7 +109,9 @@ def _crear_orden_mesa():
     usuario = UserFactory()
     producto = ProductoFactory(precio=Decimal("10.00"))
     return OrdenService.crear_orden(
-        usuario=usuario, tipo_orden="mesa", mesa=mesa,
+        usuario=usuario,
+        tipo_orden="mesa",
+        mesa=mesa,
         detalles=[{"producto": producto, "cantidad": 1}],
     )
 
@@ -131,7 +140,9 @@ def test_cocina_recibe_aviso_de_pedido_nuevo_al_crear_orden():
 @pytest.mark.django_db(transaction=True)
 def test_mesero_no_recibe_aviso_de_pedido_nuevo():
     """pedido.nuevo solo va al grupo 'cocina' — al mesero solo le importa
-    la alerta de 'listo' (ver test_mesero_solo_recibe_alerta_cuando_el_item_pasa_a_listo)."""
+    la alerta de 'listo'
+    (ver test_mesero_solo_recibe_alerta_cuando_el_item_pasa_a_listo)."""
+
     async def body():
         mesero_user = await asyncio.to_thread(_usuario_con_rol, "mesero")
         token = await asyncio.to_thread(_token_de, mesero_user)
@@ -200,6 +211,7 @@ def test_cajero_puede_conectarse_a_meseros():
     """ws/meseros/ ahora tambien acepta cajero: el cliente puede pedir la
     cuenta con un metodo que cobra el cajero en caja, no solo el mesero
     con el POS en la mesa."""
+
     async def body():
         cajero_user = await asyncio.to_thread(_usuario_con_rol, "cajero")
         token = await asyncio.to_thread(_token_de, cajero_user)
@@ -219,8 +231,14 @@ def test_mesero_y_cajero_reciben_solicitud_de_cobro():
         token_mesero = await asyncio.to_thread(_token_de, mesero_user)
         token_cajero = await asyncio.to_thread(_token_de, cajero_user)
 
-        comm_mesero = WebsocketCommunicator(application, f"/ws/meseros/?token={token_mesero}")
-        comm_cajero = WebsocketCommunicator(application, f"/ws/meseros/?token={token_cajero}")
+        comm_mesero = WebsocketCommunicator(
+            application,
+            f"/ws/meseros/?token={token_mesero}",
+        )
+        comm_cajero = WebsocketCommunicator(
+            application,
+            f"/ws/meseros/?token={token_cajero}",
+        )
         assert (await comm_mesero.connect())[0] is True
         assert (await comm_cajero.connect())[0] is True
 

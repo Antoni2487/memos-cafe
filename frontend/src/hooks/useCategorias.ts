@@ -14,20 +14,25 @@ export function useCategorias() {
   const [deactivateError, setDeactivateError] = useState<string | null>(null);
   const [editTarget, setEditTarget]       = useState<Categoria | null>(null);
 
-  const cargar = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const { data } = await categoriaService.listar();
-      setCategorias(Array.isArray(data) ? data : (data.results ?? []));
-    } catch (err) {
-      setError(getErrorMessage(err, "Error al cargar categorías"));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  // Todos los setState van dentro de callbacks de la promesa, asi el
+  // efecto de montaje no actualiza estado de forma sincrona
+  // (react-hooks/set-state-in-effect).
+  const obtener = useCallback(() =>
+    categoriaService.listar()
+      .then((lista) => {
+        setCategorias(lista);
+        setError(null);
+      })
+      .catch((err) => setError(getErrorMessage(err, "Error al cargar categorías")))
+      .finally(() => setLoading(false)),
+  []);
 
-  useEffect(() => { cargar(); }, [cargar]);
+  const cargar = useCallback(() => {
+    setLoading(true);
+    return obtener();
+  }, [obtener]);
+
+  useEffect(() => { obtener(); }, [obtener]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();

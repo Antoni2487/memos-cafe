@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { FormModal, InputField, ImageUpload } from "../common";
 import { esSoloAlfanumerico, LIMITES, MENSAJES } from "../../utils/validators";
 import type { Promocion } from "../../types";
@@ -20,31 +20,34 @@ interface FormState {
   fecha_fin: string;
 }
 
-export default function PromocionForm({ abierto, promocion, onGuardar, onCerrar, cargando }: PromocionFormProps) {
-  const hoy = new Date().toISOString().split("T")[0];
-  const [form, setForm] = useState<FormState>({
-    nombre: "", descripcion: "", precio: "",
-    fecha_inicio: hoy, fecha_fin: "",
-  });
-  const [imagenFile, setImagenFile] = useState<File | null>(null);
-  const [errores, setErrores] = useState<Partial<Record<keyof FormState, string>>>({});
-
-  useEffect(() => {
-    if (promocion) {
-      setForm({
+function formInicial(promocion: Promocion | null, hoy: string): FormState {
+  return promocion
+    ? {
         nombre:       promocion.nombre       || "",
         descripcion:  promocion.descripcion  || "",
         precio:       String(promocion.precio ?? ""),
         fecha_inicio: promocion.fecha_inicio || hoy,
         fecha_fin:    promocion.fecha_fin    || "",
-      });
-    } else {
-      setForm({ nombre: "", descripcion: "", precio: "", fecha_inicio: hoy, fecha_fin: "" });
-    }
+      }
+    : { nombre: "", descripcion: "", precio: "", fecha_inicio: hoy, fecha_fin: "" };
+}
+
+export default function PromocionForm({ abierto, promocion, onGuardar, onCerrar, cargando }: PromocionFormProps) {
+  const hoy = new Date().toISOString().split("T")[0];
+  const [form, setForm] = useState<FormState>(() => formInicial(promocion, hoy));
+  const [imagenFile, setImagenFile] = useState<File | null>(null);
+  const [errores, setErrores] = useState<Partial<Record<keyof FormState, string>>>({});
+
+  // Reinicia el formulario al abrirlo o al cambiar de promoción. Se hace durante
+  // el render (y no en un useEffect) para evitar un render extra:
+  // https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
+  const [prev, setPrev] = useState({ promocion, abierto });
+  if (prev.promocion !== promocion || prev.abierto !== abierto) {
+    setPrev({ promocion, abierto });
+    setForm(formInicial(promocion, hoy));
     setImagenFile(null);
     setErrores({});
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [promocion, abierto]);
+  }
 
   const set = (campo: keyof FormState) => (val: string) => setForm((f) => ({ ...f, [campo]: val }));
 

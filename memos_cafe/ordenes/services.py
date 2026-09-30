@@ -1,15 +1,18 @@
-﻿import logging
+import logging
 from decimal import Decimal
 
-logger = logging.getLogger("memos_cafe.ordenes")
-
 from django.db import transaction
+from django.db.models import Max
 
 from memos_cafe.caja.models import Caja
 from memos_cafe.mesas.models import Mesa
-from memos_cafe.ordenes.models import DetalleOrden, Orden
-from memos_cafe.productos.models import Producto, Promocion
+from memos_cafe.ordenes.models import DetalleOrden
+from memos_cafe.ordenes.models import Orden
+from memos_cafe.productos.models import Producto
+from memos_cafe.productos.models import Promocion
 from memos_cafe.realtime.notificar import notificar
+
+logger = logging.getLogger("memos_cafe.ordenes")
 
 
 class OrdenService:
@@ -26,7 +29,7 @@ class OrdenService:
 
     @staticmethod
     @transaction.atomic
-    def crear_orden(
+    def crear_orden(  # noqa: PLR0913 -- un parametro por campo del pedido
         usuario,
         tipo_orden: str,
         detalles: list[dict],
@@ -36,6 +39,7 @@ class OrdenService:
         direccion_entrega: str = "",
         plataforma_delivery: str = "",
         plataforma_otra: str = "",
+        *,
         mesa_ya_ocupada: bool = False,
     ) -> Orden:
         """mesa_ya_ocupada=True: la mesa ya esta 'ocupada' por un motivo
@@ -46,21 +50,31 @@ class OrdenService:
         cambia — la mesa debe estar libre y esta orden es quien la ocupa,
         igual que hoy."""
         if not Caja.objects.get_sesion_abierta():
-            raise ValueError("No hay una sesion de caja abierta. Un cajero debe abrir turno antes de crear ordenes.")
+            msg = (
+                "No hay una sesion de caja abierta. "
+                "Un cajero debe abrir turno antes de crear ordenes."
+            )
+            raise ValueError(
+                msg,
+            )
 
         if tipo_orden == Orden.TipoOrden.MESA and not mesa:
-            raise ValueError("Debe asignar una mesa para ordenes de tipo 'mesa'.")
+            msg = "Debe asignar una mesa para ordenes de tipo 'mesa'."
+            raise ValueError(msg)
 
         if tipo_orden == Orden.TipoOrden.DELIVERY and not plataforma_delivery:
-            raise ValueError("Debe especificar la plataforma para ordenes delivery.")
+            msg = "Debe especificar la plataforma para ordenes delivery."
+            raise ValueError(msg)
 
         if mesa:
             mesa = Mesa.objects.select_for_update().get(pk=mesa.pk)
             if not mesa_ya_ocupada and mesa.estado != Mesa.Estado.LIBRE:
-                raise ValueError(f"La mesa {mesa.numero} no esta libre.")
+                msg = f"La mesa {mesa.numero} no esta libre."
+                raise ValueError(msg)
 
         if not detalles:
-            raise ValueError("La orden debe tener al menos un item.")
+            msg = "La orden debe tener al menos un item."
+            raise ValueError(msg)
 
         orden = Orden.objects.create(
             usuario=usuario,
@@ -69,21 +83,28 @@ class OrdenService:
             cliente_nombre=cliente_nombre,
             cliente_telefono=cliente_telefono,
             direccion_entrega=direccion_entrega,
-            plataforma_delivery=plataforma_delivery if tipo_orden == Orden.TipoOrden.DELIVERY else "",
-            plataforma_otra=plataforma_otra if tipo_orden == Orden.TipoOrden.DELIVERY else "",
+            plataforma_delivery=plataforma_delivery
+            if tipo_orden == Orden.TipoOrden.DELIVERY
+            else "",
+            plataforma_otra=plataforma_otra
+            if tipo_orden == Orden.TipoOrden.DELIVERY
+            else "",
         )
 
         if mesa and not mesa_ya_ocupada:
             mesa.ocupar()
 
         for item in detalles:
-            DetalleOrdenService._crear_detalle(orden=orden, **item)
+            DetalleOrdenService._crear_detalle(orden=orden, **item)  # noqa: SLF001
 
         orden.recalcular_total()
         orden.refresh_from_db()
         logger.info(
             "Orden #%s creada por usuario %s | tipo=%s | total=%s",
-            orden.id, usuario, tipo_orden, orden.total,
+            orden.id,
+            usuario,
+            tipo_orden,
+            orden.total,
         )
         OrdenService._notificar_nuevo_pedido(orden)
         return orden
@@ -94,18 +115,23 @@ class OrdenService:
         creada, o una ronda nueva agregada a una ya abierta). Se envia al
         confirmar la transaccion y un fallo de Redis no afecta la orden
         (ver memos_cafe/realtime/notificar.py)."""
-        notificar(["cocina"], {
-            "type": "pedido.nuevo",
-            "orden_id": orden.id,
-            "mesa_numero": orden.mesa.numero if orden.mesa_id else None,
-        })
+        notificar(
+            ["cocina"],
+            {
+                "type": "pedido.nuevo",
+                "orden_id": orden.id,
+                "mesa_numero": orden.mesa.numero if orden.mesa_id else None,
+            },
+        )
 
     @staticmethod
     @transaction.atomic
     def anular_orden(orden: Orden) -> Orden:
         logger.warning(
             "Orden #%s ANULADA | mesa=%s | total=%s",
-            orden.id, orden.mesa_id, orden.total,
+            orden.id,
+            orden.mesa_id,
+            orden.total,
         )
         orden.anular()
         return orden
@@ -115,7 +141,7 @@ class DetalleOrdenService:
     """Gestiona los items individuales dentro de una orden."""
 
     @staticmethod
-    def _crear_detalle(
+    def _crear_detalle(  # noqa: PLR0913 -- un parametro por campo del item
         orden: Orden,
         cantidad: int,
         nota: str = "",
@@ -124,9 +150,11 @@ class DetalleOrdenService:
         ronda: int | None = None,
     ) -> DetalleOrden:
         if not producto and not promocion:
-            raise ValueError("Debe especificar al menos un producto o una promocion.")
+            msg = "Debe especificar al menos un producto o una promocion."
+            raise ValueError(msg)
         if cantidad <= 0:
-            raise ValueError("La cantidad debe ser mayor a 0.")
+            msg = "La cantidad debe ser mayor a 0."
+            raise ValueError(msg)
 
         precio_unitario = Decimal("0")
         if producto:
@@ -154,13 +182,12 @@ class DetalleOrdenService:
         tiene forma de saber si varias llamadas seguidas son una sola tanda,
         asi que esos items se quedan en la ronda 1 por defecto del modelo,
         sin cambio de comportamiento respecto a hoy."""
-        from django.db.models import Max
         actual = orden.detalles.aggregate(m=Max("ronda"))["m"] or 0
         return actual + 1
 
     @staticmethod
     @transaction.atomic
-    def agregar_detalle(
+    def agregar_detalle(  # noqa: PLR0913 -- un parametro por campo del item
         orden: Orden,
         cantidad: int,
         nota: str = "",
@@ -169,7 +196,10 @@ class DetalleOrdenService:
         ronda: int | None = None,
     ) -> DetalleOrden:
         if not orden.esta_abierta:
-            raise ValueError("No se pueden agregar items a una orden cerrada o anulada.")
+            msg = "No se pueden agregar items a una orden cerrada o anulada."
+            raise ValueError(
+                msg,
+            )
 
         detalle = DetalleOrdenService._crear_detalle(
             orden=orden,
@@ -180,25 +210,30 @@ class DetalleOrdenService:
             ronda=ronda,
         )
         orden.recalcular_total()
-        OrdenService._notificar_nuevo_pedido(orden)
+        OrdenService._notificar_nuevo_pedido(orden)  # noqa: SLF001
         return detalle
 
     @staticmethod
     @transaction.atomic
     def eliminar_detalle(orden: Orden, detalle_id: int) -> bool:
         if not orden.esta_abierta:
-            raise ValueError("No se pueden eliminar items de una orden cerrada o anulada.")
+            msg = "No se pueden eliminar items de una orden cerrada o anulada."
+            raise ValueError(
+                msg,
+            )
 
         try:
             detalle = orden.detalles.get(id=detalle_id)
-        except DetalleOrden.DoesNotExist:
-            raise ValueError(f"El item #{detalle_id} no existe en esta orden.")
+        except DetalleOrden.DoesNotExist as e:
+            msg = f"El item #{detalle_id} no existe en esta orden."
+            raise ValueError(msg) from e
 
         estaba_impreso = detalle.impreso
         if estaba_impreso:
             logger.warning(
                 "Detalle #%s eliminado de Orden #%s pero ya estaba impreso",
-                detalle_id, orden.id,
+                detalle_id,
+                orden.id,
             )
         detalle.delete()
         orden.recalcular_total()
@@ -211,26 +246,39 @@ class DetalleOrdenService:
         orden.detalles.filter(id__in=detalle_ids).update(impreso=True)
 
     _TRANSICIONES_PREPARACION = {
-        DetalleOrden.EstadoPreparacion.PENDIENTE: {DetalleOrden.EstadoPreparacion.EN_PREPARACION},
-        DetalleOrden.EstadoPreparacion.EN_PREPARACION: {DetalleOrden.EstadoPreparacion.LISTO},
-        DetalleOrden.EstadoPreparacion.LISTO: {DetalleOrden.EstadoPreparacion.ENTREGADO},
+        DetalleOrden.EstadoPreparacion.PENDIENTE: {
+            DetalleOrden.EstadoPreparacion.EN_PREPARACION,
+        },
+        DetalleOrden.EstadoPreparacion.EN_PREPARACION: {
+            DetalleOrden.EstadoPreparacion.LISTO,
+        },
+        DetalleOrden.EstadoPreparacion.LISTO: {
+            DetalleOrden.EstadoPreparacion.ENTREGADO,
+        },
         DetalleOrden.EstadoPreparacion.ENTREGADO: set(),
     }
 
     @staticmethod
-    def actualizar_estado_preparacion(detalle: DetalleOrden, nuevo_estado: str) -> DetalleOrden:
+    def actualizar_estado_preparacion(
+        detalle: DetalleOrden,
+        nuevo_estado: str,
+    ) -> DetalleOrden:
         """Avanza el estado de preparacion de un item (pendiente ->
         en_preparacion -> listo -> entregado, sin saltos ni retrocesos) y
         dispara el evento de tiempo real. El disparo vive aca, no en el
         consumer de WebSocket, para que toda la logica de negocio quede en
         la capa de servicios."""
         transiciones_validas = DetalleOrdenService._TRANSICIONES_PREPARACION.get(
-            detalle.estado_preparacion, set()
+            detalle.estado_preparacion,
+            set(),
         )
         if nuevo_estado not in transiciones_validas:
-            raise ValueError(
+            msg = (
                 f"No se puede pasar el item #{detalle.id} de "
                 f"'{detalle.estado_preparacion}' a '{nuevo_estado}'."
+            )
+            raise ValueError(
+                msg,
             )
         detalle.estado_preparacion = nuevo_estado
         detalle.save(update_fields=["estado_preparacion"])

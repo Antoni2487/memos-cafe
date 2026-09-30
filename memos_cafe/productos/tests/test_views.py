@@ -1,22 +1,24 @@
-import pytest
-from decimal import Decimal
 from datetime import timedelta
+from decimal import Decimal
+
+import pytest
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.utils import timezone
 from rest_framework.test import APIClient
-from memos_cafe.productos.tests.factories import (
-    CategoriaFactory, ProductoFactory, PromocionFactory
-)
+
+from memos_cafe.productos.tests.factories import CategoriaFactory
+from memos_cafe.productos.tests.factories import ProductoFactory
+from memos_cafe.productos.tests.factories import PromocionFactory
 
 pytestmark = pytest.mark.django_db
 
 
 @pytest.fixture
 def admin_client(db):
-    from django.contrib.auth import get_user_model
-    from django.contrib.auth.models import Group
-    User = get_user_model()
+    user_model = get_user_model()
     grupo, _ = Group.objects.get_or_create(name="admin")
-    user = User.objects.create_user(email="admin@test.com", password="pass123")
+    user = user_model.objects.create_user(email="admin@test.com", password="pass123")
     user.groups.add(grupo)
     client = APIClient()
     client.force_authenticate(user=user)
@@ -25,9 +27,8 @@ def admin_client(db):
 
 @pytest.fixture
 def user_client(db):
-    from django.contrib.auth import get_user_model
-    User = get_user_model()
-    user = User.objects.create_user(email="user@test.com", password="pass123")
+    user_model = get_user_model()
+    user = user_model.objects.create_user(email="user@test.com", password="pass123")
     client = APIClient()
     client.force_authenticate(user=user)
     return client
@@ -81,24 +82,39 @@ class TestProductoViewSet:
 
     def test_crear_como_admin(self, admin_client):
         cat = CategoriaFactory()
-        r = admin_client.post("/api/productos/crear/", {
-            "nombre": "Espresso", "precio": "8.50", "categoria": cat.id,
-        })
+        r = admin_client.post(
+            "/api/productos/crear/",
+            {
+                "nombre": "Espresso",
+                "precio": "8.50",
+                "categoria": cat.id,
+            },
+        )
         assert r.status_code == 201
         assert r.data["nombre"] == "Espresso"
 
     def test_crear_como_usuario_rechazado(self, user_client):
         cat = CategoriaFactory()
-        r = user_client.post("/api/productos/crear/", {
-            "nombre": "X", "precio": "5.00", "categoria": cat.id,
-        })
+        r = user_client.post(
+            "/api/productos/crear/",
+            {
+                "nombre": "X",
+                "precio": "5.00",
+                "categoria": cat.id,
+            },
+        )
         assert r.status_code == 403
 
     def test_crear_precio_invalido(self, admin_client):
         cat = CategoriaFactory()
-        r = admin_client.post("/api/productos/crear/", {
-            "nombre": "X", "precio": "0", "categoria": cat.id,
-        })
+        r = admin_client.post(
+            "/api/productos/crear/",
+            {
+                "nombre": "X",
+                "precio": "0",
+                "categoria": cat.id,
+            },
+        )
         assert r.status_code == 400
 
     def test_activar_producto(self, admin_client):
@@ -146,21 +162,28 @@ class TestPromocionViewSet:
 
     def test_crear_como_admin(self, admin_client):
         hoy = timezone.localdate()
-        r = admin_client.post("/api/productos/promociones/crear/", {
-            "nombre": "Happy Hour",
-            "precio": "12.00",
-            "fecha_inicio": str(hoy),
-            "fecha_fin": str(hoy + timedelta(days=5)),
-        })
+        r = admin_client.post(
+            "/api/productos/promociones/crear/",
+            {
+                "nombre": "Happy Hour",
+                "precio": "12.00",
+                "fecha_inicio": str(hoy),
+                "fecha_fin": str(hoy + timedelta(days=5)),
+            },
+        )
         assert r.status_code == 201
 
     def test_crear_fechas_invalidas(self, admin_client):
         hoy = timezone.localdate()
-        r = admin_client.post("/api/productos/promociones/crear/", {
-            "nombre": "X", "precio": "10.00",
-            "fecha_inicio": str(hoy + timedelta(days=5)),
-            "fecha_fin": str(hoy + timedelta(days=1)),
-        })
+        r = admin_client.post(
+            "/api/productos/promociones/crear/",
+            {
+                "nombre": "X",
+                "precio": "10.00",
+                "fecha_inicio": str(hoy + timedelta(days=5)),
+                "fecha_fin": str(hoy + timedelta(days=1)),
+            },
+        )
         assert r.status_code == 400
 
     def test_activar_promocion(self, admin_client):

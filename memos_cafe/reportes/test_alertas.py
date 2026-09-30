@@ -4,7 +4,8 @@ import pytest
 from django.contrib.auth.models import Group
 from rest_framework.test import APIClient
 
-from memos_cafe.caja.tests.factories import CajaFactory, MesaFactory
+from memos_cafe.caja.tests.factories import CajaFactory
+from memos_cafe.caja.tests.factories import MesaFactory
 from memos_cafe.mesas.models import Mesa
 from memos_cafe.mesas.services import SesionMesaService
 from memos_cafe.productos.tests.factories import ProductoFactory
@@ -35,7 +36,10 @@ def test_solicitud_cobro_aparece_en_alertas(admin_client):
     mesa = MesaFactory(estado=Mesa.Estado.LIBRE, numero=42)
     SesionMesaService.abrir_sesion(mesa, mesero=mesero)
     producto = ProductoFactory(precio=Decimal("10.00"))
-    SesionMesaService.registrar_pedido(mesa, items=[{"producto": producto, "cantidad": 1}])
+    SesionMesaService.registrar_pedido(
+        mesa,
+        items=[{"producto": producto, "cantidad": 1}],
+    )
     SesionMesaService.solicitar_cobro(mesa, metodo_pago_sugerido="yape")
 
     r = admin_client.get("/api/alertas/")

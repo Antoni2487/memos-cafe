@@ -1,5 +1,5 @@
-import api from "./api";
-import type { EstadoMesa, Mesa, Paginated } from "../types";
+import api, { getAll } from "./api";
+import type { EstadoMesa, Mesa } from "../types";
 
 export interface MesaFormData {
   numero: number;
@@ -12,7 +12,7 @@ export interface AbrirSesionQRResponse {
 }
 
 const mesasService = {
-  listar:        ()                                  => api.get<Paginated<Mesa> | Mesa[]>("/mesas/"),
+  listar:        ()                                  => getAll<Mesa>("/mesas/"),
   crear:         (data: MesaFormData)                => api.post<Mesa>("/mesas/", data),
   editar:        (id: number, data: MesaFormData)    => api.put<Mesa>(`/mesas/${id}/`, data),
   darDeBaja:     (id: number)                        => api.delete(`/mesas/${id}/`),

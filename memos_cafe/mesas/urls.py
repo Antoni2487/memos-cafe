@@ -1,11 +1,9 @@
 from django.urls import path
 from rest_framework.routers import DefaultRouter
 
-from memos_cafe.mesas.api.qr_views import (
-    MesaQREstadoView,
-    MesaQRPedidoView,
-    MesaQRSolicitarCobroView,
-)
+from memos_cafe.mesas.api.qr_views import MesaQREstadoView
+from memos_cafe.mesas.api.qr_views import MesaQRPedidoView
+from memos_cafe.mesas.api.qr_views import MesaQRSolicitarCobroView
 from memos_cafe.mesas.api.views import MesaViewSet
 
 router = DefaultRouter()
@@ -22,4 +20,5 @@ urlpatterns = [
         MesaQRSolicitarCobroView.as_view(),
         name="mesa-qr-solicitar-cobro",
     ),
-] + router.urls
+    *router.urls,
+]

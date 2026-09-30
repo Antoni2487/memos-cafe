@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
 import { Plus, Minus, ShoppingBag, Receipt, Loader2, Coffee } from "lucide-react";
@@ -78,7 +78,9 @@ export default function PedidoQRPage() {
 
   const [productos, setProductos] = useState<Producto[]>([]);
   const [promociones, setPromociones] = useState<Promocion[]>([]);
-  const [catalogoCargado, setCatalogoCargado] = useState(false);
+  // Si la carta ya se pidio (o esta en camino). Ref y no estado: no cambia lo
+  // que se ve, solo evita pedirla dos veces.
+  const catalogoPedido = useRef(false);
 
   const [carrito, setCarrito] = useState<ItemCarrito[]>([]);
   const [carritoAbierto, setCarritoAbierto] = useState(false);
@@ -94,39 +96,48 @@ export default function PedidoQRPage() {
   const [enviandoCobro, setEnviandoCobro] = useState(false);
   const [cobroSolicitado, setCobroSolicitado] = useState(false);
 
-  const cargarEstado = useCallback(async () => {
-    try {
-      const { data } = await pedidoQRService.estado(codigo);
-      setSesionActiva(data.sesion_activa);
-      setMesaNumero(data.mesa_numero);
-      setOrdenActual(data.orden);
-      if (data.sesion_activa) setTuvoSesionActiva(true);
-      setMesaInexistente(false);
-    } catch (err) {
-      if (axios.isAxiosError(err) && err.response?.status === 404) {
-        setMesaInexistente(true);
-      }
-    } finally {
-      setCargandoInicial(false);
-    }
-  }, [codigo]);
+  // La carta se pide una sola vez, recien cuando la mesa esta abierta. Si
+  // falla, se reintenta en la siguiente consulta de estado (POLL_MS).
+  const cargarCatalogo = useCallback(() => {
+    catalogoPedido.current = true;
+    Promise.all([productoService.listarPublico(), promocionService.listarPublico()])
+      .then(([listaProductos, listaPromociones]) => {
+        setProductos(listaProductos);
+        setPromociones(listaPromociones);
+      })
+      .catch(() => {
+        catalogoPedido.current = false;
+      });
+  }, []);
+
+  // Todos los setState van dentro de callbacks de la promesa
+  // (react-hooks/set-state-in-effect).
+  const cargarEstado = useCallback(
+    () =>
+      pedidoQRService
+        .estado(codigo)
+        .then(({ data }) => {
+          setSesionActiva(data.sesion_activa);
+          setMesaNumero(data.mesa_numero);
+          setOrdenActual(data.orden);
+          if (data.sesion_activa) setTuvoSesionActiva(true);
+          setMesaInexistente(false);
+          if (data.sesion_activa && !catalogoPedido.current) cargarCatalogo();
+        })
+        .catch((err) => {
+          if (axios.isAxiosError(err) && err.response?.status === 404) {
+            setMesaInexistente(true);
+          }
+        })
+        .finally(() => setCargandoInicial(false)),
+    [codigo, cargarCatalogo]
+  );
 
   useEffect(() => {
     cargarEstado();
     const iv = setInterval(cargarEstado, POLL_MS);
     return () => clearInterval(iv);
   }, [cargarEstado]);
-
-  useEffect(() => {
-    if (!sesionActiva || catalogoCargado) return;
-    setCatalogoCargado(true);
-    Promise.all([productoService.listarPublico(), promocionService.listarPublico()])
-      .then(([prod, promo]) => {
-        setProductos(prod.data);
-        setPromociones(promo.data);
-      })
-      .catch(() => setCatalogoCargado(false));
-  }, [sesionActiva, catalogoCargado]);
 
   const agregarAlCarrito = (item: Producto | Promocion, esPromo: boolean) => {
     const key = `${esPromo ? "promo" : "prod"}-${item.id}`;

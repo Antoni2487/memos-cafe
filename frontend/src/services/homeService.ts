@@ -1,9 +1,9 @@
-import api from "./api";
-import type { Mesa, Orden, Paginated } from "../types";
+import { getAll } from "./api";
+import type { Mesa, Orden } from "../types";
 
 const homeService = {
-  getMesas:   () => api.get<Paginated<Mesa> | Mesa[]>("/mesas/"),
-  getOrdenes: () => api.get<Paginated<Orden> | Orden[]>("/ordenes/"),
+  getMesas:   () => getAll<Mesa>("/mesas/"),
+  getOrdenes: () => getAll<Orden>("/ordenes/"),
 };
 
 export default homeService;

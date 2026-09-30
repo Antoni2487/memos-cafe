@@ -1,15 +1,17 @@
 from django.db import transaction
 
-from memos_cafe.mesas.models import Mesa, SesionMesaQR, generar_codigo_qr
-
 # Cruce a otras apps de negocio (ordenes/caja) permitido en la capa de
 # servicios — igual patron que ordenes/services.py importando Mesa/Caja.
 # Las vistas de mesas/api/ nunca importan estos modulos directo (ver
 # .importlinter, contrato "vistas-no-cruzan-apps-de-negocio"): siempre
 # pasan por SesionMesaService, que es quien conoce el cruce.
 from memos_cafe.caja.models import SolicitudCobro
+from memos_cafe.mesas.models import Mesa
+from memos_cafe.mesas.models import SesionMesaQR
+from memos_cafe.mesas.models import generar_codigo_qr
 from memos_cafe.ordenes.models import Orden
-from memos_cafe.ordenes.services import DetalleOrdenService, OrdenService
+from memos_cafe.ordenes.services import DetalleOrdenService
+from memos_cafe.ordenes.services import OrdenService
 from memos_cafe.realtime.notificar import notificar
 
 
@@ -17,20 +19,28 @@ class MesaService:
     @staticmethod
     def crear(numero: int, capacidad: int) -> Mesa:
         if Mesa.objects.filter(numero=numero).exists():
-            raise ValueError(f"Ya existe una mesa con el número {numero}.")
+            msg = f"Ya existe una mesa con el número {numero}."
+            raise ValueError(msg)
         if capacidad <= 0:
-            raise ValueError("La capacidad debe ser mayor a 0.")
+            msg = "La capacidad debe ser mayor a 0."
+            raise ValueError(msg)
         return Mesa.objects.create(numero=numero, capacidad=capacidad)
 
     @staticmethod
-    def actualizar(mesa: Mesa, numero: int = None, capacidad: int = None) -> Mesa:
+    def actualizar(
+        mesa: Mesa,
+        numero: int | None = None,
+        capacidad: int | None = None,
+    ) -> Mesa:
         if numero and numero != mesa.numero:
             if Mesa.objects.filter(numero=numero).exists():
-                raise ValueError(f"Ya existe una mesa con el número {numero}.")
+                msg = f"Ya existe una mesa con el número {numero}."
+                raise ValueError(msg)
             mesa.numero = numero
         if capacidad is not None:
             if capacidad <= 0:
-                raise ValueError("La capacidad debe ser mayor a 0.")
+                msg = "La capacidad debe ser mayor a 0."
+                raise ValueError(msg)
             mesa.capacidad = capacidad
         mesa.save(update_fields=["numero", "capacidad"])
         return mesa
@@ -38,8 +48,9 @@ class MesaService:
     @staticmethod
     def dar_de_baja(mesa: Mesa) -> Mesa:
         if mesa.estado == Mesa.Estado.OCUPADA:
+            msg = f"No se puede dar de baja la mesa {mesa.numero} porque está ocupada."
             raise ValueError(
-                f"No se puede dar de baja la mesa {mesa.numero} porque está ocupada."
+                msg,
             )
         mesa.dar_de_baja()
         return mesa
@@ -64,13 +75,16 @@ class MesaService:
             Mesa.Estado.OCUPADA: [],
         }
         if nuevo_estado not in transiciones_validas.get(mesa.estado, []):
+            msg = (
+                f"No se puede cambiar el estado de '{mesa.estado}' "
+                f"a '{nuevo_estado}' manualmente."
+            )
             raise ValueError(
-                f"No se puede cambiar el estado de '{mesa.estado}' a '{nuevo_estado}' manualmente."
+                msg,
             )
         mesa.estado = nuevo_estado
         mesa.save(update_fields=["estado"])
         return mesa
-
 
     @staticmethod
     def regenerar_codigo_qr(mesa: Mesa) -> Mesa:
@@ -92,7 +106,10 @@ class SesionMesaService:
     def abrir_sesion(mesa: Mesa, mesero) -> SesionMesaQR:
         mesa = Mesa.objects.select_for_update().get(pk=mesa.pk)
         if mesa.estado != Mesa.Estado.LIBRE:
-            raise ValueError(f"La mesa {mesa.numero} no está libre para abrir un pedido por QR.")
+            msg = f"La mesa {mesa.numero} no está libre para abrir un pedido por QR."
+            raise ValueError(
+                msg,
+            )
         sesion = SesionMesaQR.objects.create(mesa=mesa, mesero=mesero)
         mesa.ocupar()
         return sesion
@@ -115,11 +132,17 @@ class SesionMesaService:
         mesa = Mesa.objects.select_for_update().get(pk=mesa.pk)
         sesion = SesionMesaQR.objects.filter(mesa=mesa, cerrada_en__isnull=True).first()
         if not sesion:
-            raise ValueError(f"La mesa {mesa.numero} no tiene una sesión de pedido por QR activa.")
-        if Orden.objects.filter(mesa=mesa, estado=Orden.Estado.ABIERTA).exists():
+            msg = f"La mesa {mesa.numero} no tiene una sesión de pedido por QR activa."
             raise ValueError(
-                f"La mesa {mesa.numero} ya tiene un pedido en curso — anúlalo o ciérralo, "
-                "eso libera la mesa automáticamente."
+                msg,
+            )
+        if Orden.objects.filter(mesa=mesa, estado=Orden.Estado.ABIERTA).exists():
+            msg = (
+                f"La mesa {mesa.numero} ya tiene un pedido en curso — "
+                "anúlalo o ciérralo, eso libera la mesa automáticamente."
+            )
+            raise ValueError(
+                msg,
             )
         mesa.liberar()
 
@@ -135,14 +158,22 @@ class SesionMesaService:
         mesa = Mesa.objects.select_for_update().get(pk=mesa.pk)
         sesion = SesionMesaQR.objects.filter(mesa=mesa, cerrada_en__isnull=True).first()
         if not sesion:
-            raise ValueError(
+            msg = (
                 f"No hay un pedido abierto para la mesa {mesa.numero}. "
                 "Pedile a tu mesero que la abra."
             )
+            raise ValueError(
+                msg,
+            )
 
-        orden = Orden.objects.filter(
-            mesa=mesa, estado=Orden.Estado.ABIERTA
-        ).order_by("-fecha_creacion").first()
+        orden = (
+            Orden.objects.filter(
+                mesa=mesa,
+                estado=Orden.Estado.ABIERTA,
+            )
+            .order_by("-fecha_creacion")
+            .first()
+        )
 
         if orden is None:
             return OrdenService.crear_orden(
@@ -161,13 +192,20 @@ class SesionMesaService:
 
     @staticmethod
     def solicitar_cobro(mesa: Mesa, metodo_pago_sugerido: str) -> SolicitudCobro:
-        orden = Orden.objects.filter(
-            mesa=mesa, estado=Orden.Estado.ABIERTA
-        ).order_by("-fecha_creacion").first()
+        orden = (
+            Orden.objects.filter(
+                mesa=mesa,
+                estado=Orden.Estado.ABIERTA,
+            )
+            .order_by("-fecha_creacion")
+            .first()
+        )
         if orden is None:
-            raise ValueError(f"No hay una orden abierta para la mesa {mesa.numero}.")
+            msg = f"No hay una orden abierta para la mesa {mesa.numero}."
+            raise ValueError(msg)
         solicitud = SolicitudCobro.objects.create(
-            orden=orden, metodo_pago_sugerido=metodo_pago_sugerido
+            orden=orden,
+            metodo_pago_sugerido=metodo_pago_sugerido,
         )
         SesionMesaService._notificar_solicitud_cobro(mesa, solicitud)
         return solicitud
@@ -177,8 +215,11 @@ class SesionMesaService:
         """Avisa en vivo a mesero y cajero — el admin ya se entera de esto
         via el polling de /api/alertas/ (AlertasView), asi que no hace
         falta duplicarlo aca. Ver memos_cafe/realtime/notificar.py."""
-        notificar(["meseros"], {
-            "type": "solicitud_cobro.nueva",
-            "mesa_numero": mesa.numero,
-            "metodo_pago_sugerido": solicitud.metodo_pago_sugerido,
-        })
+        notificar(
+            ["meseros"],
+            {
+                "type": "solicitud_cobro.nueva",
+                "mesa_numero": mesa.numero,
+                "metodo_pago_sugerido": solicitud.metodo_pago_sugerido,
+            },
+        )

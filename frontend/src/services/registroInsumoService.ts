@@ -1,5 +1,5 @@
-import api from "./api";
-import type { Paginated, RegistroInsumo } from "../types";
+import api, { getAll } from "./api";
+import type { RegistroInsumo } from "../types";
 
 export interface RegistrarInsumoPayload {
   insumo: number | string;
@@ -10,7 +10,7 @@ export interface RegistrarInsumoPayload {
 }
 
 const registroInsumoService = {
-  listar: (params?: Record<string, unknown>) => api.get<Paginated<RegistroInsumo> | RegistroInsumo[]>("/insumos/registros/", { params }),
+  listar: (params?: Record<string, unknown>) => getAll<RegistroInsumo>("/insumos/registros/", params),
   registrar: (data: RegistrarInsumoPayload) => api.post<RegistroInsumo>("/insumos/registros/registrar/", data),
 };
 

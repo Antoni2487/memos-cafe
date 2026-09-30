@@ -1,9 +1,18 @@
-import pytest
 from decimal import Decimal
-from memos_cafe.caja.services import CajaService, PagoService, ComprobanteService
-from memos_cafe.caja.models import Caja, MovimientoCaja, Pago, Comprobante
+
+import pytest
+
 from memos_cafe.caja.api.serializers import CajaReadSerializer
-from memos_cafe.caja.tests.factories import CajaFactory, OrdenFactory
+from memos_cafe.caja.models import Caja
+from memos_cafe.caja.models import MovimientoCaja
+from memos_cafe.caja.models import NotaCredito
+from memos_cafe.caja.models import Pago
+from memos_cafe.caja.services import CajaService
+from memos_cafe.caja.services import ComprobanteService
+from memos_cafe.caja.services import PagoService
+from memos_cafe.caja.tests.factories import CajaFactory
+from memos_cafe.caja.tests.factories import OrdenFactory
+from memos_cafe.ordenes.models import Orden
 from memos_cafe.users.tests.factories import UserFactory
 
 pytestmark = pytest.mark.django_db
@@ -97,15 +106,26 @@ class TestCerrarSesionConDiscrepancia:
         caja_sin_ventas.refresh_from_db()
         assert caja_sin_ventas.estado == Caja.Estado.ABIERTA  # no se cerro
 
-    def test_discrepancia_grande_con_observaciones_permite_cierre(self, caja_sin_ventas):
+    def test_discrepancia_grande_con_observaciones_permite_cierre(
+        self,
+        caja_sin_ventas,
+    ):
         caja = CajaService.cerrar_sesion(
-            Decimal("200.00"), "Faltante grande, revisar con el turno siguiente"
+            Decimal("200.00"),
+            "Faltante grande, revisar con el turno siguiente",
         )
         assert caja.estado == Caja.Estado.CERRADA
         assert caja.monto_final == Decimal("200.00")
 
-    @pytest.mark.parametrize("monto_final", [Decimal("100.00"), Decimal("104.99"), Decimal("95.01")])
-    def test_discrepancia_dentro_del_margen_no_exige_observaciones(self, caja_sin_ventas, monto_final):
+    @pytest.mark.parametrize(
+        "monto_final",
+        [Decimal("100.00"), Decimal("104.99"), Decimal("95.01")],
+    )
+    def test_discrepancia_dentro_del_margen_no_exige_observaciones(
+        self,
+        caja_sin_ventas,
+        monto_final,
+    ):
         # dentro de +-5.00 del esperado (100): no debe exigir observaciones
         caja = CajaService.cerrar_sesion(monto_final)
         assert caja.estado == Caja.Estado.CERRADA
@@ -119,17 +139,23 @@ class TestMovimientoCajaNeto:
     def test_neto_por_caja_solo_entradas(self):
         caja = CajaFactory()
         CajaService.registrar_movimiento(
-            tipo=MovimientoCaja.Tipo.ENTRADA, monto=Decimal("30.00"), motivo="Fondo"
+            tipo=MovimientoCaja.Tipo.ENTRADA,
+            monto=Decimal("30.00"),
+            motivo="Fondo",
         )
         CajaService.registrar_movimiento(
-            tipo=MovimientoCaja.Tipo.ENTRADA, monto=Decimal("20.00"), motivo="Fondo 2"
+            tipo=MovimientoCaja.Tipo.ENTRADA,
+            monto=Decimal("20.00"),
+            motivo="Fondo 2",
         )
         assert MovimientoCaja.objects.neto_por_caja(caja) == Decimal("50.00")
 
     def test_neto_por_caja_solo_salidas(self):
         caja = CajaFactory()
         CajaService.registrar_movimiento(
-            tipo=MovimientoCaja.Tipo.SALIDA, monto=Decimal("15.00"), motivo="Compra"
+            tipo=MovimientoCaja.Tipo.SALIDA,
+            monto=Decimal("15.00"),
+            motivo="Compra",
         )
         assert MovimientoCaja.objects.neto_por_caja(caja) == Decimal("-15.00")
 
@@ -138,13 +164,17 @@ class TestMovimientoCajaNeto:
         netearse, no ignorarse una de las dos."""
         caja = CajaFactory()
         CajaService.registrar_movimiento(
-            tipo=MovimientoCaja.Tipo.ENTRADA, monto=Decimal("100.00"), motivo="Fondo adicional"
+            tipo=MovimientoCaja.Tipo.ENTRADA,
+            monto=Decimal("100.00"),
+            motivo="Fondo adicional",
         )
         CajaService.registrar_movimiento(
-            tipo=MovimientoCaja.Tipo.SALIDA, monto=Decimal("30.00"), motivo="Compra de insumos"
+            tipo=MovimientoCaja.Tipo.SALIDA,
+            monto=Decimal("30.00"),
+            motivo="Compra de insumos",
         )
         assert MovimientoCaja.objects.neto_por_caja(caja) == Decimal("70.00")
-        assert caja.movimientos.count() == 2
+        assert caja.movimientos.count() == 2  # noqa: PLR2004
 
     def test_neto_por_caja_sin_movimientos_es_cero(self):
         caja = CajaFactory()
@@ -155,12 +185,20 @@ class TestMovimientoCajaNeto:
         las ventas y el neto de movimientos (no solo las salidas)."""
         caja = CajaFactory(monto_inicial=Decimal("100.00"))
         orden = OrdenFactory(estado="abierta", total=Decimal("50.00"))
-        PagoService.procesar_pago(orden=orden, metodo_pago="efectivo", monto=Decimal("50.00"))
-        CajaService.registrar_movimiento(
-            tipo=MovimientoCaja.Tipo.ENTRADA, monto=Decimal("40.00"), motivo="Fondo adicional"
+        PagoService.procesar_pago(
+            orden=orden,
+            metodo_pago="efectivo",
+            monto=Decimal("50.00"),
         )
         CajaService.registrar_movimiento(
-            tipo=MovimientoCaja.Tipo.SALIDA, monto=Decimal("25.00"), motivo="Compra de insumos"
+            tipo=MovimientoCaja.Tipo.ENTRADA,
+            monto=Decimal("40.00"),
+            motivo="Fondo adicional",
+        )
+        CajaService.registrar_movimiento(
+            tipo=MovimientoCaja.Tipo.SALIDA,
+            monto=Decimal("25.00"),
+            motivo="Compra de insumos",
         )
 
         data = CajaReadSerializer(caja).data
@@ -171,12 +209,16 @@ class TestMovimientoCajaNeto:
     def test_cerrar_sesion_diferencia_cero_con_movimientos_mixtos_cuadrados(self):
         """El cierre no debe exigir observaciones si la caja cuadra
         exactamente, incluyendo entradas y salidas manuales."""
-        caja = CajaFactory(monto_inicial=Decimal("100.00"))
+        CajaFactory(monto_inicial=Decimal("100.00"))
         CajaService.registrar_movimiento(
-            tipo=MovimientoCaja.Tipo.ENTRADA, monto=Decimal("40.00"), motivo="Fondo adicional"
+            tipo=MovimientoCaja.Tipo.ENTRADA,
+            monto=Decimal("40.00"),
+            motivo="Fondo adicional",
         )
         CajaService.registrar_movimiento(
-            tipo=MovimientoCaja.Tipo.SALIDA, monto=Decimal("25.00"), motivo="Compra de insumos"
+            tipo=MovimientoCaja.Tipo.SALIDA,
+            monto=Decimal("25.00"),
+            motivo="Compra de insumos",
         )
         # esperado = 100 + 0 (sin ventas) + 40 - 25 = 115
         caja_cerrada = CajaService.cerrar_sesion(Decimal("115.00"))
@@ -196,7 +238,7 @@ class TestCajaModel:
 
     def test_cerrar_caja_ya_cerrada_lanza_error(self):
         caja = CajaFactory(estado=Caja.Estado.CERRADA)
-        with pytest.raises(ValueError, match="ya está cerrada"):
+        with pytest.raises(ValueError, match="ya esta cerrada"):
             caja.cerrar(Decimal("100.00"))
 
 
@@ -207,14 +249,15 @@ class TestPagoService:
         pago = PagoService.procesar_pago(
             orden=orden,
             metodo_pago=Pago.MetodoPago.EFECTIVO,
-            monto=Decimal("60.00"),
+            monto=Decimal("50.00"),
+            monto_recibido=Decimal("60.00"),
         )
-        assert pago.monto == Decimal("60.00")
+        assert pago.monto == Decimal("50.00")
         assert pago.vuelto == Decimal("10.00")
         assert pago.estado == Pago.Estado.COMPLETADO
 
     def test_procesar_pago_cierra_orden(self):
-        from memos_cafe.ordenes.models import Orden
+
         CajaFactory()
         orden = OrdenFactory(estado="abierta", total=Decimal("30.00"))
         PagoService.procesar_pago(
@@ -232,7 +275,8 @@ class TestPagoService:
             PagoService.procesar_pago(
                 orden=orden,
                 metodo_pago=Pago.MetodoPago.EFECTIVO,
-                monto=Decimal("30.00"),
+                monto=Decimal("50.00"),
+                monto_recibido=Decimal("30.00"),
             )
 
     def test_procesar_pago_orden_no_abierta_lanza_error(self):
@@ -246,14 +290,17 @@ class TestPagoService:
             )
 
     def test_procesar_pago_orden_ya_pagada_lanza_error(self):
-        from memos_cafe.caja.models import Pago as PagoModel
+
         caja = CajaFactory()
         orden = OrdenFactory(estado="abierta", total=Decimal("50.00"))
-        PagoModel.objects.create(
-            orden=orden, caja=caja,
-            metodo_pago="efectivo", monto=Decimal("50.00"), vuelto=Decimal("0"),
+        Pago.objects.create(
+            orden=orden,
+            caja=caja,
+            metodo_pago="efectivo",
+            monto=Decimal("50.00"),
+            vuelto=Decimal("0"),
         )
-        with pytest.raises(ValueError, match="ya tiene un pago"):
+        with pytest.raises(ValueError, match="completamente pagada"):
             PagoService.procesar_pago(
                 orden=orden,
                 metodo_pago=Pago.MetodoPago.EFECTIVO,
@@ -261,14 +308,18 @@ class TestPagoService:
             )
 
     def test_anular_pago(self):
-        caja = CajaFactory()
+        CajaFactory()
         orden = OrdenFactory(estado="abierta", total=Decimal("50.00"))
         pago = PagoService.procesar_pago(
             orden=orden,
             metodo_pago=Pago.MetodoPago.EFECTIVO,
             monto=Decimal("50.00"),
         )
-        PagoService.anular_pago(pago)
+        PagoService.anular_pago(
+            pago,
+            motivo=NotaCredito.Motivo.ERROR_COBRO,
+            usuario=UserFactory(),
+        )
         pago.refresh_from_db()
         assert pago.estado == Pago.Estado.ANULADO
 
@@ -280,9 +331,14 @@ class TestPagoService:
             metodo_pago=Pago.MetodoPago.EFECTIVO,
             monto=Decimal("50.00"),
         )
-        PagoService.anular_pago(pago)
+        PagoService.anular_pago(
+            pago,
+            motivo=NotaCredito.Motivo.ERROR_COBRO,
+            usuario=UserFactory(),
+        )
         mov = MovimientoCaja.objects.filter(
-            caja=caja, tipo=MovimientoCaja.Tipo.SALIDA
+            caja=caja,
+            tipo=MovimientoCaja.Tipo.SALIDA,
         ).last()
         assert mov is not None
         assert mov.monto == Decimal("50.00")
@@ -290,7 +346,7 @@ class TestPagoService:
 
 class TestComprobanteService:
     def test_emitir_boleta(self):
-        caja = CajaFactory()
+        CajaFactory()
         orden = OrdenFactory(estado="abierta", total=Decimal("50.00"))
         pago = PagoService.procesar_pago(
             orden=orden,
@@ -298,14 +354,16 @@ class TestComprobanteService:
             monto=Decimal("50.00"),
         )
         comp = ComprobanteService.emitir(
-            pago=pago, tipo="boleta",
-            serie="B001", numero=1,
+            pago=pago,
+            tipo="boleta",
+            serie="B001",
+            numero=1,
         )
         assert comp.tipo == "boleta"
         assert str(comp) == "Boleta B001-00000001"
 
     def test_emitir_factura_sin_ruc_lanza_error(self):
-        caja = CajaFactory()
+        CajaFactory()
         orden = OrdenFactory(estado="abierta", total=Decimal("50.00"))
         pago = PagoService.procesar_pago(
             orden=orden,
@@ -314,13 +372,15 @@ class TestComprobanteService:
         )
         with pytest.raises(ValueError, match="RUC"):
             ComprobanteService.emitir(
-                pago=pago, tipo="factura",
-                serie="F001", numero=1,
+                pago=pago,
+                tipo="factura",
+                serie="F001",
+                numero=1,
                 cliente_nombre="Empresa SAC",
             )
 
     def test_emitir_comprobante_duplicado_lanza_error(self):
-        caja = CajaFactory()
+        CajaFactory()
         orden = OrdenFactory(estado="abierta", total=Decimal("50.00"))
         pago = PagoService.procesar_pago(
             orden=orden,

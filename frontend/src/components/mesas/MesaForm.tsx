@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { FormModal, InputField } from "../common";
 import type { Mesa } from "../../types";
 import type { MesaFormData } from "../../services/mesasService";
@@ -16,21 +16,25 @@ interface FormState {
   capacidad: string;
 }
 
+function formInicial(mesa: MesaFormProps["mesa"]): FormState {
+  return mesa
+    ? { numero: String(mesa.numero || ""), capacidad: String(mesa.capacidad || "") }
+    : { numero: "", capacidad: "" };
+}
+
 export default function MesaForm({ abierto, mesa, onGuardar, onCerrar, cargando }: MesaFormProps) {
-  const [form, setForm] = useState<FormState>({ numero: "", capacidad: "" });
+  const [form, setForm] = useState<FormState>(() => formInicial(mesa));
   const [errores, setErrores] = useState<Partial<Record<keyof FormState, string>>>({});
 
-  useEffect(() => {
-    if (mesa) {
-      setForm({
-        numero: String(mesa.numero || ""),
-        capacidad: String(mesa.capacidad || ""),
-      });
-    } else {
-      setForm({ numero: "", capacidad: "" });
-    }
+  // Reinicia el formulario al abrirlo o al cambiar de mesa. Se hace durante
+  // el render (y no en un useEffect) para evitar un render extra:
+  // https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
+  const [prev, setPrev] = useState({ mesa, abierto });
+  if (prev.mesa !== mesa || prev.abierto !== abierto) {
+    setPrev({ mesa, abierto });
+    setForm(formInicial(mesa));
     setErrores({});
-  }, [mesa, abierto]);
+  }
 
   const set = (campo: keyof FormState) => (val: string) => setForm((f) => ({ ...f, [campo]: val }));
 

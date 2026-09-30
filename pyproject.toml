@@ -1,50 +1,46 @@
 [project]
-name = "memos_cafe"
+name = "memos-cafe"
 version = "0.1.0"
 description = "Proyecto Integrador 1"
 readme = "README.md"
 license = { text = "Not open source" }
-
 authors = [
   { name = "Antoni Montenegro", email = "tonileo2154@gmail.com" },
 ]
-
 requires-python = ">=3.12,<3.13"
-
 classifiers = [
   "Programming Language :: Python :: 3 :: Only",
   "Programming Language :: Python :: 3.12",
 ]
-
 dependencies = [
   "argon2-cffi==25.1.0",
+  "channels==4.3.2",
+  "channels-redis==4.3.0",
   "crispy-bootstrap5==2026.3",
+  "daphne==4.2.3",
   "django==6.0.6",
   "django-allauth[mfa]==65.16.1",
   "django-anymail==15.0",
+  "django-auditlog==3.4.1",
   "django-cors-headers==4.9.0",
   "django-crispy-forms==2.6",
   "django-environ==0.13.0",
   "django-filter==25.1",
   "django-model-utils==5.0.0",
-  "openpyxl==3.1.5",
   "django-redis==6.0.0",
   "djangorestframework==3.17.1",
   "djangorestframework-simplejwt==5.5.1",
-  "PyJWT==2.13.0",
   "drf-spectacular==0.29.0",
   "gunicorn==25.3.0",
   "hiredis==3.3.1",
+  "openpyxl==3.1.5",
   "pillow==12.2.0",
-  "psycopg[binary]==3.3.4",
   "psutil==7.2.2",
-  "django-auditlog==3.4.1",
+  "psycopg[binary]==3.3.4",
+  "pyjwt==2.13.0",
   "python-slugify==8.0.4",
   "redis==7.4.0",
   "whitenoise==6.12.0",
-  "channels==4.3.2",
-  "channels-redis==4.3.0",
-  "daphne==4.2.3",
 ]
 
 [dependency-groups]
@@ -75,7 +71,6 @@ extend-exclude = [
   "*/migrations/*.py",
   "staticfiles/*",
 ]
-
 lint.select = [
   "A",
   "ASYNC",
@@ -126,38 +121,21 @@ lint.select = [
   "W",
   "YTT",
 ]
-
 lint.ignore = [
   "RUF012",
   "S101",
   "SIM102",
 ]
-
+# En tests es normal comparar contra valores literales (cantidades, status
+# HTTP), usar contrasenas de prueba y llamar metodos privados.
+lint.per-file-ignores."**/test_*.py" = [ "PLR2004", "S106", "SLF001" ]
+lint.per-file-ignores."**/tests/*.py" = [ "PLR2004", "S106", "SLF001" ]
 lint.isort.force-single-line = true
 
 [tool.pyproject-fmt]
 keep_full_version = true
 
-# ==== pytest ====
-
-[tool.pytest.ini_options]
-minversion = "6.0"
-addopts = "--ds=config.settings.test --reuse-db --import-mode=importlib"
-
-python_files = [
-  "tests.py",
-  "test_*.py",
-]
-
-# ==== Coverage ====
-
-[tool.coverage.run]
-include = [ "memos_cafe/**" ]
-omit = [ "*/migrations/*", "*/tests/*" ]
-plugins = [ "django_coverage_plugin" ]
-
 # ==== mypy ====
-
 [tool.mypy]
 python_version = "3.12"
 check_untyped_defs = true
@@ -165,21 +143,41 @@ ignore_missing_imports = true
 warn_unused_ignores = true
 warn_redundant_casts = true
 warn_unused_configs = true
-
 plugins = [
   "mypy_django_plugin.main",
   "mypy_drf_plugin.main",
 ]
+overrides = [ { module = "*.migrations.*", ignore_errors = true } ]
 
-[[tool.mypy.overrides]]
-module = "*.migrations.*"
-ignore_errors = true
+# ==== Pyrefly ====
+# Pyrefly es un linter externo de VS Code. El type checker oficial del proyecto
+# es mypy con mypy-drf-plugin (ver sección [tool.mypy] arriba).
+# Los errores bad-override en clases Meta de DRF son falsos positivos:
+# SerializerMetaclass procesa Meta en tiempo de ejecución de una forma que
+# Pyrefly no puede inferir estáticamente. Se deshabilitan aquí para evitar
+# contaminar los archivos con comentarios # pyrefly: ignore.
+[tool.pyrefly]
+errors_to_ignore = [ "bad-override" ]
 
 [tool.django-stubs]
 django_settings_module = "config.settings.test"
 
-# ==== djLint ====
+[tool.pytest]
+# ==== pytest ====
+ini_options.minversion = "6.0"
+ini_options.addopts = "--ds=config.settings.test --reuse-db --import-mode=importlib"
+ini_options.python_files = [
+  "tests.py",
+  "test_*.py",
+]
 
+[tool.coverage]
+# ==== Coverage ====
+run.include = [ "memos_cafe/**" ]
+run.omit = [ "*/migrations/*", "*/tests/*" ]
+run.plugins = [ "django_coverage_plugin" ]
+
+# ==== djLint ====
 [tool.djlint]
 blank_line_after_tag = "load,extends"
 close_void_tags = true
@@ -190,19 +188,5 @@ include = "H017,H035"
 indent = 2
 max_line_length = 119
 profile = "django"
-
-[tool.djlint.css]
-indent_size = 2
-
-[tool.djlint.js]
-indent_size = 2
-
-# ==== Pyrefly ====
-# Pyrefly es un linter externo de VS Code. El type checker oficial del proyecto
-# es mypy con mypy-drf-plugin (ver sección [tool.mypy] arriba).
-# Los errores bad-override en clases Meta de DRF son falsos positivos:
-# SerializerMetaclass procesa Meta en tiempo de ejecución de una forma que
-# Pyrefly no puede inferir estáticamente. Se deshabilitan aquí para evitar
-# contaminar los archivos con comentarios # pyrefly: ignore.
-[tool.pyrefly]
-errors_to_ignore = ["bad-override"]
+css.indent_size = 2
+js.indent_size = 2

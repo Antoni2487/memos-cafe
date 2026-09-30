@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { FormModal, InputField } from "../common";
 import { ROLES } from "../../utils/constants";
 import { esSoloAlfabetico, esEmailValido, LIMITES, MENSAJES } from "../../utils/validators";
@@ -28,23 +28,30 @@ interface FormState {
 
 type Campo = keyof FormState;
 
-export default function UsuarioForm({ abierto, usuario, onGuardar, onCerrar, cargando }: UsuarioFormProps) {
-  const [form, setForm] = useState<FormState>({ name: "", email: "", password: "", group_name: "" });
-  const [errores, setErrores] = useState<Partial<Record<Campo, string>>>({});
-
-  useEffect(() => {
-    if (usuario) {
-      setForm({
+function formInicial(usuario: Usuario | null): FormState {
+  return usuario
+    ? {
         name: usuario.name || "",
         email: usuario.email,
         password: "",
         group_name: usuario.groups?.[0]?.name ?? "",
-      });
-    } else {
-      setForm({ name: "", email: "", password: "", group_name: "" });
-    }
+      }
+    : { name: "", email: "", password: "", group_name: "" };
+}
+
+export default function UsuarioForm({ abierto, usuario, onGuardar, onCerrar, cargando }: UsuarioFormProps) {
+  const [form, setForm] = useState<FormState>(() => formInicial(usuario));
+  const [errores, setErrores] = useState<Partial<Record<Campo, string>>>({});
+
+  // Reinicia el formulario al abrirlo o al cambiar de usuario. Se hace durante
+  // el render (y no en un useEffect) para evitar un render extra:
+  // https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
+  const [prev, setPrev] = useState({ usuario, abierto });
+  if (prev.usuario !== usuario || prev.abierto !== abierto) {
+    setPrev({ usuario, abierto });
+    setForm(formInicial(usuario));
     setErrores({});
-  }, [usuario, abierto]);
+  }
 
   const set = (campo: Campo) => (val: string) => setForm((f) => ({ ...f, [campo]: val }));
 

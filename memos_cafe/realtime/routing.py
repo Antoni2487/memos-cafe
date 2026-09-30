@@ -1,8 +1,8 @@
-from django.urls import re_path
+from django.urls import path
 
 from memos_cafe.realtime import consumers
 
 websocket_urlpatterns = [
-    re_path(r"^ws/cocina/$", consumers.CocinaConsumer.as_asgi()),
-    re_path(r"^ws/meseros/$", consumers.MeseroConsumer.as_asgi()),
+    path("ws/cocina/", consumers.CocinaConsumer.as_asgi()),
+    path("ws/meseros/", consumers.MeseroConsumer.as_asgi()),
 ]

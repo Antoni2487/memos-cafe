@@ -1,5 +1,5 @@
-import api from "./api";
-import type { Paginated, Usuario } from "../types";
+import api, { getAll } from "./api";
+import type { Usuario } from "../types";
 
 export interface UsuarioFormData {
   name?: string;
@@ -9,7 +9,7 @@ export interface UsuarioFormData {
 }
 
 const usuarioService = {
-  getAll:       ()                                        => api.get<Paginated<Usuario> | Usuario[]>("/users/"),
+  getAll:       ()                                        => getAll<Usuario>("/users/"),
   getById:      (pk: number)                              => api.get<Usuario>(`/users/${pk}/`),
   create:       (data: UsuarioFormData)                   => api.post<Usuario>("/users/", data),
   update:       (pk: number, data: Partial<UsuarioFormData>) => api.patch<Usuario>(`/users/${pk}/`, data),

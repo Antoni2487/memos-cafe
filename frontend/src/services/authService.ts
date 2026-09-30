@@ -1,5 +1,5 @@
-import api from "./api";
-import type { Paginated, PermisoRol, UsuarioAuth } from "../types";
+import api, { getAll } from "./api";
+import type { PermisoRol, UsuarioAuth } from "../types";
 
 interface JwtPayload {
   roles?: string[];
@@ -49,8 +49,7 @@ const authService = {
     // Si falla, queda sin módulos extra hasta el próximo login — admin
     // igual tiene acceso total vía bypass en el backend y en tieneModulo.
     try {
-      const { data } = await api.get<Paginated<PermisoRol> | PermisoRol[]>("/roles/permisos/");
-      const permisos = Array.isArray(data) ? data : (data.results ?? []);
+      const permisos = await getAll<PermisoRol>("/roles/permisos/");
       const modulosPermitidos = permisos
         .filter((p) => roles.includes(p.rol) && p.puede_acceder)
         .map((p) => p.modulo);

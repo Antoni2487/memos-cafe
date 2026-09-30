@@ -13,13 +13,11 @@ from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from memos_cafe.mesas.api.serializers import (
-    OrdenQRSerializer,
-    PedidoQRSerializer,
-    SesionMesaQREstadoSerializer,
-    SolicitarCobroQRSerializer,
-)
 from memos_cafe.mesas.api import throttles
+from memos_cafe.mesas.api.serializers import OrdenQRSerializer
+from memos_cafe.mesas.api.serializers import PedidoQRSerializer
+from memos_cafe.mesas.api.serializers import SesionMesaQREstadoSerializer
+from memos_cafe.mesas.api.serializers import SolicitarCobroQRSerializer
 from memos_cafe.mesas.models import Mesa
 from memos_cafe.mesas.services import SesionMesaService
 
@@ -35,6 +33,7 @@ class MesaQREstadoView(APIView):
     """GET /api/mesas/qr/<codigo>/ — el frontend cliente pega aca apenas
     escanea el QR para saber si hay un pedido abierto y que tiene hasta
     ahora."""
+
     permission_classes = []
     throttle_classes = throttles.LECTURA
 
@@ -64,6 +63,7 @@ class MesaQREstadoView(APIView):
 class MesaQRPedidoView(APIView):
     """POST /api/mesas/qr/<codigo>/pedido/ — el cliente confirma su
     carrito (pedido inicial o una ronda mas)."""
+
     permission_classes = []
     throttle_classes = throttles.PEDIDO
 
@@ -74,10 +74,11 @@ class MesaQRPedidoView(APIView):
 
         try:
             orden = SesionMesaService.registrar_pedido(
-                mesa=mesa, items=serializer.validated_data["items"]
+                mesa=mesa,
+                items=serializer.validated_data["items"],
             )
         except ValueError as e:
-            raise ValidationError({"detail": str(e)})
+            raise ValidationError({"detail": str(e)}) from e
 
         return Response(OrdenQRSerializer(orden).data, status=201)
 
@@ -86,6 +87,7 @@ class MesaQRSolicitarCobroView(APIView):
     """POST /api/mesas/qr/<codigo>/solicitar-cobro/ — el cliente termino
     y avisa que quiere pagar. No es un Pago real: el cajero/mesero sigue
     cobrando fisicamente como hoy, esto solo notifica al personal."""
+
     permission_classes = []
     throttle_classes = throttles.COBRO
 
@@ -100,6 +102,6 @@ class MesaQRSolicitarCobroView(APIView):
                 metodo_pago_sugerido=serializer.validated_data["metodo_pago_sugerido"],
             )
         except ValueError as e:
-            raise ValidationError({"detail": str(e)})
+            raise ValidationError({"detail": str(e)}) from e
 
         return Response(status=201)

@@ -3,6 +3,7 @@ from rest_framework.permissions import BasePermission
 
 class EsAdmin(BasePermission):
     """Solo usuarios del grupo 'admin'."""
+
     def has_permission(self, request, view):
         return (
             request.user.is_authenticated
@@ -12,6 +13,7 @@ class EsAdmin(BasePermission):
 
 class EsCajero(BasePermission):
     """Solo usuarios del grupo 'cajero'."""
+
     def has_permission(self, request, view):
         return (
             request.user.is_authenticated
@@ -21,6 +23,7 @@ class EsCajero(BasePermission):
 
 class EsMesero(BasePermission):
     """Solo usuarios del grupo 'mesero'."""
+
     def has_permission(self, request, view):
         return (
             request.user.is_authenticated
@@ -30,6 +33,7 @@ class EsMesero(BasePermission):
 
 class EsCocina(BasePermission):
     """Solo usuarios del grupo 'cocina'."""
+
     def has_permission(self, request, view):
         return (
             request.user.is_authenticated
@@ -39,6 +43,7 @@ class EsCocina(BasePermission):
 
 class EsAdminOCajero(BasePermission):
     """Admin o cajero."""
+
     def has_permission(self, request, view):
         return (
             request.user.is_authenticated
@@ -48,6 +53,7 @@ class EsAdminOCajero(BasePermission):
 
 class EsAdminOMesero(BasePermission):
     """Admin o mesero."""
+
     def has_permission(self, request, view):
         return (
             request.user.is_authenticated
@@ -57,6 +63,7 @@ class EsAdminOMesero(BasePermission):
 
 class EsAdminOCocina(BasePermission):
     """Admin o cocina."""
+
     def has_permission(self, request, view):
         return (
             request.user.is_authenticated
@@ -66,6 +73,7 @@ class EsAdminOCocina(BasePermission):
 
 class TodosAutenticados(BasePermission):
     """Cualquier usuario autenticado (los 3 roles)."""
+
     def has_permission(self, request, view):
         return request.user.is_authenticated
 
@@ -79,6 +87,7 @@ class ModuloHabilitado(BasePermission):
     solo puede restringir mas, nunca otorgar acceso que el grupo no
     tendria de por si. No instanciar directo — usar modulo_requerido().
     """
+
     modulo = None
 
     def has_permission(self, request, view):
@@ -94,14 +103,17 @@ class ModuloHabilitado(BasePermission):
         # hacia una app de negocio especifica (ver .importlinter). El
         # registro de apps de Django resuelve el modelo en runtime sin
         # crear ese acoplamiento estatico.
-        from django.apps import apps
+        from django.apps import apps  # noqa: PLC0415 -- ver comentario de arriba
+
         PermisoRol = apps.get_model("roles", "PermisoRol")
 
         rol = user.groups.values_list("name", flat=True).first()
         if not rol:
             return False
         return PermisoRol.objects.filter(
-            rol=rol, modulo=self.modulo, puede_acceder=True
+            rol=rol,
+            modulo=self.modulo,
+            puede_acceder=True,
         ).exists()
 
 

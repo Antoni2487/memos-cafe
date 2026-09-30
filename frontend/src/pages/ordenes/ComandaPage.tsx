@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, type CSSProperties } from "react";
+import { useState, useEffect, type CSSProperties } from "react";
 import { useParams } from "react-router-dom";
 import ordenesService from "../../services/ordenesService";
 import { formatDateTime } from "../../utils/formatters";
@@ -12,23 +12,18 @@ export default function ComandaPage() {
   const [imprimiendo, setImprimiendo] = useState(false);
   const [yaImpreso, setYaImpreso]     = useState(false);
 
-  const cargar = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const { data } = await ordenesService.listar();
-      const ordenes = Array.isArray(data) ? data : (data.results ?? []);
-      const found = ordenes.find((o) => o.id === parseInt(ordenId ?? "", 10));
-      if (!found) { setError("Orden no encontrada."); return; }
-      setOrden(found);
-    } catch {
-      setError("Error al cargar la orden.");
-    } finally {
-      setLoading(false);
-    }
+  // setState solo dentro de callbacks de la promesa
+  // (react-hooks/set-state-in-effect).
+  useEffect(() => {
+    ordenesService.listar()
+      .then((ordenes) => {
+        const found = ordenes.find((o) => o.id === parseInt(ordenId ?? "", 10));
+        if (found) setOrden(found);
+        else setError("Orden no encontrada.");
+      })
+      .catch(() => setError("Error al cargar la orden."))
+      .finally(() => setLoading(false));
   }, [ordenId]);
-
-  useEffect(() => { cargar(); }, [cargar]);
 
   const itemsPendientes = orden?.detalles?.filter((d) => !d.impreso) ?? [];
   const itemsImpreso    = orden?.detalles?.filter((d) => d.impreso)  ?? [];

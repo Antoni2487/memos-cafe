@@ -4,10 +4,11 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 
-from memos_cafe.mesas.models import Mesa
-from memos_cafe.mesas.services import MesaService, SesionMesaService
 from memos_cafe.mesas.api.serializers import MesaEstadoSerializer
 from memos_cafe.mesas.api.serializers import MesaSerializer
+from memos_cafe.mesas.models import Mesa
+from memos_cafe.mesas.services import MesaService
+from memos_cafe.mesas.services import SesionMesaService
 from memos_cafe.utils.permissions import EsAdmin
 from memos_cafe.utils.permissions import EsAdminOMesero
 from memos_cafe.utils.permissions import TodosAutenticados
@@ -22,6 +23,7 @@ class MesaViewSet(ModelViewSet):
     destroy:DELETE /api/mesas/{id}/   -> solo admin (da de baja)
     estado: PATCH /api/mesas/{id}/estado/ -> admin o mesero
     """
+
     queryset = Mesa.objects.filter(activo=True).order_by("numero")
     serializer_class = MesaSerializer
 
@@ -47,7 +49,7 @@ class MesaViewSet(ModelViewSet):
                 capacidad=serializer.validated_data["capacidad"],
             )
         except ValueError as e:
-            raise ValidationError({"detail": str(e)})
+            raise ValidationError({"detail": str(e)}) from e
         serializer.instance = mesa
 
     def perform_update(self, serializer):
@@ -58,7 +60,7 @@ class MesaViewSet(ModelViewSet):
                 capacidad=serializer.validated_data.get("capacidad"),
             )
         except ValueError as e:
-            raise ValidationError({"detail": str(e)})
+            raise ValidationError({"detail": str(e)}) from e
 
     def destroy(self, request, *args, **kwargs):
         """En vez de borrar fisicamente, da de baja la mesa."""
@@ -66,7 +68,7 @@ class MesaViewSet(ModelViewSet):
         try:
             MesaService.dar_de_baja(mesa)
         except ValueError as e:
-            raise ValidationError({"detail": str(e)})
+            raise ValidationError({"detail": str(e)}) from e
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=True, methods=["patch"], url_path="estado")
@@ -80,7 +82,7 @@ class MesaViewSet(ModelViewSet):
         try:
             MesaService.cambiar_estado(mesa, nuevo_estado)
         except ValueError as e:
-            raise ValidationError({"detail": str(e)})
+            raise ValidationError({"detail": str(e)}) from e
 
         return Response(MesaSerializer(mesa).data)
 
@@ -93,7 +95,7 @@ class MesaViewSet(ModelViewSet):
         try:
             sesion = SesionMesaService.abrir_sesion(mesa, mesero=request.user)
         except ValueError as e:
-            raise ValidationError({"detail": str(e)})
+            raise ValidationError({"detail": str(e)}) from e
         # abrir_sesion() ocupa la mesa sobre su propia copia re-fetcheada
         # (select_for_update); esta instancia local sigue con el estado
         # viejo en memoria hasta refrescarla.
@@ -119,6 +121,6 @@ class MesaViewSet(ModelViewSet):
         try:
             SesionMesaService.cancelar_sesion(mesa)
         except ValueError as e:
-            raise ValidationError({"detail": str(e)})
+            raise ValidationError({"detail": str(e)}) from e
         mesa.refresh_from_db()
         return Response(MesaSerializer(mesa).data)

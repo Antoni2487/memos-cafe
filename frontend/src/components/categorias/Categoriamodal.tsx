@@ -1,4 +1,4 @@
-import { useState, type FormEvent, type FocusEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { X, Tag } from "lucide-react";
 import { esSoloAlfanumerico, LIMITES, MENSAJES } from "../../utils/validators";
 import { getErrorMessage } from "../../utils/errors";
@@ -20,7 +20,7 @@ export function CategoryModal({ onClose, onSave }: CategoryModalProps) {
     return null;
   };
 
-  const handleBlur = (_e: FocusEvent<HTMLInputElement>) => {
+  const handleBlur = () => {
     const msg = validarNombre(name.trim());
     setError(msg || "");
   };

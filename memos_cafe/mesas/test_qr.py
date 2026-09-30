@@ -2,12 +2,12 @@ from decimal import Decimal
 
 import pytest
 from django.contrib.auth.models import Group
-from django.core.cache import cache
 from rest_framework.test import APIClient
 
 from memos_cafe.caja.models import SolicitudCobro
-from memos_cafe.caja.tests.factories import CajaFactory, MesaFactory
-from memos_cafe.mesas.models import Mesa, SesionMesaQR
+from memos_cafe.caja.tests.factories import CajaFactory
+from memos_cafe.caja.tests.factories import MesaFactory
+from memos_cafe.mesas.models import Mesa
 from memos_cafe.mesas.services import SesionMesaService
 from memos_cafe.ordenes.models import Orden
 from memos_cafe.productos.tests.factories import ProductoFactory
@@ -25,7 +25,9 @@ def mesero():
     # abrir-qr esta gateado por el modulo "mesas", igual que "estado" —
     # ver mesas/tests.py::TestMesaModuloHabilitado para el mismo patron.
     PermisoRol.objects.update_or_create(
-        modulo="mesas", rol="mesero", defaults={"puede_acceder": True}
+        modulo="mesas",
+        rol="mesero",
+        defaults={"puede_acceder": True},
     )
     return usuario
 
@@ -78,7 +80,8 @@ class TestSesionMesaServiceRegistrarPedido:
         producto = ProductoFactory(precio=Decimal("10.00"))
         with pytest.raises(ValueError, match="Pedile a tu mesero"):
             SesionMesaService.registrar_pedido(
-                mesa, items=[{"producto": producto, "cantidad": 1}]
+                mesa,
+                items=[{"producto": producto, "cantidad": 1}],
             )
 
     def test_primer_pedido_crea_la_orden_en_ronda_1(self, mesero):
@@ -88,7 +91,8 @@ class TestSesionMesaServiceRegistrarPedido:
         producto = ProductoFactory(precio=Decimal("10.00"))
 
         orden = SesionMesaService.registrar_pedido(
-            mesa, items=[{"producto": producto, "cantidad": 2}]
+            mesa,
+            items=[{"producto": producto, "cantidad": 2}],
         )
 
         assert orden.mesa_id == mesa.id
@@ -105,10 +109,12 @@ class TestSesionMesaServiceRegistrarPedido:
         producto = ProductoFactory(precio=Decimal("10.00"))
 
         orden1 = SesionMesaService.registrar_pedido(
-            mesa, items=[{"producto": producto, "cantidad": 1}]
+            mesa,
+            items=[{"producto": producto, "cantidad": 1}],
         )
         orden2 = SesionMesaService.registrar_pedido(
-            mesa, items=[{"producto": producto, "cantidad": 3}]
+            mesa,
+            items=[{"producto": producto, "cantidad": 3}],
         )
 
         assert orden1.id == orden2.id  # misma orden, no una nueva
@@ -128,7 +134,8 @@ class TestSesionMesaServiceSolicitarCobro:
         SesionMesaService.abrir_sesion(mesa, mesero=mesero)
         producto = ProductoFactory(precio=Decimal("10.00"))
         orden = SesionMesaService.registrar_pedido(
-            mesa, items=[{"producto": producto, "cantidad": 1}]
+            mesa,
+            items=[{"producto": producto, "cantidad": 1}],
         )
 
         solicitud = SesionMesaService.solicitar_cobro(mesa, metodo_pago_sugerido="yape")
@@ -187,7 +194,10 @@ class TestCancelarSesionQR:
         mesa = MesaFactory(estado=Mesa.Estado.LIBRE)
         SesionMesaService.abrir_sesion(mesa, mesero=mesero)
         producto = ProductoFactory(precio=Decimal("10.00"))
-        SesionMesaService.registrar_pedido(mesa, items=[{"producto": producto, "cantidad": 1}])
+        SesionMesaService.registrar_pedido(
+            mesa,
+            items=[{"producto": producto, "cantidad": 1}],
+        )
 
         with pytest.raises(ValueError, match="ya tiene un pedido en curso"):
             SesionMesaService.cancelar_sesion(mesa)
@@ -209,7 +219,10 @@ class TestCancelarSesionQR:
         mesa = MesaFactory(estado=Mesa.Estado.LIBRE)
         SesionMesaService.abrir_sesion(mesa, mesero=mesero)
         producto = ProductoFactory(precio=Decimal("10.00"))
-        SesionMesaService.registrar_pedido(mesa, items=[{"producto": producto, "cantidad": 1}])
+        SesionMesaService.registrar_pedido(
+            mesa,
+            items=[{"producto": producto, "cantidad": 1}],
+        )
 
         r = mesero_client.post(f"/api/mesas/{mesa.id}/cerrar-qr/")
 

@@ -22,8 +22,7 @@ export default function useUsuarios() {
   const cargar = useCallback(async () => {
     try {
       setCargando(true);
-      const { data } = await usuarioService.getAll();
-      const lista = "results" in data ? data.results : data;
+      const lista = await usuarioService.getAll();
       setUsuarios(lista);
       setFiltrados(lista);
       setPagina(1);

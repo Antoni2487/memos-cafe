@@ -1,14 +1,19 @@
 from rest_framework import serializers
 
 from memos_cafe.mesas.models import Mesa
-from memos_cafe.ordenes.models import DetalleOrden, Orden
-from memos_cafe.productos.api.serializers import ProductoSerializer, PromocionSerializer
-from memos_cafe.productos.models import Producto, Promocion
-from memos_cafe.utils.validators import es_alfanumerico_extendido, es_telefono_valido
+from memos_cafe.ordenes.models import DetalleOrden
+from memos_cafe.ordenes.models import Orden
+from memos_cafe.productos.api.serializers import ProductoSerializer
+from memos_cafe.productos.api.serializers import PromocionSerializer
+from memos_cafe.productos.models import Producto
+from memos_cafe.productos.models import Promocion
+from memos_cafe.utils.validators import es_alfanumerico_extendido
+from memos_cafe.utils.validators import es_telefono_valido
 
 
 class DetalleOrdenReadSerializer(serializers.ModelSerializer):
     """Lectura: producto y promoción anidados completos."""
+
     producto = ProductoSerializer(read_only=True)
     promocion = PromocionSerializer(read_only=True)
 
@@ -28,6 +33,7 @@ class DetalleOrdenReadSerializer(serializers.ModelSerializer):
 
 class DetalleOrdenWriteSerializer(serializers.Serializer):
     """Valida un ítem al crear o agregar a una orden."""
+
     producto = serializers.PrimaryKeyRelatedField(
         queryset=Producto.objects.filter(disponible=True),
         required=False,
@@ -39,12 +45,18 @@ class DetalleOrdenWriteSerializer(serializers.Serializer):
         allow_null=True,
     )
     cantidad = serializers.IntegerField(min_value=1)
-    nota = serializers.CharField(max_length=150, required=False, allow_blank=True, default="")
+    nota = serializers.CharField(
+        max_length=150,
+        required=False,
+        allow_blank=True,
+        default="",
+    )
 
     def validate(self, data):
         if not data.get("producto") and not data.get("promocion"):
+            msg = "Debe especificar al menos un producto o una promoción."
             raise serializers.ValidationError(
-                "Debe especificar al menos un producto o una promoción."
+                msg,
             )
         return data
 
@@ -56,19 +68,38 @@ class OrdenReadSerializer(serializers.ModelSerializer):
     def get_usuario_nombre(self, obj):
         return obj.usuario.name or obj.usuario.email
 
-    mesa_numero = serializers.IntegerField(source="mesa.numero", read_only=True, default=None)
+    mesa_numero = serializers.IntegerField(
+        source="mesa.numero",
+        read_only=True,
+        default=None,
+    )
     estado_display = serializers.CharField(source="get_estado_display", read_only=True)
-    tipo_orden_display = serializers.CharField(source="get_tipo_orden_display", read_only=True)
+    tipo_orden_display = serializers.CharField(
+        source="get_tipo_orden_display",
+        read_only=True,
+    )
     pagos_resumen = serializers.SerializerMethodField()
 
     class Meta:
         model = Orden
         fields = [
-            "id", "mesa", "mesa_numero", "usuario", "usuario_nombre",
-            "estado", "estado_display", "tipo_orden", "tipo_orden_display",
-            "fecha_creacion", "fecha_cierre", "total",
-            "cliente_nombre", "cliente_telefono", "direccion_entrega",
-            "plataforma_delivery", "plataforma_otra",
+            "id",
+            "mesa",
+            "mesa_numero",
+            "usuario",
+            "usuario_nombre",
+            "estado",
+            "estado_display",
+            "tipo_orden",
+            "tipo_orden_display",
+            "fecha_creacion",
+            "fecha_cierre",
+            "total",
+            "cliente_nombre",
+            "cliente_telefono",
+            "direccion_entrega",
+            "plataforma_delivery",
+            "plataforma_otra",
             "detalles",
             "pagos_resumen",
         ]
@@ -95,6 +126,7 @@ class OrdenReadSerializer(serializers.ModelSerializer):
 
 class OrdenWriteSerializer(serializers.Serializer):
     """Valida datos para crear una orden con sus ítems."""
+
     mesa = serializers.PrimaryKeyRelatedField(
         queryset=Mesa.objects.filter(activo=True),
         required=False,
@@ -104,30 +136,57 @@ class OrdenWriteSerializer(serializers.Serializer):
     detalles = DetalleOrdenWriteSerializer(many=True)
 
     # Campos delivery (opcionales según tipo_orden)
-    cliente_nombre = serializers.CharField(max_length=150, required=False, allow_blank=True, default="")
-    cliente_telefono = serializers.CharField(max_length=20, required=False, allow_blank=True, default="")
-    direccion_entrega = serializers.CharField(max_length=255, required=False, allow_blank=True, default="")
+    cliente_nombre = serializers.CharField(
+        max_length=150,
+        required=False,
+        allow_blank=True,
+        default="",
+    )
+    cliente_telefono = serializers.CharField(
+        max_length=20,
+        required=False,
+        allow_blank=True,
+        default="",
+    )
+    direccion_entrega = serializers.CharField(
+        max_length=255,
+        required=False,
+        allow_blank=True,
+        default="",
+    )
     plataforma_delivery = serializers.ChoiceField(
         choices=Orden.PlataformaDelivery.choices,
         required=False,
         allow_null=True,
     )
-    plataforma_otra = serializers.CharField(max_length=100, required=False, allow_blank=True, default="")
+    plataforma_otra = serializers.CharField(
+        max_length=100,
+        required=False,
+        allow_blank=True,
+        default="",
+    )
 
     def validate_cliente_nombre(self, value):
         if value and not es_alfanumerico_extendido(value):
-            raise serializers.ValidationError("El nombre contiene caracteres no permitidos.")
+            msg = "El nombre contiene caracteres no permitidos."
+            raise serializers.ValidationError(
+                msg,
+            )
         return value
 
     def validate_cliente_telefono(self, value):
         if value and not es_telefono_valido(value):
-            raise serializers.ValidationError("El teléfono solo puede contener números, espacios, + y -.")
+            msg = "El teléfono solo puede contener números, espacios, + y -."
+            raise serializers.ValidationError(
+                msg,
+            )
         return value
 
     def validate_detalles(self, value):
         if not value:
+            msg = "La orden debe tener al menos un ítem."
             raise serializers.ValidationError(
-                "La orden debe tener al menos un ítem."
+                msg,
             )
         return value
 
@@ -137,23 +196,30 @@ class OrdenWriteSerializer(serializers.Serializer):
 
         if tipo_orden == Orden.TipoOrden.MESA and not mesa:
             raise serializers.ValidationError(
-                {"mesa": "Debe asignar una mesa para órdenes de tipo 'mesa'."}
+                {"mesa": "Debe asignar una mesa para órdenes de tipo 'mesa'."},
             )
         if tipo_orden == Orden.TipoOrden.DELIVERY:
             if not data.get("plataforma_delivery"):
                 raise serializers.ValidationError(
-                    {"plataforma_delivery": "Debe especificar la plataforma para órdenes delivery."}
+                    {
+                        "plataforma_delivery": (
+                            "Debe especificar la plataforma para órdenes delivery."
+                        ),
+                    },
                 )
             plataforma = data.get("plataforma_delivery")
-            if plataforma == Orden.PlataformaDelivery.OTRO and not data.get("plataforma_otra"):
+            if plataforma == Orden.PlataformaDelivery.OTRO and not data.get(
+                "plataforma_otra",
+            ):
                 raise serializers.ValidationError(
-                    {"plataforma_otra": "Debe especificar el nombre de la plataforma."}
+                    {"plataforma_otra": "Debe especificar el nombre de la plataforma."},
                 )
         return data
 
 
 class MarcarImpresoSerializer(serializers.Serializer):
     """Valida los ids de detalle a marcar como enviados a cocina/barra."""
+
     detalle_ids = serializers.ListField(
         child=serializers.IntegerField(),
         allow_empty=False,
@@ -163,6 +229,7 @@ class MarcarImpresoSerializer(serializers.Serializer):
 class DetalleCocinaSerializer(serializers.ModelSerializer):
     """Lectura liviana de un ítem para el tablero de Cocina: solo lo que
     hace falta para preparar, nada de precios/pagos."""
+
     nombre = serializers.SerializerMethodField()
 
     def get_nombre(self, obj):
@@ -174,22 +241,46 @@ class DetalleCocinaSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = DetalleOrden
-        fields = ["id", "nombre", "cantidad", "nota", "ronda", "estado_preparacion", "fecha_creacion"]
+        fields = [
+            "id",
+            "nombre",
+            "cantidad",
+            "nota",
+            "ronda",
+            "estado_preparacion",
+            "fecha_creacion",
+        ]
 
 
 class TicketCocinaSerializer(serializers.ModelSerializer):
     """Lectura liviana de una orden para el tablero de Cocina."""
-    mesa_numero = serializers.IntegerField(source="mesa.numero", read_only=True, default=None)
-    tipo_orden_display = serializers.CharField(source="get_tipo_orden_display", read_only=True)
+
+    mesa_numero = serializers.IntegerField(
+        source="mesa.numero",
+        read_only=True,
+        default=None,
+    )
+    tipo_orden_display = serializers.CharField(
+        source="get_tipo_orden_display",
+        read_only=True,
+    )
     detalles = serializers.SerializerMethodField()
 
     class Meta:
         model = Orden
-        fields = ["id", "mesa_numero", "tipo_orden", "tipo_orden_display", "fecha_creacion", "detalles"]
+        fields = [
+            "id",
+            "mesa_numero",
+            "tipo_orden",
+            "tipo_orden_display",
+            "fecha_creacion",
+            "detalles",
+        ]
 
     def get_detalles(self, obj):
         pendientes = [
-            d for d in obj.detalles.all()
+            d
+            for d in obj.detalles.all()
             if d.estado_preparacion != DetalleOrden.EstadoPreparacion.ENTREGADO
         ]
         return DetalleCocinaSerializer(pendientes, many=True).data
@@ -197,4 +288,7 @@ class TicketCocinaSerializer(serializers.ModelSerializer):
 
 class ActualizarEstadoPreparacionSerializer(serializers.Serializer):
     """Valida el nuevo estado de preparación de un ítem."""
-    estado_preparacion = serializers.ChoiceField(choices=DetalleOrden.EstadoPreparacion.choices)
+
+    estado_preparacion = serializers.ChoiceField(
+        choices=DetalleOrden.EstadoPreparacion.choices,
+    )

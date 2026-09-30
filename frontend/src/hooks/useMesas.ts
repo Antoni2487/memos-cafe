@@ -7,21 +7,25 @@ export default function useMesas() {
   const [cargando, setCargando] = useState(true);
   const [error, setError]     = useState<string | null>(null);
 
-  const cargar = useCallback(async () => {
-    try {
-      setCargando(true);
-      setError(null);
-      const { data } = await mesasService.listar();
-      const lista = "results" in data ? data.results : data;
-      setMesas(lista);
-    } catch {
-      setError("Error al cargar mesas");
-    } finally {
-      setCargando(false);
-    }
-  }, []);
+  // Todos los setState van dentro de callbacks de la promesa, asi el
+  // efecto de montaje no actualiza estado de forma sincrona
+  // (react-hooks/set-state-in-effect).
+  const cargar = useCallback(() =>
+    mesasService.listar()
+      .then((lista) => {
+        setMesas(lista);
+        setError(null);
+      })
+      .catch(() => setError("Error al cargar mesas"))
+      .finally(() => setCargando(false)),
+  []);
+
+  const recargar = useCallback(() => {
+    setCargando(true);
+    return cargar();
+  }, [cargar]);
 
   useEffect(() => { cargar(); }, [cargar]);
 
-  return { mesas, cargando, error, recargar: cargar };
+  return { mesas, cargando, error, recargar };
 }

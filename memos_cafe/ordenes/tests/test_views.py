@@ -1,11 +1,13 @@
-import pytest
 from decimal import Decimal
 
+import pytest
 from django.contrib.auth.models import Group
 from rest_framework.test import APIClient
 
-from memos_cafe.caja.tests.factories import CajaFactory, MesaFactory
+from memos_cafe.caja.tests.factories import CajaFactory
+from memos_cafe.caja.tests.factories import MesaFactory
 from memos_cafe.mesas.models import Mesa
+from memos_cafe.ordenes.services import OrdenService
 from memos_cafe.productos.tests.factories import ProductoFactory
 from memos_cafe.users.tests.factories import UserFactory
 
@@ -53,9 +55,10 @@ class TestOrdenViewSetQuerysetCajero:
         mesero = UserFactory()
         mesa = MesaFactory(estado=Mesa.Estado.LIBRE)
         producto = ProductoFactory(precio=Decimal("10.00"))
-        from memos_cafe.ordenes.services import OrdenService
         OrdenService.crear_orden(
-            usuario=mesero, tipo_orden="mesa", mesa=mesa,
+            usuario=mesero,
+            tipo_orden="mesa",
+            mesa=mesa,
             detalles=[{"producto": producto, "cantidad": 1}],
         )
 
@@ -127,9 +130,10 @@ class TestTableroCocina:
         mesero = UserFactory()
         mesa = MesaFactory(estado=Mesa.Estado.LIBRE)
         producto = ProductoFactory(precio=Decimal("10.00"))
-        from memos_cafe.ordenes.services import OrdenService
         return OrdenService.crear_orden(
-            usuario=mesero, tipo_orden="mesa", mesa=mesa,
+            usuario=mesero,
+            tipo_orden="mesa",
+            mesa=mesa,
             detalles=[{"producto": producto, "cantidad": 2}],
         )
 
@@ -222,9 +226,10 @@ class TestMeseroMarcaEntregado:
         CajaFactory()
         mesa = MesaFactory(estado=Mesa.Estado.LIBRE)
         producto = ProductoFactory(precio=Decimal("10.00"))
-        from memos_cafe.ordenes.services import OrdenService
         return OrdenService.crear_orden(
-            usuario=mesero, tipo_orden="mesa", mesa=mesa,
+            usuario=mesero,
+            tipo_orden="mesa",
+            mesa=mesa,
             detalles=[{"producto": producto, "cantidad": 1}],
         )
 

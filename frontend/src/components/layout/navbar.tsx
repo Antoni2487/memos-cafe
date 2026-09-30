@@ -75,20 +75,18 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
     : "U";
 
   // ── Polling cada 30 segundos ──────────────────────────────────────────────
-  const cargarAlertas = async () => {
-    if (!esAdmin) return;
-    try {
-      const { data } = await api.get<Alerta[]>("/alertas/");
-      setAlertas(data);
-    } catch { /* silencioso */ }
-  };
-
   useEffect(() => {
     if (!esAdmin) return;
+    // setAlertas solo dentro del callback de la promesa
+    // (react-hooks/set-state-in-effect).
+    const cargarAlertas = () => {
+      api.get<Alerta[]>("/alertas/")
+        .then(({ data }) => setAlertas(data))
+        .catch(() => { /* silencioso */ });
+    };
     cargarAlertas();
     const iv = setInterval(cargarAlertas, 30000);
     return () => clearInterval(iv);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [esAdmin]);
 
   // ── Avisos en vivo por ws/meseros/ ──────────────────────────────────────

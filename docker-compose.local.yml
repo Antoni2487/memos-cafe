@@ -15,8 +15,8 @@ services:
       - postgres
       - redis
     volumes:
-      - memos_cafe_local_venv:/app/.venv   
-      - .:/app:z                           
+      - memos_cafe_local_venv:/app/.venv
+      - .:/app:z
     env_file:
       - ./.envs/.local/.django
       - ./.envs/.local/.postgres
