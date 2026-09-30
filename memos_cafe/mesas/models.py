@@ -14,6 +14,18 @@ def generar_codigo_qr() -> str:
     return secrets.token_urlsafe(9)
 
 
+# Croquis del salon: un lienzo de PLANO_ANCHO x PLANO_ALTO unidades. El
+# frontend lo escala al ancho de la pantalla manteniendo la proporcion, asi
+# el mismo plano se ve igual en una tablet y en un celular.
+PLANO_ANCHO = 1000
+PLANO_ALTO = 640
+
+
+class Forma(models.TextChoices):
+    REDONDA = "redonda", "Redonda"
+    RECTANGULAR = "rectangular", "Rectangular"
+
+
 class Mesa(models.Model):
     class Estado(models.TextChoices):
         LIBRE = "libre", "Libre"
@@ -38,6 +50,14 @@ class Mesa(models.Model):
         default=generar_codigo_qr,
         editable=False,
     )
+    # Posicion en el croquis (centro de la mesa). Sin posicion, la mesa
+    # todavia no se ubico: el editor la muestra aparte para arrastrarla.
+    plano_x = models.PositiveSmallIntegerField(null=True, blank=True)
+    plano_y = models.PositiveSmallIntegerField(null=True, blank=True)
+    plano_ancho = models.PositiveSmallIntegerField(default=70)
+    plano_alto = models.PositiveSmallIntegerField(default=70)
+    forma = models.CharField(max_length=12, choices=Forma, default=Forma.REDONDA)
+    rotacion = models.PositiveSmallIntegerField(default=0)
 
     class Meta:
         db_table = "mesa"
@@ -81,6 +101,39 @@ class Mesa(models.Model):
         self.estado = self.Estado.LIBRE
         self.fecha_baja = timezone.now()
         self.save(update_fields=["activo", "estado", "fecha_baja"])
+
+
+class ElementoPlano(models.Model):
+    """Lo que no es una mesa en el croquis: la barra, una pared o divisor,
+    la entrada o un texto. Solo orienta al mesero; no tiene estado."""
+
+    class Tipo(models.TextChoices):
+        BARRA = "barra", "Barra"
+        PARED = "pared", "Pared o divisor"
+        ENTRADA = "entrada", "Entrada"
+        TEXTO = "texto", "Texto"
+
+    tipo = models.CharField(max_length=10, choices=Tipo.choices)
+    etiqueta = models.CharField(max_length=40, blank=True)
+    plano_x = models.PositiveSmallIntegerField()
+    plano_y = models.PositiveSmallIntegerField()
+    plano_ancho = models.PositiveSmallIntegerField()
+    plano_alto = models.PositiveSmallIntegerField()
+    forma = models.CharField(
+        max_length=12,
+        choices=Forma,
+        default=Forma.RECTANGULAR,
+    )
+    rotacion = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        db_table = "elemento_plano"
+        verbose_name = "Elemento del plano"
+        verbose_name_plural = "Elementos del plano"
+        ordering = ["id"]
+
+    def __str__(self):
+        return self.etiqueta or self.get_tipo_display()
 
 
 class SesionMesaQR(models.Model):
@@ -127,5 +180,72 @@ class SesionMesaQR(models.Model):
         return self.cerrada_en is None
 
 
+class PedidoPorConfirmar(models.Model):
+    """Primer pedido por QR de una mesa que estaba libre. Espera a que un
+    mesero lo confirme (hay gente sentada) o lo rechace (la mesa esta vacia:
+    alguien pidio con una foto del QR). Recien al confirmarlo se crea la
+    Orden, asi que Cocina y Caja no ven nada que no este confirmado.
+
+    Si varios celulares de la mesa piden mientras tanto, sus items se suman
+    a este mismo pedido. Ver SesionMesaService en mesas/services.py."""
+
+    class Estado(models.TextChoices):
+        PENDIENTE = "pendiente", "Por confirmar"
+        CONFIRMADO = "confirmado", "Confirmado"
+        RECHAZADO = "rechazado", "Rechazado"
+        EXPIRADO = "expirado", "Expirado"
+
+    mesa = models.ForeignKey(
+        Mesa,
+        on_delete=models.CASCADE,
+        related_name="pedidos_por_confirmar",
+    )
+    # [{"producto": id|null, "promocion": id|null, "cantidad": n, "nota": "",
+    #   "nombre": "...", "precio": "10.00"}] -- nombre y precio para mostrar
+    items = models.JSONField(default=list)
+    estado = models.CharField(
+        max_length=12,
+        choices=Estado.choices,
+        default=Estado.PENDIENTE,
+    )
+    creado_en = models.DateTimeField(auto_now_add=True)
+    actualizado_en = models.DateTimeField(auto_now=True)
+    resuelto_en = models.DateTimeField(null=True, blank=True)
+    resuelto_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="pedidos_qr_resueltos",
+    )
+    # Orden creada al confirmar. String para no importar ordenes.models
+    # (que ya importa Mesa de aca).
+    orden = models.ForeignKey(
+        "ordenes.Orden",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
+
+    class Meta:
+        db_table = "pedido_por_confirmar"
+        verbose_name = "Pedido por confirmar (QR)"
+        verbose_name_plural = "Pedidos por confirmar (QR)"
+        ordering = ["creado_en"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["mesa"],
+                condition=models.Q(estado="pendiente"),
+                name="un_pedido_por_confirmar_por_mesa",
+            ),
+        ]
+
+    def __str__(self):
+        return f"Pedido por confirmar Mesa {self.mesa.numero} ({self.estado})"
+
+
 auditlog.register(Mesa)
 auditlog.register(SesionMesaQR)
+auditlog.register(PedidoPorConfirmar)
+auditlog.register(ElementoPlano)

@@ -3,9 +3,11 @@ from decimal import Decimal
 
 from django.db import transaction
 from django.db.models import Max
+from django.utils import timezone
 
 from memos_cafe.caja.models import Caja
 from memos_cafe.mesas.models import Mesa
+from memos_cafe.ordenes.models import Comanda
 from memos_cafe.ordenes.models import DetalleOrden
 from memos_cafe.ordenes.models import Orden
 from memos_cafe.productos.models import Producto
@@ -41,6 +43,7 @@ class OrdenService:
         plataforma_otra: str = "",
         *,
         mesa_ya_ocupada: bool = False,
+        origen: str = Comanda.Origen.MESERO,
     ) -> Orden:
         """mesa_ya_ocupada=True: la mesa ya esta 'ocupada' por un motivo
         ajeno a esta orden (pedido por QR: SesionMesaService.abrir_sesion
@@ -94,8 +97,9 @@ class OrdenService:
         if mesa and not mesa_ya_ocupada:
             mesa.ocupar()
 
+        comanda = ComandaService.crear(orden, origen)
         for item in detalles:
-            DetalleOrdenService._crear_detalle(orden=orden, **item)  # noqa: SLF001
+            DetalleOrdenService._crear_detalle(comanda=comanda, **item)  # noqa: SLF001
 
         orden.recalcular_total()
         orden.refresh_from_db()
@@ -106,23 +110,8 @@ class OrdenService:
             tipo_orden,
             orden.total,
         )
-        OrdenService._notificar_nuevo_pedido(orden)
+        ComandaService.notificar_nueva(comanda)
         return orden
-
-    @staticmethod
-    def _notificar_nuevo_pedido(orden: Orden) -> None:
-        """Avisa a Cocina que hay items nuevos por preparar (orden recien
-        creada, o una ronda nueva agregada a una ya abierta). Se envia al
-        confirmar la transaccion y un fallo de Redis no afecta la orden
-        (ver memos_cafe/realtime/notificar.py)."""
-        notificar(
-            ["cocina"],
-            {
-                "type": "pedido.nuevo",
-                "orden_id": orden.id,
-                "mesa_numero": orden.mesa.numero if orden.mesa_id else None,
-            },
-        )
 
     @staticmethod
     @transaction.atomic
@@ -141,13 +130,12 @@ class DetalleOrdenService:
     """Gestiona los items individuales dentro de una orden."""
 
     @staticmethod
-    def _crear_detalle(  # noqa: PLR0913 -- un parametro por campo del item
-        orden: Orden,
+    def _crear_detalle(
+        comanda: Comanda,
         cantidad: int,
         nota: str = "",
         producto: Producto | None = None,
         promocion: Promocion | None = None,
-        ronda: int | None = None,
     ) -> DetalleOrden:
         if not producto and not promocion:
             msg = "Debe especificar al menos un producto o una promocion."
@@ -162,55 +150,73 @@ class DetalleOrdenService:
         if promocion:
             precio_unitario += promocion.precio
 
-        extra = {"ronda": ronda} if ronda is not None else {}
         return DetalleOrden.objects.create(
-            orden=orden,
+            orden_id=comanda.orden_id,
+            comanda=comanda,
+            ronda=comanda.numero,
             producto=producto,
             promocion=promocion,
             cantidad=cantidad,
             precio_unitario=precio_unitario,
             nota=nota,
-            **extra,
         )
 
     @staticmethod
-    def siguiente_ronda(orden: Orden) -> int:
-        """Numero de ronda para la proxima TANDA de items que se agrega de
-        una sola vez (ej. un pedido por QR). Solo lo calculan los llamadores
-        que reciben un lote completo de items juntos — el endpoint actual
-        del mesero (POST .../detalles/) agrega un item por llamada y no
-        tiene forma de saber si varias llamadas seguidas son una sola tanda,
-        asi que esos items se quedan en la ronda 1 por defecto del modelo,
-        sin cambio de comportamiento respecto a hoy."""
-        actual = orden.detalles.aggregate(m=Max("ronda"))["m"] or 0
-        return actual + 1
+    @transaction.atomic
+    def agregar_ronda(orden: Orden, items: list[dict], origen: str) -> Comanda:
+        """Agrega una tanda de items que llega junta (una ronda pedida por
+        QR) como una comanda nueva: Cocina la recibe con un solo aviso."""
+        orden = Orden.objects.select_for_update().get(pk=orden.pk)
+        if not orden.esta_abierta:
+            msg = "No se pueden agregar items a una orden cerrada o anulada."
+            raise ValueError(msg)
+        if not items:
+            msg = "La ronda debe tener al menos un item."
+            raise ValueError(msg)
+        comanda = ComandaService.crear(orden, origen)
+        for item in items:
+            DetalleOrdenService._crear_detalle(comanda=comanda, **item)
+        orden.recalcular_total()
+        ComandaService.notificar_nueva(comanda)
+        return comanda
 
     @staticmethod
     @transaction.atomic
-    def agregar_detalle(  # noqa: PLR0913 -- un parametro por campo del item
+    def agregar_detalle(
         orden: Orden,
         cantidad: int,
         nota: str = "",
         producto: Producto | None = None,
         promocion: Promocion | None = None,
-        ronda: int | None = None,
     ) -> DetalleOrden:
+        """El mesero agrega un item suelto. Si la ultima comanda de la orden
+        todavia no se empezo a preparar, el item se suma a ella (varios
+        items seguidos del mesero son una sola tanda para Cocina); si ya
+        se empezo, abre una comanda nueva."""
+        orden = Orden.objects.select_for_update().get(pk=orden.pk)
         if not orden.esta_abierta:
             msg = "No se pueden agregar items a una orden cerrada o anulada."
             raise ValueError(
                 msg,
             )
 
+        ultima = orden.comandas.order_by("-numero").first()
+        es_nueva = ultima is None or ultima.estado != Comanda.Estado.PENDIENTE
+        comanda = (
+            ComandaService.crear(orden, Comanda.Origen.MESERO) if es_nueva else ultima
+        )
         detalle = DetalleOrdenService._crear_detalle(
-            orden=orden,
+            comanda=comanda,
             cantidad=cantidad,
             nota=nota,
             producto=producto,
             promocion=promocion,
-            ronda=ronda,
         )
         orden.recalcular_total()
-        OrdenService._notificar_nuevo_pedido(orden)  # noqa: SLF001
+        if es_nueva:
+            ComandaService.notificar_nueva(comanda)
+        else:
+            ComandaService.notificar_cambio(comanda)
         return detalle
 
     @staticmethod
@@ -235,7 +241,10 @@ class DetalleOrdenService:
                 detalle_id,
                 orden.id,
             )
+        comanda = detalle.comanda
         detalle.delete()
+        if comanda and not comanda.detalles.exists():
+            comanda.delete()
         orden.recalcular_total()
         return estaba_impreso
 
@@ -283,6 +292,8 @@ class DetalleOrdenService:
         detalle.estado_preparacion = nuevo_estado
         detalle.save(update_fields=["estado_preparacion"])
         DetalleOrdenService._notificar_cambio_estado(detalle)
+        if detalle.comanda_id:
+            ComandaService.sincronizar_desde_items(detalle.comanda)
         return detalle
 
     @staticmethod
@@ -313,3 +324,172 @@ class DetalleOrdenService:
         if detalle.estado_preparacion == DetalleOrden.EstadoPreparacion.LISTO:
             grupos.append("meseros")
         notificar(grupos, payload)
+
+
+class ComandaService:
+    """Ciclo de vida de una comanda en Cocina y sus tiempos:
+
+    pendiente -iniciar-> en_preparacion -marcar_lista-> lista -entregar-> entregada
+
+    Registra iniciada_en, lista_en y entregada_en; con creada_en permiten
+    medir la espera (recibida -> iniciada) y la preparacion (iniciada ->
+    lista). Mantiene el estado_preparacion de los items en linea con el de
+    la comanda."""
+
+    ITEM = DetalleOrden.EstadoPreparacion
+
+    @staticmethod
+    def crear(orden: Orden, origen: str) -> Comanda:
+        """Llamar con la orden bloqueada (select_for_update) o recien
+        creada, para que dos rondas simultaneas no tomen el mismo numero."""
+        ultimo = orden.comandas.aggregate(m=Max("numero"))["m"] or 0
+        return Comanda.objects.create(orden=orden, numero=ultimo + 1, origen=origen)
+
+    @staticmethod
+    def _bloquear(comanda: Comanda) -> Comanda:
+        return (
+            Comanda.objects.select_for_update()
+            .select_related("orden")
+            .get(pk=comanda.pk)
+        )
+
+    @staticmethod
+    @transaction.atomic
+    def iniciar(comanda: Comanda) -> Comanda:
+        comanda = ComandaService._bloquear(comanda)
+        if comanda.estado != Comanda.Estado.PENDIENTE:
+            msg = f"La comanda {comanda.numero} ya se empezo a preparar."
+            raise ValueError(msg)
+        ComandaService._pasar_a_preparacion(comanda)
+        comanda.save(update_fields=["estado", "iniciada_en"])
+        ComandaService.notificar_cambio(comanda)
+        return comanda
+
+    @staticmethod
+    @transaction.atomic
+    def marcar_item(detalle: DetalleOrden, *, listo: bool) -> DetalleOrden:
+        """Check de un item en el tablero de Cocina. Marcar un item de una
+        comanda pendiente la empieza. No cierra la comanda: eso lo hace
+        marcar_lista, para que un check por error no la mande al mesero."""
+        comanda = ComandaService._bloquear(detalle.comanda)
+        if comanda.estado not in (
+            Comanda.Estado.PENDIENTE,
+            Comanda.Estado.EN_PREPARACION,
+        ):
+            msg = f"La comanda {comanda.numero} ya no esta en preparacion."
+            raise ValueError(msg)
+        if comanda.estado == Comanda.Estado.PENDIENTE:
+            ComandaService._pasar_a_preparacion(comanda)
+            comanda.save(update_fields=["estado", "iniciada_en"])
+            detalle.refresh_from_db()
+        detalle.estado_preparacion = (
+            ComandaService.ITEM.LISTO if listo else ComandaService.ITEM.EN_PREPARACION
+        )
+        detalle.save(update_fields=["estado_preparacion"])
+        ComandaService.notificar_cambio(comanda)
+        return detalle
+
+    @staticmethod
+    @transaction.atomic
+    def marcar_lista(comanda: Comanda) -> Comanda:
+        comanda = ComandaService._bloquear(comanda)
+        if comanda.estado not in (
+            Comanda.Estado.PENDIENTE,
+            Comanda.Estado.EN_PREPARACION,
+        ):
+            msg = f"La comanda {comanda.numero} ya estaba lista."
+            raise ValueError(msg)
+        ahora = timezone.now()
+        comanda.iniciada_en = comanda.iniciada_en or ahora
+        comanda.lista_en = ahora
+        comanda.estado = Comanda.Estado.LISTA
+        comanda.save(update_fields=["estado", "iniciada_en", "lista_en"])
+        comanda.detalles.exclude(
+            estado_preparacion=ComandaService.ITEM.ENTREGADO,
+        ).update(
+            estado_preparacion=ComandaService.ITEM.LISTO,
+        )
+        ComandaService.notificar_cambio(comanda)
+        return comanda
+
+    @staticmethod
+    @transaction.atomic
+    def entregar(comanda: Comanda) -> Comanda:
+        comanda = ComandaService._bloquear(comanda)
+        if comanda.estado != Comanda.Estado.LISTA:
+            msg = f"La comanda {comanda.numero} todavia no esta lista."
+            raise ValueError(msg)
+        comanda.entregada_en = timezone.now()
+        comanda.estado = Comanda.Estado.ENTREGADA
+        comanda.save(update_fields=["estado", "entregada_en"])
+        comanda.detalles.update(estado_preparacion=ComandaService.ITEM.ENTREGADO)
+        ComandaService.notificar_cambio(comanda)
+        return comanda
+
+    @staticmethod
+    def sincronizar_desde_items(comanda: Comanda) -> None:
+        """Para el flujo por item (el tablero de Cocina actual avanza item
+        por item): deriva el estado y los tiempos de la comanda."""
+        estados = set(comanda.detalles.values_list("estado_preparacion", flat=True))
+        if not estados:
+            return
+        item = ComandaService.ITEM
+        ahora = timezone.now()
+        campos = set()
+        if comanda.estado == Comanda.Estado.PENDIENTE and estados != {item.PENDIENTE}:
+            comanda.estado = Comanda.Estado.EN_PREPARACION
+            comanda.iniciada_en = ahora
+            campos |= {"estado", "iniciada_en"}
+        if estados <= {item.LISTO, item.ENTREGADO} and comanda.estado in (
+            Comanda.Estado.PENDIENTE,
+            Comanda.Estado.EN_PREPARACION,
+        ):
+            comanda.estado = Comanda.Estado.LISTA
+            comanda.iniciada_en = comanda.iniciada_en or ahora
+            comanda.lista_en = ahora
+            campos |= {"estado", "iniciada_en", "lista_en"}
+        if estados == {item.ENTREGADO} and comanda.estado != Comanda.Estado.ENTREGADA:
+            comanda.estado = Comanda.Estado.ENTREGADA
+            comanda.entregada_en = ahora
+            campos |= {"estado", "entregada_en"}
+        if campos:
+            comanda.save(update_fields=sorted(campos))
+            ComandaService.notificar_cambio(comanda)
+
+    @staticmethod
+    def _pasar_a_preparacion(comanda: Comanda) -> None:
+        comanda.estado = Comanda.Estado.EN_PREPARACION
+        comanda.iniciada_en = timezone.now()
+        comanda.detalles.filter(
+            estado_preparacion=ComandaService.ITEM.PENDIENTE,
+        ).update(
+            estado_preparacion=ComandaService.ITEM.EN_PREPARACION,
+        )
+
+    # -- Avisos en tiempo real (ver memos_cafe/realtime/notificar.py) ------
+
+    @staticmethod
+    def _payload(comanda: Comanda, tipo: str) -> dict:
+        orden = comanda.orden
+        return {
+            "type": tipo,
+            "comanda_id": comanda.id,
+            "orden_id": orden.id,
+            "numero": comanda.numero,
+            "origen": comanda.origen,
+            "estado": comanda.estado,
+            "mesa_numero": orden.mesa.numero if orden.mesa_id else None,
+        }
+
+    @staticmethod
+    def notificar_nueva(comanda: Comanda) -> None:
+        """Una comanda nueva = un solo aviso (y un solo sonido) en Cocina,
+        tenga los items que tenga."""
+        notificar(["cocina"], ComandaService._payload(comanda, "pedido.nuevo"))
+
+    @staticmethod
+    def notificar_cambio(comanda: Comanda) -> None:
+        grupos = ["cocina"]
+        if comanda.estado == Comanda.Estado.LISTA:
+            grupos.append("meseros")
+        notificar(grupos, ComandaService._payload(comanda, "comanda.actualizada"))

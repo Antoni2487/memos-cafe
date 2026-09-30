@@ -15,10 +15,12 @@ from rest_framework.views import APIView
 
 from memos_cafe.mesas.api import throttles
 from memos_cafe.mesas.api.serializers import OrdenQRSerializer
+from memos_cafe.mesas.api.serializers import PedidoPorConfirmarSerializer
 from memos_cafe.mesas.api.serializers import PedidoQRSerializer
 from memos_cafe.mesas.api.serializers import SesionMesaQREstadoSerializer
 from memos_cafe.mesas.api.serializers import SolicitarCobroQRSerializer
 from memos_cafe.mesas.models import Mesa
+from memos_cafe.mesas.models import PedidoPorConfirmar
 from memos_cafe.mesas.services import SesionMesaService
 
 
@@ -40,18 +42,14 @@ class MesaQREstadoView(APIView):
     def get(self, request, codigo):
         mesa = _mesa_activa_o_404(codigo)
         sesion = SesionMesaService.sesion_activa(mesa)
-
-        orden = None
-        if sesion:
-            orden = (
-                mesa.ordenes.filter(estado="abierta")
-                .order_by("-fecha_creacion")
-                .first()
-            )
+        # La orden abierta de la mesa aunque la haya abierto el mesero a
+        # mano: el cliente puede ver lo pedido y sumar rondas.
+        orden = SesionMesaService.orden_abierta(mesa)
 
         data = {
-            "sesion_activa": sesion is not None,
+            "sesion_activa": sesion is not None or orden is not None,
             "mesa_numero": mesa.numero,
+            "pedido_por_confirmar": SesionMesaService.ultimo_pedido_no_confirmado(mesa),
             "orden": orden,  # instancia cruda o None — el campo nested
             # OrdenQRSerializer de SesionMesaQREstadoSerializer la serializa
             # el solo; pre-serializarla aca duplicaba el paso y rompia con
@@ -73,14 +71,25 @@ class MesaQRPedidoView(APIView):
         serializer.is_valid(raise_exception=True)
 
         try:
-            orden = SesionMesaService.registrar_pedido(
+            resultado = SesionMesaService.registrar_pedido(
                 mesa=mesa,
                 items=serializer.validated_data["items"],
             )
         except ValueError as e:
             raise ValidationError({"detail": str(e)}) from e
 
-        return Response(OrdenQRSerializer(orden).data, status=201)
+        if isinstance(resultado, PedidoPorConfirmar):
+            # Primer pedido de una mesa libre: espera al mesero.
+            return Response(
+                {
+                    "estado": "por_confirmar",
+                    "pedido_por_confirmar": PedidoPorConfirmarSerializer(
+                        resultado,
+                    ).data,
+                },
+                status=202,
+            )
+        return Response(OrdenQRSerializer(resultado).data, status=201)
 
 
 class MesaQRSolicitarCobroView(APIView):

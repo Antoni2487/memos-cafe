@@ -58,6 +58,22 @@ class _StaffConsumer(AsyncJsonWebsocketConsumer):
         cliente se acerca a caja, o el mesero le lleva el POS a la mesa)."""
         await self.send_json(event)
 
+    async def comanda_actualizada(self, event):
+        """type='comanda.actualizada' — una comanda cambio de estado
+        (empezada, lista, entregada) o se le sumo un item. Lo reciben
+        Cocina y, cuando queda lista, los meseros."""
+        await self.send_json(event)
+
+    async def pedido_por_confirmar(self, event):
+        """type='pedido.por_confirmar' — primer pedido por QR de una mesa
+        libre: un mesero tiene que confirmarlo o rechazarlo."""
+        await self.send_json(event)
+
+    async def pedido_por_confirmar_resuelto(self, event):
+        """type='pedido.por_confirmar_resuelto' — otro mesero ya lo
+        confirmo o rechazo: el aviso se quita de todas las pantallas."""
+        await self.send_json(event)
+
 
 class CocinaConsumer(_StaffConsumer):
     grupo_channel_layer = "cocina"

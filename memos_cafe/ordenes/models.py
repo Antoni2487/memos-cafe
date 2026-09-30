@@ -140,6 +140,72 @@ class Orden(models.Model):
         return self.estado == self.Estado.ABIERTA
 
 
+class Comanda(models.Model):
+    """Un envio a Cocina: el pedido inicial de una orden o cada ronda que se
+    agrega despues. Es la unidad con la que trabaja Cocina y la que tiene
+    reloj: registra cuando se recibio, cuando se empezo a preparar, cuando
+    quedo lista y cuando se entrego. Los items conservan su propio
+    estado_preparacion para el detalle (que falta), pero los tiempos son de
+    la comanda. Ver ComandaService en ordenes/services.py."""
+
+    class Estado(models.TextChoices):
+        PENDIENTE = "pendiente", "Pendiente"
+        EN_PREPARACION = "en_preparacion", "En preparación"
+        LISTA = "lista", "Lista"
+        ENTREGADA = "entregada", "Entregada"
+
+    class Origen(models.TextChoices):
+        MESERO = "mesero", "Mesero"
+        QR = "qr", "Pedido por QR"
+
+    orden = models.ForeignKey(Orden, on_delete=models.CASCADE, related_name="comandas")
+    # 1 para el pedido inicial, 2, 3... para cada ronda siguiente de la orden
+    numero = models.PositiveSmallIntegerField()
+    origen = models.CharField(
+        max_length=10,
+        choices=Origen.choices,
+        default=Origen.MESERO,
+    )
+    estado = models.CharField(
+        max_length=15,
+        choices=Estado.choices,
+        default=Estado.PENDIENTE,
+    )
+    creada_en = models.DateTimeField(auto_now_add=True)
+    iniciada_en = models.DateTimeField(null=True, blank=True)
+    lista_en = models.DateTimeField(null=True, blank=True)
+    entregada_en = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "comanda"
+        verbose_name = "Comanda"
+        verbose_name_plural = "Comandas"
+        ordering = ["creada_en"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["orden", "numero"],
+                name="comanda_numero_unico_por_orden",
+            ),
+        ]
+
+    def __str__(self):
+        return f"Comanda {self.numero} de Orden #{self.orden_id} ({self.estado})"
+
+    @property
+    def segundos_espera(self) -> int | None:
+        """Desde que llego a Cocina hasta que se empezo a preparar."""
+        if not self.iniciada_en:
+            return None
+        return int((self.iniciada_en - self.creada_en).total_seconds())
+
+    @property
+    def segundos_preparacion(self) -> int | None:
+        """Desde que se empezo a preparar hasta que quedo lista."""
+        if not (self.iniciada_en and self.lista_en):
+            return None
+        return int((self.lista_en - self.iniciada_en).total_seconds())
+
+
 class DetalleOrden(models.Model):
     class EstadoPreparacion(models.TextChoices):
         PENDIENTE = "pendiente", "Pendiente"
@@ -178,6 +244,15 @@ class DetalleOrden(models.Model):
     # lista plana. Ver DetalleOrdenService.agregar_detalle().
     ronda = models.PositiveSmallIntegerField(default=1)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
+    # Nulo solo en items creados antes de que existieran las comandas y que
+    # la migracion no pudo agrupar (no deberia quedar ninguno).
+    comanda = models.ForeignKey(
+        Comanda,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="detalles",
+    )
 
     class Meta:
         db_table = "detalle_orden"

@@ -117,6 +117,31 @@ class ModuloHabilitado(BasePermission):
         ).exists()
 
 
+class EsAdminCocinaOMesero(BasePermission):
+    """Admin, cocina o mesero (por ejemplo, entregar una comanda lista)."""
+
+    def has_permission(self, request, view):
+        return (
+            request.user.is_authenticated
+            and request.user.groups.filter(
+                name__in=["admin", "cocina", "mesero"],
+            ).exists()
+        )
+
+
+class EsPersonalDeSala(BasePermission):
+    """Admin, mesero o cajero: quienes atienden las mesas (por ejemplo,
+    confirmar el primer pedido por QR de una mesa)."""
+
+    def has_permission(self, request, view):
+        return (
+            request.user.is_authenticated
+            and request.user.groups.filter(
+                name__in=["admin", "mesero", "cajero"],
+            ).exists()
+        )
+
+
 def modulo_requerido(modulo):
     """Crea una subclase de ModuloHabilitado atada a un modulo fijo,
     instanciable sin argumentos (compatible con permission_classes=[...]

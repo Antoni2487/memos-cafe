@@ -8,6 +8,7 @@ from memos_cafe.caja.models import SolicitudCobro
 from memos_cafe.caja.tests.factories import CajaFactory
 from memos_cafe.caja.tests.factories import MesaFactory
 from memos_cafe.mesas.models import Mesa
+from memos_cafe.mesas.models import PedidoPorConfirmar
 from memos_cafe.mesas.services import SesionMesaService
 from memos_cafe.ordenes.models import Orden
 from memos_cafe.productos.tests.factories import ProductoFactory
@@ -74,15 +75,17 @@ class TestSesionMesaServiceAbrirSesion:
 
 
 class TestSesionMesaServiceRegistrarPedido:
-    def test_sin_sesion_activa_lanza_error(self):
+    def test_sin_sesion_activa_queda_por_confirmar(self):
+        """Mesa libre: el pedido espera a un mesero y no crea orden."""
         CajaFactory()
         mesa = MesaFactory(estado=Mesa.Estado.LIBRE)
         producto = ProductoFactory(precio=Decimal("10.00"))
-        with pytest.raises(ValueError, match="Pedile a tu mesero"):
-            SesionMesaService.registrar_pedido(
-                mesa,
-                items=[{"producto": producto, "cantidad": 1}],
-            )
+        resultado = SesionMesaService.registrar_pedido(
+            mesa,
+            items=[{"producto": producto, "cantidad": 1}],
+        )
+        assert isinstance(resultado, PedidoPorConfirmar)
+        assert not Orden.objects.filter(mesa=mesa).exists()
 
     def test_primer_pedido_crea_la_orden_en_ronda_1(self, mesero):
         CajaFactory()
@@ -250,7 +253,7 @@ class TestMesaQREndpointsPublicos:
         assert r.data["sesion_activa"] is True
         assert r.data["orden"] is None
 
-    def test_pedido_sin_sesion_activa_rechaza(self):
+    def test_pedido_sin_sesion_activa_queda_por_confirmar(self):
         CajaFactory()
         mesa = MesaFactory(estado=Mesa.Estado.LIBRE)
         producto = ProductoFactory(precio=Decimal("10.00"))
@@ -260,7 +263,8 @@ class TestMesaQREndpointsPublicos:
             {"items": [{"producto": producto.id, "cantidad": 1}]},
             format="json",
         )
-        assert r.status_code == 400
+        assert r.status_code == 202
+        assert r.data["estado"] == "por_confirmar"
 
     def test_pedido_completo_end_to_end(self, mesero):
         CajaFactory()

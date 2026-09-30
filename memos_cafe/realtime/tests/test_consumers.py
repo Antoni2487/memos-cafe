@@ -19,7 +19,9 @@ from memos_cafe.caja.tests.factories import MesaFactory
 from memos_cafe.caja.tests.factories import OrdenFactory
 from memos_cafe.mesas.models import Mesa
 from memos_cafe.mesas.services import SesionMesaService
+from memos_cafe.ordenes.models import Comanda
 from memos_cafe.ordenes.models import DetalleOrden
+from memos_cafe.ordenes.services import ComandaService
 from memos_cafe.ordenes.services import DetalleOrdenService
 from memos_cafe.ordenes.services import OrdenService
 from memos_cafe.productos.tests.factories import ProductoFactory
@@ -45,8 +47,9 @@ def _crear_detalle_pendiente():
     CajaFactory()
     orden = OrdenFactory(mesa=MesaFactory())
     producto = ProductoFactory(precio=Decimal("10.00"))
+    comanda = ComandaService.crear(orden, Comanda.Origen.MESERO)
     return DetalleOrdenService._crear_detalle(
-        orden=orden,
+        comanda=comanda,
         cantidad=1,
         producto=producto,
     )

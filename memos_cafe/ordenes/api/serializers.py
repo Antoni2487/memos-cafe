@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from memos_cafe.mesas.models import Mesa
+from memos_cafe.ordenes.models import Comanda
 from memos_cafe.ordenes.models import DetalleOrden
 from memos_cafe.ordenes.models import Orden
 from memos_cafe.productos.api.serializers import ProductoSerializer
@@ -284,6 +285,56 @@ class TicketCocinaSerializer(serializers.ModelSerializer):
             if d.estado_preparacion != DetalleOrden.EstadoPreparacion.ENTREGADO
         ]
         return DetalleCocinaSerializer(pendientes, many=True).data
+
+
+class ComandaCocinaSerializer(serializers.ModelSerializer):
+    """Una comanda para el tablero de Cocina: items por preparar, de donde
+    viene (mesa, para llevar, delivery, QR) y sus tiempos. Sin precios."""
+
+    orden_id = serializers.IntegerField(read_only=True)
+    mesa_numero = serializers.IntegerField(
+        source="orden.mesa.numero",
+        read_only=True,
+        default=None,
+    )
+    tipo_orden = serializers.CharField(source="orden.tipo_orden", read_only=True)
+    tipo_orden_display = serializers.CharField(
+        source="orden.get_tipo_orden_display",
+        read_only=True,
+    )
+    cliente_nombre = serializers.CharField(
+        source="orden.cliente_nombre",
+        read_only=True,
+    )
+    mesero = serializers.SerializerMethodField()
+    detalles = DetalleCocinaSerializer(many=True, read_only=True)
+
+    def get_mesero(self, obj):
+        usuario = obj.orden.usuario
+        return (usuario.name or usuario.email) if usuario else ""
+
+    class Meta:
+        model = Comanda
+        fields = [
+            "id",
+            "numero",
+            "origen",
+            "estado",
+            "creada_en",
+            "iniciada_en",
+            "lista_en",
+            "orden_id",
+            "mesa_numero",
+            "tipo_orden",
+            "tipo_orden_display",
+            "cliente_nombre",
+            "mesero",
+            "detalles",
+        ]
+
+
+class CheckItemSerializer(serializers.Serializer):
+    listo = serializers.BooleanField()
 
 
 class ActualizarEstadoPreparacionSerializer(serializers.Serializer):

@@ -31,6 +31,7 @@ from memos_cafe.caja.models import MovimientoCaja
 from memos_cafe.caja.models import Pago
 from memos_cafe.caja.models import SolicitudCobro
 from memos_cafe.mesas.models import Mesa
+from memos_cafe.mesas.services import SesionMesaService
 from memos_cafe.ordenes.models import DetalleOrden
 from memos_cafe.ordenes.models import Orden
 from memos_cafe.realtime.notificar import estado_tiempo_real
@@ -1149,6 +1150,25 @@ class AlertasView(APIView):
                 "icono": "venta",
             }
             for pago in pagos
+        )
+
+        # ── Primeros pedidos por QR que nadie confirma ────────────────────
+        # Los meseros y cajeros los reciben al instante; si pasan unos
+        # minutos sin respuesta, el admin tambien se entera.
+        limite_escala = timezone.now() - timedelta(
+            minutes=SesionMesaService.MINUTOS_ESCALA_POR_CONFIRMAR,
+        )
+        alertas.extend(
+            {
+                "tipo": "pedido_por_confirmar",
+                "mensaje": (
+                    f"Mesa {p.mesa.numero}: pedido por QR sin confirmar "
+                    f"desde las {timezone.localtime(p.creado_en):%H:%M}"
+                ),
+                "fecha": p.creado_en,
+                "icono": "orden",
+            }
+            for p in SesionMesaService.pendientes().filter(creado_en__lt=limite_escala)
         )
 
         # ── Solicitudes de cobro (cliente pidio la cuenta por QR) ──────────

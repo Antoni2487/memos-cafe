@@ -1,3 +1,4 @@
+from django.db.models import Prefetch
 from django.utils import timezone
 from rest_framework import mixins
 from rest_framework import status
@@ -6,17 +7,22 @@ from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
 from memos_cafe.ordenes.api.serializers import ActualizarEstadoPreparacionSerializer
+from memos_cafe.ordenes.api.serializers import CheckItemSerializer
+from memos_cafe.ordenes.api.serializers import ComandaCocinaSerializer
 from memos_cafe.ordenes.api.serializers import DetalleOrdenWriteSerializer
 from memos_cafe.ordenes.api.serializers import MarcarImpresoSerializer
 from memos_cafe.ordenes.api.serializers import OrdenReadSerializer
 from memos_cafe.ordenes.api.serializers import OrdenWriteSerializer
 from memos_cafe.ordenes.api.serializers import TicketCocinaSerializer
+from memos_cafe.ordenes.models import Comanda
 from memos_cafe.ordenes.models import DetalleOrden
 from memos_cafe.ordenes.models import Orden
+from memos_cafe.ordenes.services import ComandaService
 from memos_cafe.ordenes.services import DetalleOrdenService
 from memos_cafe.ordenes.services import OrdenService
 from memos_cafe.utils.fechas import entre_fechas
 from memos_cafe.utils.permissions import EsAdmin
+from memos_cafe.utils.permissions import EsAdminCocinaOMesero
 from memos_cafe.utils.permissions import EsAdminOCocina
 from memos_cafe.utils.permissions import EsAdminOMesero
 from memos_cafe.utils.permissions import TodosAutenticados
@@ -256,3 +262,97 @@ class OrdenViewSet(
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         orden.refresh_from_db()
         return Response(TicketCocinaSerializer(orden).data)
+
+
+class ComandaViewSet(GenericViewSet):
+    """Tablero de Cocina por comanda y sus transiciones.
+
+    GET  /api/ordenes/comandas/cocina/                         tablero
+    POST /api/ordenes/comandas/{id}/iniciar/                   cocina
+    POST /api/ordenes/comandas/{id}/items/{detalle}/check/     cocina
+    POST /api/ordenes/comandas/{id}/lista/                     cocina
+    POST /api/ordenes/comandas/{id}/entregar/                  cocina o mesero
+    """
+
+    serializer_class = ComandaCocinaSerializer
+
+    def get_queryset(self):
+        return (
+            Comanda.objects.filter(orden__estado=Orden.Estado.ABIERTA)
+            .select_related("orden", "orden__mesa", "orden__usuario")
+            .prefetch_related(
+                Prefetch(
+                    "detalles",
+                    queryset=DetalleOrden.objects.select_related(
+                        "producto",
+                        "promocion",
+                    ),
+                ),
+            )
+            .order_by("creada_en")
+        )
+
+    def get_permissions(self):
+        if self.action == "entregar":
+            return [EsAdminCocinaOMesero()]
+        return [EsAdminOCocina(), modulo_requerido("ordenes_cocina")()]
+
+    def _responder(self, comanda):
+        return Response(
+            self.get_serializer(self.get_queryset().get(pk=comanda.pk)).data,
+        )
+
+    @action(detail=False, methods=["get"], url_path="cocina")
+    def cocina(self, request):
+        comandas = self.get_queryset().filter(
+            estado__in=[
+                Comanda.Estado.PENDIENTE,
+                Comanda.Estado.EN_PREPARACION,
+                Comanda.Estado.LISTA,
+            ],
+        )
+        return Response(self.get_serializer(comandas, many=True).data)
+
+    def _transicion(self, funcion):
+        comanda = self.get_object()
+        try:
+            funcion(comanda)
+        except ValueError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return self._responder(comanda)
+
+    @action(detail=True, methods=["post"], url_path="iniciar")
+    def iniciar(self, request, pk=None):
+        return self._transicion(ComandaService.iniciar)
+
+    @action(detail=True, methods=["post"], url_path="lista")
+    def lista(self, request, pk=None):
+        return self._transicion(ComandaService.marcar_lista)
+
+    @action(detail=True, methods=["post"], url_path="entregar")
+    def entregar(self, request, pk=None):
+        return self._transicion(ComandaService.entregar)
+
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path=r"items/(?P<detalle_id>[0-9]+)/check",
+    )
+    def check(self, request, pk=None, detalle_id=None):
+        comanda = self.get_object()
+        serializer = CheckItemSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        detalle = comanda.detalles.filter(pk=detalle_id).first()
+        if detalle is None:
+            return Response(
+                {"detail": f"El item #{detalle_id} no es de esta comanda."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        try:
+            ComandaService.marcar_item(
+                detalle,
+                listo=serializer.validated_data["listo"],
+            )
+        except ValueError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return self._responder(comanda)
