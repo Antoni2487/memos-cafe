@@ -1,16 +1,37 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { QRCodeCanvas } from "qrcode.react";
-import { Download, Printer } from "lucide-react";
+import { Download, Printer, RefreshCw } from "lucide-react";
+import { getErrorMessage } from "../../utils/errors";
 
 interface MesaQRCodigoProps {
   mesaNumero: number;
   url: string;
+  /** Solo admin: invalida el QR impreso y genera uno nuevo. */
+  onRegenerar?: () => Promise<void>;
 }
 
-// Genera el QR en el navegador (nunca pasa por el backend) — codifica el
-// link fijo de la mesa, el mismo que nunca cambia mientras la mesa exista.
-export default function MesaQRCodigo({ mesaNumero, url }: MesaQRCodigoProps) {
+// Genera el QR en el navegador (nunca pasa por el backend). Codifica el
+// link con el codigo secreto de la mesa: no cambia salvo que el admin lo
+// regenere.
+export default function MesaQRCodigo({ mesaNumero, url, onRegenerar }: MesaQRCodigoProps) {
   const canvasRef = useRef<HTMLDivElement>(null);
+  const [confirmando, setConfirmando] = useState(false);
+  const [regenerando, setRegenerando] = useState(false);
+  const [errorRegenerar, setErrorRegenerar] = useState<string | null>(null);
+
+  const handleRegenerar = async () => {
+    if (!onRegenerar) return;
+    setRegenerando(true);
+    setErrorRegenerar(null);
+    try {
+      await onRegenerar();
+      setConfirmando(false);
+    } catch (err) {
+      setErrorRegenerar(getErrorMessage(err, "No se pudo regenerar el código QR"));
+    } finally {
+      setRegenerando(false);
+    }
+  };
 
   const getCanvas = () => canvasRef.current?.querySelector("canvas") ?? null;
 
@@ -38,7 +59,7 @@ export default function MesaQRCodigo({ mesaNumero, url }: MesaQRCodigoProps) {
         </head>
         <body style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;margin:0;font-family:Georgia,serif;">
           <h1 style="font-size:30px;margin:0 0 6px;color:#2C5545;">Mesa ${mesaNumero}</h1>
-          <p style="font-size:13px;color:#666;margin:0 0 18px;font-family:sans-serif;">Escaneá para pedir — Memo's Café</p>
+          <p style="font-size:13px;color:#666;margin:0 0 18px;font-family:sans-serif;">Escanea para pedir — Memo's Café</p>
           <img src="${dataUrl}" width="260" height="260" onload="window.print()" />
         </body>
       </html>
@@ -66,6 +87,39 @@ export default function MesaQRCodigo({ mesaNumero, url }: MesaQRCodigoProps) {
           <Printer size={14} /> Imprimir
         </button>
       </div>
+      {onRegenerar && !confirmando && (
+        <button
+          onClick={() => setConfirmando(true)}
+          className="flex items-center gap-1.5 font-body text-xs font-semibold text-brand/60 hover:text-brand"
+        >
+          <RefreshCw size={13} /> Regenerar código
+        </button>
+      )}
+      {onRegenerar && confirmando && (
+        <div className="flex w-full flex-col gap-2 rounded-lg bg-red-50 p-3">
+          <p className="font-body text-xs text-red-800">
+            El QR impreso actual dejará de funcionar y tendrás que imprimir y pegar el nuevo.
+            Úsalo si alguien pudo fotografiar el código.
+          </p>
+          {errorRegenerar && <p className="font-body text-xs font-semibold text-red-700">{errorRegenerar}</p>}
+          <div className="flex gap-2">
+            <button
+              onClick={() => setConfirmando(false)}
+              disabled={regenerando}
+              className="flex-1 rounded-lg border border-brand/20 bg-white py-2 font-body text-xs font-semibold text-brand"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleRegenerar}
+              disabled={regenerando}
+              className="flex-1 rounded-lg bg-red-700 py-2 font-body text-xs font-semibold text-white disabled:opacity-60"
+            >
+              {regenerando ? "Regenerando..." : "Sí, regenerar"}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

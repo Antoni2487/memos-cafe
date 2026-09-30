@@ -1,6 +1,6 @@
-﻿from django.db import transaction
+from django.db import transaction
 
-from memos_cafe.mesas.models import Mesa, SesionMesaQR
+from memos_cafe.mesas.models import Mesa, SesionMesaQR, generar_codigo_qr
 
 # Cruce a otras apps de negocio (ordenes/caja) permitido en la capa de
 # servicios — igual patron que ordenes/services.py importando Mesa/Caja.
@@ -10,6 +10,7 @@ from memos_cafe.mesas.models import Mesa, SesionMesaQR
 from memos_cafe.caja.models import SolicitudCobro
 from memos_cafe.ordenes.models import Orden
 from memos_cafe.ordenes.services import DetalleOrdenService, OrdenService
+from memos_cafe.realtime.notificar import notificar
 
 
 class MesaService:
@@ -68,6 +69,16 @@ class MesaService:
             )
         mesa.estado = nuevo_estado
         mesa.save(update_fields=["estado"])
+        return mesa
+
+
+    @staticmethod
+    def regenerar_codigo_qr(mesa: Mesa) -> Mesa:
+        """Invalida el QR impreso de la mesa (por ejemplo, si se filtro una
+        foto) y le asigna uno nuevo. El QR viejo deja de funcionar al
+        instante: hay que imprimir y pegar el nuevo."""
+        mesa.codigo_qr = generar_codigo_qr()
+        mesa.save(update_fields=["codigo_qr"])
         return mesa
 
 
@@ -165,17 +176,8 @@ class SesionMesaService:
     def _notificar_solicitud_cobro(mesa: Mesa, solicitud: SolicitudCobro) -> None:
         """Avisa en vivo a mesero y cajero — el admin ya se entera de esto
         via el polling de /api/alertas/ (AlertasView), asi que no hace
-        falta duplicarlo aca. No-op silencioso si Channels no esta
-        configurado, mismo criterio que el resto de las notificaciones."""
-        from channels.layers import get_channel_layer
-
-        channel_layer = get_channel_layer()
-        if channel_layer is None:
-            return
-
-        from asgiref.sync import async_to_sync
-
-        async_to_sync(channel_layer.group_send)("meseros", {
+        falta duplicarlo aca. Ver memos_cafe/realtime/notificar.py."""
+        notificar(["meseros"], {
             "type": "solicitud_cobro.nueva",
             "mesa_numero": mesa.numero,
             "metodo_pago_sugerido": solicitud.metodo_pago_sugerido,

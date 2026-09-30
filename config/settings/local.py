@@ -1,6 +1,7 @@
 from django.core.management.utils import get_random_secret_key
 
 from .base import *  # noqa: F403
+from .base import BASE_DIR
 from .base import INSTALLED_APPS
 from .base import MIDDLEWARE
 from .base import env
@@ -12,7 +13,10 @@ DEBUG = True
 # aleatoria en cada arranque -- invalida sesiones/JWT existentes al
 # reiniciar el contenedor local, pero eso es aceptable en dev y no en
 # produccion (config.settings.production exige la env var sin default).
-SECRET_KEY = env("DJANGO_SECRET_KEY", default=get_random_secret_key())
+# El `or` va afuera de env() a proposito: si la clave generada empieza con
+# "$", django-environ la toma como referencia a otra variable y entra en
+# recursion infinita (RecursionError al azar al arrancar).
+SECRET_KEY = env.str("DJANGO_SECRET_KEY", default="") or get_random_secret_key()
 ALLOWED_HOSTS = ["localhost", "0.0.0.0", "127.0.0.1"]  # noqa: S104
 
 # CACHES
@@ -80,7 +84,7 @@ LOGGING = {
         },
         "file": {
             "class": "logging.FileHandler",
-            "filename": "/app/logs/memos_cafe.log",
+            "filename": BASE_DIR / "logs" / "memos_cafe.log",
             "formatter": "verbose",
             "delay": True,
         },

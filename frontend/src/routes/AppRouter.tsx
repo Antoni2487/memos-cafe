@@ -29,7 +29,7 @@ export default function AppRouter() {
         {/* Pública */}
         <Route path="/login" element={<LoginPage />} />
         {/* Pedido por QR del cliente — sin login, sin sidebar/layout de staff */}
-        <Route path="/pedir/:mesaId" element={<PedidoQRPage />} />
+        <Route path="/pedir/:codigo" element={<PedidoQRPage />} />
 
         {
           /* Rutas protegidas dentro del layout común */

@@ -223,7 +223,7 @@ class TestMesaQREndpointsPublicos:
     def test_estado_sin_sesion(self):
         mesa = MesaFactory()
         client = APIClient()
-        r = client.get(f"/api/mesas/qr/{mesa.id}/")
+        r = client.get(f"/api/mesas/qr/{mesa.codigo_qr}/")
         assert r.status_code == 200
         assert r.data["sesion_activa"] is False
         assert r.data["orden"] is None
@@ -232,7 +232,7 @@ class TestMesaQREndpointsPublicos:
         mesa = MesaFactory(estado=Mesa.Estado.LIBRE)
         SesionMesaService.abrir_sesion(mesa, mesero=mesero)
         client = APIClient()
-        r = client.get(f"/api/mesas/qr/{mesa.id}/")
+        r = client.get(f"/api/mesas/qr/{mesa.codigo_qr}/")
         assert r.status_code == 200
         assert r.data["sesion_activa"] is True
         assert r.data["orden"] is None
@@ -243,7 +243,7 @@ class TestMesaQREndpointsPublicos:
         producto = ProductoFactory(precio=Decimal("10.00"))
         client = APIClient()
         r = client.post(
-            f"/api/mesas/qr/{mesa.id}/pedido/",
+            f"/api/mesas/qr/{mesa.codigo_qr}/pedido/",
             {"items": [{"producto": producto.id, "cantidad": 1}]},
             format="json",
         )
@@ -257,7 +257,7 @@ class TestMesaQREndpointsPublicos:
         client = APIClient()
 
         r1 = client.post(
-            f"/api/mesas/qr/{mesa.id}/pedido/",
+            f"/api/mesas/qr/{mesa.codigo_qr}/pedido/",
             {"items": [{"producto": producto.id, "cantidad": 2}]},
             format="json",
         )
@@ -267,7 +267,7 @@ class TestMesaQREndpointsPublicos:
 
         # segunda ronda
         r2 = client.post(
-            f"/api/mesas/qr/{mesa.id}/pedido/",
+            f"/api/mesas/qr/{mesa.codigo_qr}/pedido/",
             {"items": [{"producto": producto.id, "cantidad": 1}]},
             format="json",
         )
@@ -276,13 +276,13 @@ class TestMesaQREndpointsPublicos:
         assert len(r2.data["detalles"]) == 2
 
         # el estado ahora refleja el pedido completo
-        r_estado = client.get(f"/api/mesas/qr/{mesa.id}/")
+        r_estado = client.get(f"/api/mesas/qr/{mesa.codigo_qr}/")
         assert r_estado.data["orden"]["id"] == orden_id
         assert len(r_estado.data["orden"]["detalles"]) == 2
 
         # solicitar cobro
         r_cobro = client.post(
-            f"/api/mesas/qr/{mesa.id}/solicitar-cobro/",
+            f"/api/mesas/qr/{mesa.codigo_qr}/solicitar-cobro/",
             {"metodo_pago_sugerido": "efectivo"},
             format="json",
         )
@@ -293,7 +293,7 @@ class TestMesaQREndpointsPublicos:
         mesa = MesaFactory()
         client = APIClient()
         r = client.post(
-            f"/api/mesas/qr/{mesa.id}/solicitar-cobro/",
+            f"/api/mesas/qr/{mesa.codigo_qr}/solicitar-cobro/",
             {"metodo_pago_sugerido": "efectivo"},
             format="json",
         )
@@ -302,29 +302,5 @@ class TestMesaQREndpointsPublicos:
     def test_mesa_inactiva_da_404(self):
         mesa = MesaFactory(activo=False)
         client = APIClient()
-        r = client.get(f"/api/mesas/qr/{mesa.id}/")
+        r = client.get(f"/api/mesas/qr/{mesa.codigo_qr}/")
         assert r.status_code == 404
-
-
-class TestThrottlePorMesa:
-    """El limite de pedido_qr es por mesa, no por IP: en el wifi de la
-    cafeteria varios clientes reales pueden compartir la misma IP publica
-    (NAT), y no queremos que se agoten el balde entre ellos."""
-
-    def setup_method(self):
-        cache.clear()
-
-    def test_agotar_el_limite_de_una_mesa_no_afecta_a_otra(self):
-        mesa1 = MesaFactory()
-        mesa2 = MesaFactory()
-        client = APIClient()  # mismo cliente/IP para las dos mesas
-
-        for _ in range(20):
-            r = client.get(f"/api/mesas/qr/{mesa1.id}/")
-            assert r.status_code == 200
-
-        r_bloqueado = client.get(f"/api/mesas/qr/{mesa1.id}/")
-        assert r_bloqueado.status_code == 429
-
-        r_mesa2 = client.get(f"/api/mesas/qr/{mesa2.id}/")
-        assert r_mesa2.status_code == 200

@@ -16,6 +16,7 @@ from memos_cafe.productos.api.serializers import (
     PromocionEditarSerializer,
 )
 from memos_cafe.utils.permissions import EsAdmin, TodosAutenticados
+from memos_cafe.utils.throttles import CatalogoPublicoThrottle
 
 
 class CategoriaViewSet(
@@ -153,7 +154,13 @@ class ProductoViewSet(
         producto.desactivar()
         return Response(ProductoSerializer(producto).data)
 
-    @action(detail=False, methods=["get"], url_path="publico", permission_classes=[])
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="publico",
+        permission_classes=[],
+        throttle_classes=[CatalogoPublicoThrottle],
+    )
     def publico(self, request):
         """GET /api/productos/publico/ — catálogo sin login, para el
         pedido por QR. Mismo serializer que list(), sin datos sensibles."""
@@ -220,7 +227,13 @@ class PromocionViewSet(
         PromocionService.desactivar(promocion)
         return Response(PromocionSerializer(promocion).data)
 
-    @action(detail=False, methods=["get"], url_path="publico", permission_classes=[])
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="publico",
+        permission_classes=[],
+        throttle_classes=[CatalogoPublicoThrottle],
+    )
     def publico(self, request):
         """GET /api/productos/promociones/publico/ — vigentes, sin login."""
         promociones = Promocion.objects.vigentes()

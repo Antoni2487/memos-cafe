@@ -1,8 +1,16 @@
-﻿import uuid
+import secrets
+import uuid
 
 from auditlog.registry import auditlog
 from django.conf import settings
 from django.db import models
+
+
+def generar_codigo_qr() -> str:
+    """Codigo aleatorio de 12 caracteres (72 bits) para la URL publica del
+    QR de una mesa. Reemplaza al id correlativo (1, 2, 3...), que permitia
+    pedir a cualquier mesa desde fuera del local probando numeros."""
+    return secrets.token_urlsafe(9)
 
 
 class Mesa(models.Model):
@@ -20,6 +28,15 @@ class Mesa(models.Model):
     )
     activo = models.BooleanField(default=True)
     fecha_baja = models.DateTimeField(null=True, blank=True)
+    # Lo que codifica el QR impreso (/pedir/<codigo_qr>). Es secreto: solo
+    # lo ve el personal. Si se filtra, el admin lo regenera y reimprime
+    # (ver MesaService.regenerar_codigo_qr).
+    codigo_qr = models.CharField(
+        max_length=16,
+        unique=True,
+        default=generar_codigo_qr,
+        editable=False,
+    )
 
     class Meta:
         db_table = "mesa"

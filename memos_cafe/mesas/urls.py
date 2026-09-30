@@ -15,10 +15,10 @@ router.register("", MesaViewSet, basename="mesa")
 # prefijo "mesas/" y deben resolverse antes que el patron {pk} generico
 # del router (que si no, podria intentar interpretar "qr" como un pk).
 urlpatterns = [
-    path("qr/<int:mesa_id>/", MesaQREstadoView.as_view(), name="mesa-qr-estado"),
-    path("qr/<int:mesa_id>/pedido/", MesaQRPedidoView.as_view(), name="mesa-qr-pedido"),
+    path("qr/<slug:codigo>/", MesaQREstadoView.as_view(), name="mesa-qr-estado"),
+    path("qr/<slug:codigo>/pedido/", MesaQRPedidoView.as_view(), name="mesa-qr-pedido"),
     path(
-        "qr/<int:mesa_id>/solicitar-cobro/",
+        "qr/<slug:codigo>/solicitar-cobro/",
         MesaQRSolicitarCobroView.as_view(),
         name="mesa-qr-solicitar-cobro",
     ),

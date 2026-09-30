@@ -19,6 +19,7 @@ const mesasService = {
   cambiarEstado: (id: number, estado: EstadoMesa)    => api.patch<Mesa>(`/mesas/${id}/estado/`, { estado }),
   abrirSesionQR: (id: number)                        => api.post<AbrirSesionQRResponse>(`/mesas/${id}/abrir-qr/`),
   cerrarSesionQR: (id: number)                       => api.post<Mesa>(`/mesas/${id}/cerrar-qr/`),
+  regenerarQR:   (id: number)                        => api.post<Mesa>(`/mesas/${id}/regenerar-qr/`),
 };
 
 export default mesasService;

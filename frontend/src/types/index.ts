@@ -81,6 +81,8 @@ export interface Mesa {
   capacidad: number;
   estado: EstadoMesa;
   activo?: boolean;
+  /** Codigo secreto que va impreso en el QR de la mesa (solo personal). */
+  codigo_qr?: string;
 }
 
 export interface ItemRef {

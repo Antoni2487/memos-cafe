@@ -5,6 +5,7 @@ from datetime import timedelta
 from pathlib import Path
 
 import environ
+from corsheaders.defaults import default_headers
 
 BASE_DIR = Path(__file__).resolve(strict=True).parent.parent.parent
 # memos_cafe/
@@ -317,8 +318,17 @@ REST_FRAMEWORK = {
         "anon": "20/minute",
         "user": "200/minute",
         "login": "5/minute",
-        "pedido_qr": "20/minute",
-        "solicitar_cobro": "5/minute",
+        # Pedido por QR (ver memos_cafe/mesas/api/throttles.py): un limite
+        # por celular y un tope por mesa. Con 4 personas en una mesa el
+        # polling de estado suma 24/min.
+        "qr_lectura_dispositivo": "30/minute",
+        "qr_lectura_mesa": "150/minute",
+        "qr_pedido_dispositivo": "10/minute",
+        "qr_pedido_mesa": "40/minute",
+        "qr_cobro_dispositivo": "3/minute",
+        "qr_cobro_mesa": "6/minute",
+        # Carta publica: todos los clientes del wifi del local comparten IP.
+        "qr_catalogo": "120/minute",
     },
     "DEFAULT_FILTER_BACKENDS": [
         "django_filters.rest_framework.DjangoFilterBackend",
@@ -347,6 +357,9 @@ SIMPLE_JWT = {
 # django-cors-headers
 # -------------------------------------------------------------------------------
 CORS_URLS_REGEX = r"^/api/.*$"
+# X-Dispositivo-QR: id aleatorio por celular que manda el pedido por QR
+# para sus limites de uso (ver memos_cafe/mesas/api/throttles.py).
+CORS_ALLOW_HEADERS = (*default_headers, "x-dispositivo-qr")
 # ⚠️ CORRECCIÓN: agregados los puertos de Vite (5173) para desarrollo local
 # El dominio real del frontend desplegado se agrega via DJANGO_CORS_ALLOWED_ORIGINS
 # (env var, coma-separada) sin tocar codigo — ver .envs/.production/.django.

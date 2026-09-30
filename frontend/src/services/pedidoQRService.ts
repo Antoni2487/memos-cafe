@@ -8,19 +8,56 @@ export interface ItemPedidoQRPayload {
   nota?: string;
 }
 
-// Endpoints públicos (sin login) del pedido por QR — ver
-// memos_cafe/mesas/api/qr_views.py. Usan la misma instancia `api` que el
-// resto de la app: si no hay token en localStorage simplemente no se manda
-// Authorization, y estos endpoints no lo requieren.
+const CLAVE_DISPOSITIVO = "pedido_qr_dispositivo";
+
+function generarId(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
+  // Navegadores viejos: UUID v4 con Math.random (solo identifica, no es secreto)
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    return (c === "x" ? r : (r & 0x3) | 0x8).toString(16);
+  });
+}
+
+/**
+ * Id aleatorio y persistente de este celular. El backend lo usa para que los
+ * limites de uso sean por persona y no por mesa (ver
+ * memos_cafe/mesas/api/throttles.py). No es un secreto ni autentica nada.
+ */
+function idDispositivo(): string {
+  try {
+    let id = localStorage.getItem(CLAVE_DISPOSITIVO);
+    if (!id) {
+      id = generarId();
+      localStorage.setItem(CLAVE_DISPOSITIVO, id);
+    }
+    return id;
+  } catch {
+    return generarId(); // navegacion privada sin localStorage
+  }
+}
+
+/** URL publica que va impresa en el QR de una mesa. */
+export function urlPedidoQR(codigoQR: string): string {
+  return `${window.location.origin}/pedir/${codigoQR}`;
+}
+
+// Endpoints publicos (sin login) del pedido por QR — ver
+// memos_cafe/mesas/api/qr_views.py. La URL lleva el codigo secreto de la
+// mesa (el del QR impreso), nunca su id.
+const conDispositivo = () => ({ headers: { "X-Dispositivo-QR": idDispositivo() } });
+
 const pedidoQRService = {
-  estado: (mesaId: number) =>
-    api.get<SesionMesaQREstado>(`/mesas/qr/${mesaId}/`),
-  pedir: (mesaId: number, items: ItemPedidoQRPayload[]) =>
-    api.post<OrdenQR>(`/mesas/qr/${mesaId}/pedido/`, { items }),
-  solicitarCobro: (mesaId: number, metodoPagoSugerido: string) =>
-    api.post(`/mesas/qr/${mesaId}/solicitar-cobro/`, {
-      metodo_pago_sugerido: metodoPagoSugerido,
-    }),
+  estado: (codigo: string) =>
+    api.get<SesionMesaQREstado>(`/mesas/qr/${codigo}/`, conDispositivo()),
+  pedir: (codigo: string, items: ItemPedidoQRPayload[]) =>
+    api.post<OrdenQR>(`/mesas/qr/${codigo}/pedido/`, { items }, conDispositivo()),
+  solicitarCobro: (codigo: string, metodoPagoSugerido: string) =>
+    api.post(
+      `/mesas/qr/${codigo}/solicitar-cobro/`,
+      { metodo_pago_sugerido: metodoPagoSugerido },
+      conDispositivo()
+    ),
 };
 
 export default pedidoQRService;

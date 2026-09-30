@@ -67,8 +67,7 @@ function ItemCatalogo({
 }
 
 export default function PedidoQRPage() {
-  const { mesaId: mesaIdParam } = useParams<{ mesaId: string }>();
-  const mesaId = Number(mesaIdParam);
+  const { codigo = "" } = useParams<{ codigo: string }>();
 
   const [cargandoInicial, setCargandoInicial] = useState(true);
   const [mesaInexistente, setMesaInexistente] = useState(false);
@@ -97,7 +96,7 @@ export default function PedidoQRPage() {
 
   const cargarEstado = useCallback(async () => {
     try {
-      const { data } = await pedidoQRService.estado(mesaId);
+      const { data } = await pedidoQRService.estado(codigo);
       setSesionActiva(data.sesion_activa);
       setMesaNumero(data.mesa_numero);
       setOrdenActual(data.orden);
@@ -110,7 +109,7 @@ export default function PedidoQRPage() {
     } finally {
       setCargandoInicial(false);
     }
-  }, [mesaId]);
+  }, [codigo]);
 
   useEffect(() => {
     cargarEstado();
@@ -168,7 +167,7 @@ export default function PedidoQRPage() {
     setError(null);
     try {
       const { data } = await pedidoQRService.pedir(
-        mesaId,
+        codigo,
         carrito.map((i) => ({
           producto: i.productoId ?? null,
           promocion: i.promocionId ?? null,
@@ -189,7 +188,7 @@ export default function PedidoQRPage() {
     setEnviandoCobro(true);
     setError(null);
     try {
-      await pedidoQRService.solicitarCobro(mesaId, metodoPago);
+      await pedidoQRService.solicitarCobro(codigo, metodoPago);
       setCobroSolicitado(true);
       setMostrarCobro(false);
     } catch (err) {

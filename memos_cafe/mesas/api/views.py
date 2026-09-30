@@ -1,4 +1,4 @@
-﻿from rest_framework import status
+from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
@@ -102,6 +102,13 @@ class MesaViewSet(ModelViewSet):
             {"mesa": MesaSerializer(mesa).data, "token": str(sesion.token)},
             status=status.HTTP_201_CREATED,
         )
+
+    @action(detail=True, methods=["post"], url_path="regenerar-qr")
+    def regenerar_qr(self, request, pk=None):
+        """POST /api/mesas/{id}/regenerar-qr/ — solo admin. Invalida el QR
+        impreso de la mesa y genera uno nuevo (hay que reimprimirlo)."""
+        mesa = MesaService.regenerar_codigo_qr(self.get_object())
+        return Response(MesaSerializer(mesa).data)
 
     @action(detail=True, methods=["post"], url_path="cerrar-qr")
     def cerrar_sesion_qr(self, request, pk=None):

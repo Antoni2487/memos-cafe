@@ -1,4 +1,4 @@
-﻿from rest_framework import serializers
+from rest_framework import serializers
 
 from memos_cafe.caja.models import Pago
 from memos_cafe.mesas.models import Mesa
@@ -21,8 +21,11 @@ class MesaSerializer(serializers.ModelSerializer):
             "estado_display",
             "activo",
             "fecha_baja",
+            "codigo_qr",
         ]
-        read_only_fields = ["estado", "activo", "fecha_baja"]
+        # codigo_qr solo lo ve el personal (este serializer no se usa en los
+        # endpoints publicos del QR): es lo que va impreso en la mesa.
+        read_only_fields = ["estado", "activo", "fecha_baja", "codigo_qr"]
 
 
 class MesaEstadoSerializer(serializers.Serializer):

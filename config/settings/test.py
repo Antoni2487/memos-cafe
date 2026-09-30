@@ -13,7 +13,10 @@ from .base import env
 # https://docs.djangoproject.com/en/dev/ref/settings/#secret-key
 # Sin default fijo (ver config.settings.local para el mismo razonamiento):
 # los tests no necesitan una firma estable entre corridas.
-SECRET_KEY = env("DJANGO_SECRET_KEY", default=get_random_secret_key())
+# El `or` va afuera de env() a proposito: si la clave generada empieza con
+# "$", django-environ la toma como referencia a otra variable y entra en
+# recursion infinita (RecursionError al azar al arrancar).
+SECRET_KEY = env.str("DJANGO_SECRET_KEY", default="") or get_random_secret_key()
 # https://docs.djangoproject.com/en/dev/ref/settings/#test-runner
 TEST_RUNNER = "django.test.runner.DiscoverRunner"
 

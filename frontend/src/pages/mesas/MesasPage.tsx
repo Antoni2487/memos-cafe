@@ -4,6 +4,8 @@ import useMesas from "../../hooks/useMesas";
 import MesaForm from "../../components/mesas/MesaForm";
 import MesaQRCodigo from "../../components/mesas/MesaQRCodigo";
 import mesasService from "../../services/mesasService";
+import authService from "../../services/authService";
+import { urlPedidoQR } from "../../services/pedidoQRService";
 import { getErrorMessage } from "../../utils/errors";
 import {
   PageHeader, DataTable,
@@ -73,12 +75,23 @@ export default function MesasPage() {
     }
   };
 
+  const esAdmin = authService.hasRole("admin");
+
+  // Invalida el QR impreso (por ejemplo, si alguien le saco foto) y muestra
+  // el nuevo para reimprimirlo. El QR viejo deja de funcionar al instante.
+  const handleRegenerarQR = async () => {
+    if (!mesaVerQR) return;
+    const { data } = await mesasService.regenerarQR(mesaVerQR.id);
+    setMesaVerQR(data);
+    await recargar();
+  };
+
   const handleAbrirQR = async (mesa: Mesa) => {
     try {
       setAbriendoQR(mesa.id);
       setErrorQR(null);
       await mesasService.abrirSesionQR(mesa.id);
-      setLinkQR({ mesaNumero: mesa.numero, url: `${window.location.origin}/pedir/${mesa.id}` });
+      setLinkQR({ mesaNumero: mesa.numero, url: urlPedidoQR(mesa.codigo_qr ?? "") });
       await recargar();
     } catch (err) {
       setErrorQR(getErrorMessage(err, "No se pudo abrir la mesa para pedido por QR"));
@@ -315,7 +328,8 @@ export default function MesasPage() {
         {mesaVerQR && (
           <MesaQRCodigo
             mesaNumero={mesaVerQR.numero}
-            url={`${window.location.origin}/pedir/${mesaVerQR.id}`}
+            url={urlPedidoQR(mesaVerQR.codigo_qr ?? "")}
+            onRegenerar={esAdmin ? handleRegenerarQR : undefined}
           />
         )}
       </DetailModal>

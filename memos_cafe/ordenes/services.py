@@ -9,6 +9,7 @@ from memos_cafe.caja.models import Caja
 from memos_cafe.mesas.models import Mesa
 from memos_cafe.ordenes.models import DetalleOrden, Orden
 from memos_cafe.productos.models import Producto, Promocion
+from memos_cafe.realtime.notificar import notificar
 
 
 class OrdenService:
@@ -90,19 +91,10 @@ class OrdenService:
     @staticmethod
     def _notificar_nuevo_pedido(orden: Orden) -> None:
         """Avisa a Cocina que hay items nuevos por preparar (orden recien
-        creada, o una ronda nueva agregada a una ya abierta). No-op
-        silencioso si Channels no esta configurado, igual que
-        DetalleOrdenService._notificar_cambio_estado — nunca debe hacer
-        fallar la creacion de una orden real por un problema de broadcast."""
-        from channels.layers import get_channel_layer
-
-        channel_layer = get_channel_layer()
-        if channel_layer is None:
-            return
-
-        from asgiref.sync import async_to_sync
-
-        async_to_sync(channel_layer.group_send)("cocina", {
+        creada, o una ronda nueva agregada a una ya abierta). Se envia al
+        confirmar la transaccion y un fallo de Redis no afecta la orden
+        (ver memos_cafe/realtime/notificar.py)."""
+        notificar(["cocina"], {
             "type": "pedido.nuevo",
             "orden_id": orden.id,
             "mesa_numero": orden.mesa.numero if orden.mesa_id else None,
@@ -247,17 +239,8 @@ class DetalleOrdenService:
 
     @staticmethod
     def _notificar_cambio_estado(detalle: DetalleOrden) -> None:
-        """Envia el evento al channel layer. No-op silencioso si Channels
-        no esta configurado (ej. entorno de tests) — nunca debe hacer
-        fallar una transicion de estado real por un problema de broadcast."""
-        from channels.layers import get_channel_layer
-
-        channel_layer = get_channel_layer()
-        if channel_layer is None:
-            return
-
-        from asgiref.sync import async_to_sync
-
+        """Avisa el cambio a Cocina (y a los meseros cuando el item queda
+        listo). Ver memos_cafe/realtime/notificar.py."""
         if detalle.producto_id:
             nombre = detalle.producto.nombre
         elif detalle.promocion_id:
@@ -278,6 +261,7 @@ class DetalleOrdenService:
             # tablero completo.
             "mesa_numero": detalle.orden.mesa.numero if detalle.orden.mesa_id else None,
         }
-        async_to_sync(channel_layer.group_send)("cocina", payload)
+        grupos = ["cocina"]
         if detalle.estado_preparacion == DetalleOrden.EstadoPreparacion.LISTO:
-            async_to_sync(channel_layer.group_send)("meseros", payload)
+            grupos.append("meseros")
+        notificar(grupos, payload)

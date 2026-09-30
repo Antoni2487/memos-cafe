@@ -19,24 +19,27 @@ from memos_cafe.mesas.api.serializers import (
     SesionMesaQREstadoSerializer,
     SolicitarCobroQRSerializer,
 )
-from memos_cafe.mesas.api.throttles import PedidoQRThrottle, SolicitarCobroThrottle
+from memos_cafe.mesas.api import throttles
 from memos_cafe.mesas.models import Mesa
 from memos_cafe.mesas.services import SesionMesaService
 
 
-def _mesa_activa_o_404(mesa_id):
-    return get_object_or_404(Mesa, pk=mesa_id, activo=True)
+def _mesa_activa_o_404(codigo):
+    """La URL publica lleva el codigo secreto de la mesa (el que va impreso
+    en el QR), nunca su id: un id correlativo permitia pedir a cualquier
+    mesa desde fuera del local probando numeros."""
+    return get_object_or_404(Mesa, codigo_qr=codigo, activo=True)
 
 
 class MesaQREstadoView(APIView):
-    """GET /api/mesas/qr/<mesa_id>/ — el frontend cliente pega aca apenas
+    """GET /api/mesas/qr/<codigo>/ — el frontend cliente pega aca apenas
     escanea el QR para saber si hay un pedido abierto y que tiene hasta
     ahora."""
     permission_classes = []
-    throttle_classes = [PedidoQRThrottle]
+    throttle_classes = throttles.LECTURA
 
-    def get(self, request, mesa_id):
-        mesa = _mesa_activa_o_404(mesa_id)
+    def get(self, request, codigo):
+        mesa = _mesa_activa_o_404(codigo)
         sesion = SesionMesaService.sesion_activa(mesa)
 
         orden = None
@@ -59,13 +62,13 @@ class MesaQREstadoView(APIView):
 
 
 class MesaQRPedidoView(APIView):
-    """POST /api/mesas/qr/<mesa_id>/pedido/ — el cliente confirma su
+    """POST /api/mesas/qr/<codigo>/pedido/ — el cliente confirma su
     carrito (pedido inicial o una ronda mas)."""
     permission_classes = []
-    throttle_classes = [PedidoQRThrottle]
+    throttle_classes = throttles.PEDIDO
 
-    def post(self, request, mesa_id):
-        mesa = _mesa_activa_o_404(mesa_id)
+    def post(self, request, codigo):
+        mesa = _mesa_activa_o_404(codigo)
         serializer = PedidoQRSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -80,14 +83,14 @@ class MesaQRPedidoView(APIView):
 
 
 class MesaQRSolicitarCobroView(APIView):
-    """POST /api/mesas/qr/<mesa_id>/solicitar-cobro/ — el cliente termino
+    """POST /api/mesas/qr/<codigo>/solicitar-cobro/ — el cliente termino
     y avisa que quiere pagar. No es un Pago real: el cajero/mesero sigue
     cobrando fisicamente como hoy, esto solo notifica al personal."""
     permission_classes = []
-    throttle_classes = [SolicitarCobroThrottle]
+    throttle_classes = throttles.COBRO
 
-    def post(self, request, mesa_id):
-        mesa = _mesa_activa_o_404(mesa_id)
+    def post(self, request, codigo):
+        mesa = _mesa_activa_o_404(codigo)
         serializer = SolicitarCobroQRSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
