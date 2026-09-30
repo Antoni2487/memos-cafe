@@ -7,21 +7,25 @@ export default function usePromociones() {
     const [cargando, setCargando] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    const cargar = useCallback(async () => {
-        try {
-            setCargando(true);
-            setError(null);
-            const { data } = await promocionService.getAll();
-            const lista = (Array.isArray(data) ? data : data.results).slice().sort((a, b) => a.id - b.id);
-            setPromociones(lista);
-        } catch {
-            setError("Error al cargar promociones");
-        } finally {
-            setCargando(false);
-        }
-    }, []);
+    // Todos los setState van dentro de callbacks de la promesa, asi el
+    // efecto de montaje no actualiza estado de forma sincrona
+    // (react-hooks/set-state-in-effect).
+    const cargar = useCallback(() =>
+        promocionService.getAll()
+            .then(({ data }) => {
+                setPromociones((Array.isArray(data) ? data : data.results).slice().sort((a, b) => a.id - b.id));
+                setError(null);
+            })
+            .catch(() => setError("Error al cargar promociones"))
+            .finally(() => setCargando(false)),
+    []);
+
+    const recargar = useCallback(() => {
+        setCargando(true);
+        return cargar();
+    }, [cargar]);
 
     useEffect(() => { cargar(); }, [cargar]);
 
-    return { promociones, cargando, error, recargar: cargar };
+    return { promociones, cargando, error, recargar };
 }

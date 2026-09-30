@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import rolesService from "../services/rolesService";
 import type { PermisoRol } from "../types";
 
@@ -15,20 +15,14 @@ export default function useRoles() {
   const [error, setError]         = useState<string | null>(null);
   const [exito, setExito]         = useState(false);
 
-  const cargar = useCallback(async () => {
-    try {
-      setCargando(true);
-      const { data } = await rolesService.getAll();
-      const lista = "results" in data ? data.results : data;
-      setPermisos(lista);
-    } catch {
-      setError("Error al cargar los permisos.");
-    } finally {
-      setCargando(false);
-    }
+  // setState solo dentro de callbacks de la promesa
+  // (react-hooks/set-state-in-effect).
+  useEffect(() => {
+    rolesService.getAll()
+      .then(({ data }) => setPermisos("results" in data ? data.results : data))
+      .catch(() => setError("Error al cargar los permisos."))
+      .finally(() => setCargando(false));
   }, []);
-
-  useEffect(() => { cargar(); }, [cargar]);
 
   const handleToggle = async (permiso: PermisoRol) => {
     // Optimistic update — actualiza UI antes de la respuesta

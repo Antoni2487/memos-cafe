@@ -7,18 +7,23 @@ export default function useRegistrosInsumo() {
     const [cargando, setCargando] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    const cargar = useCallback(async () => {
-        try {
-            setCargando(true);
-            setError(null);
-            const { data } = await registroInsumoService.listar();
-            setRegistros("results" in data ? data.results : data);
-        } catch {
-            setError("Error al cargar el historial de gastos");
-        } finally {
-            setCargando(false);
-        }
-    }, []);
+    // Todos los setState van dentro de callbacks de la promesa, asi el
+    // efecto de montaje no actualiza estado de forma sincrona
+    // (react-hooks/set-state-in-effect).
+    const cargar = useCallback(() =>
+        registroInsumoService.listar()
+            .then(({ data }) => {
+                setRegistros("results" in data ? data.results : data);
+                setError(null);
+            })
+            .catch(() => setError("Error al cargar el historial de gastos"))
+            .finally(() => setCargando(false)),
+    []);
+
+    const recargar = useCallback(() => {
+        setCargando(true);
+        return cargar();
+    }, [cargar]);
 
     useEffect(() => { cargar(); }, [cargar]);
 
@@ -31,5 +36,5 @@ export default function useRegistrosInsumo() {
         .filter((r) => new Date(r.fecha) >= inicioMes)
         .reduce((acc, r) => acc + Number(r.costo_total), 0);
 
-    return { registros, cargando, error, recargar: cargar, totalGastado, gastadoEsteMes };
+    return { registros, cargando, error, recargar, totalGastado, gastadoEsteMes };
 }

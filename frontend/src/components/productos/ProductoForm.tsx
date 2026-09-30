@@ -20,10 +20,19 @@ interface FormState {
   categoria: string;
 }
 
+function formInicial(producto: Producto | null): FormState {
+  return producto
+    ? {
+        nombre:      producto.nombre      || "",
+        descripcion: producto.descripcion || "",
+        precio:      String(producto.precio ?? ""),
+        categoria:   String(producto.categoria ?? ""),
+      }
+    : { nombre: "", descripcion: "", precio: "", categoria: "" };
+}
+
 export default function ProductoForm({ abierto, producto, onGuardar, onCerrar, cargando }: ProductoFormProps) {
-  const [form, setForm] = useState<FormState>({
-    nombre: "", descripcion: "", precio: "", categoria: "",
-  });
+  const [form, setForm] = useState<FormState>(() => formInicial(producto));
   const [imagenFile, setImagenFile] = useState<File | null>(null);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [errores, setErrores] = useState<Partial<Record<keyof FormState, string>>>({});
@@ -35,20 +44,16 @@ export default function ProductoForm({ abierto, producto, onGuardar, onCerrar, c
     });
   }, []);
 
-  useEffect(() => {
-    if (producto) {
-      setForm({
-        nombre:      producto.nombre      || "",
-        descripcion: producto.descripcion || "",
-        precio:      String(producto.precio ?? ""),
-        categoria:   String(producto.categoria ?? ""),
-      });
-    } else {
-      setForm({ nombre: "", descripcion: "", precio: "", categoria: "" });
-    }
+  // Reinicia el formulario al abrirlo o al cambiar de producto. Se hace durante
+  // el render (y no en un useEffect) para evitar un render extra:
+  // https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
+  const [prev, setPrev] = useState({ producto, abierto });
+  if (prev.producto !== producto || prev.abierto !== abierto) {
+    setPrev({ producto, abierto });
+    setForm(formInicial(producto));
     setImagenFile(null);
     setErrores({});
-  }, [producto, abierto]);
+  }
 
   const set = (campo: keyof FormState) => (val: string) => setForm((f) => ({ ...f, [campo]: val }));
 

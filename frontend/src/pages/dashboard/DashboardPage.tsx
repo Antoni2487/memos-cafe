@@ -355,22 +355,29 @@ export default function DashboardPage() {
   const [error, setError]     = useState<string | null>(null);
   const [recargando, setRecargando] = useState(false);
 
-  const cargar = async (silencioso = false) => {
+  // Todos los setState van dentro de callbacks de la promesa, asi el
+  // efecto de montaje no actualiza estado de forma sincrona
+  // (react-hooks/set-state-in-effect).
+  const obtener = () =>
+    dashboardService.getDashboard()
+      .then((res) => {
+        setData(res);
+        setError(null);
+      })
+      .catch(() => setError("No se pudo cargar el dashboard."))
+      .finally(() => {
+        setCargando(false);
+        setRecargando(false);
+      });
+
+  const cargar = (silencioso = false) => {
     if (!silencioso) setCargando(true);
     else setRecargando(true);
     setError(null);
-    try {
-      const res = await dashboardService.getDashboard();
-      setData(res);
-    } catch {
-      setError("No se pudo cargar el dashboard.");
-    } finally {
-      setCargando(false);
-      setRecargando(false);
-    }
+    return obtener();
   };
 
-  useEffect(() => { cargar(); }, []);
+  useEffect(() => { obtener(); }, []);
 
   if (cargando) return <LoadingSpinner texto="Cargando dashboard..." full />;
 

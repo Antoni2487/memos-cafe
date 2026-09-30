@@ -1,6 +1,7 @@
 from django.core.management.utils import get_random_secret_key
 
 from .base import *  # noqa: F403
+from .base import BASE_DIR
 from .base import INSTALLED_APPS
 from .base import MIDDLEWARE
 from .base import env
@@ -45,9 +46,10 @@ DEBUG_TOOLBAR_CONFIG = {
 INTERNAL_IPS = ["127.0.0.1", "10.0.2.2"]
 if env("USE_DOCKER") == "yes":
     import socket
+
     hostname, _, ips = socket.gethostbyname_ex(socket.gethostname())
     INTERNAL_IPS += [".".join([*ip.split(".")[:-1], "1"]) for ip in ips]
-    RUNSERVERPLUS_POLLER_RELOADER_TYPE = 'stat'
+    RUNSERVERPLUS_POLLER_RELOADER_TYPE = "stat"
     RUNSERVERPLUS_POLLER_RELOADER_INTERVAL = 1
 
 # django-extensions
@@ -80,7 +82,7 @@ LOGGING = {
         },
         "file": {
             "class": "logging.FileHandler",
-            "filename": "/app/logs/memos_cafe.log",
+            "filename": BASE_DIR / "logs" / "memos_cafe.log",
             "formatter": "verbose",
             "delay": True,
         },

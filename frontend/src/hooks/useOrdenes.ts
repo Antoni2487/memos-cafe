@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import ordenesService from "../services/ordenesService";
+import type { CrearOrdenPayload } from "../services/ordenesService";
 import { getErrorMessage } from "../utils/errors";
 import type { Orden } from "../types";
 
@@ -8,22 +9,27 @@ export function useOrdenes() {
   const [loading, setLoading]   = useState(true);
   const [error, setError]       = useState<string | null>(null);
 
-  const cargar = useCallback(async () => {
+  // Todos los setState van dentro de callbacks de la promesa, asi el
+  // efecto de montaje no actualiza estado de forma sincrona
+  // (react-hooks/set-state-in-effect).
+  const obtener = useCallback(() =>
+    ordenesService.listar()
+      .then(({ data }) => {
+        setOrdenes(Array.isArray(data) ? data : (data.results ?? []));
+        setError(null);
+      })
+      .catch((err) => setError(getErrorMessage(err, "Error al cargar órdenes")))
+      .finally(() => setLoading(false)),
+  []);
+
+  const cargar = useCallback(() => {
     setLoading(true);
-    setError(null);
-    try {
-      const { data } = await ordenesService.listar();
-      setOrdenes(Array.isArray(data) ? data : (data.results ?? []));
-    } catch (err) {
-      setError(getErrorMessage(err, "Error al cargar órdenes"));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    return obtener();
+  }, [obtener]);
 
-  useEffect(() => { cargar(); }, [cargar]);
+  useEffect(() => { obtener(); }, [obtener]);
 
-  const crear = useCallback(async (payload: Parameters<typeof ordenesService.crear>[0]) => {
+  const crear = useCallback(async (payload: CrearOrdenPayload) => {
     const { data } = await ordenesService.crear(payload);
     setOrdenes((prev) => [data, ...prev]);
     return data;

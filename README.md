@@ -125,7 +125,7 @@ npm run lint
 |---|---|
 | `linter` | hooks de pre-commit sobre los archivos que cambian |
 | `backend` | migraciones al día, contratos de import-linter y `pytest` contra Postgres 16 |
-| `frontend` | `tsc` + `vite build` |
+| `frontend` | ESLint, `tsc` y `vite build` |
 
 [`.github/workflows/mantenimiento_diario.yml`](.github/workflows/mantenimiento_diario.yml) corre todos los días a las 00:00 (hora de Lima). Limpia los tokens JWT expirados y genera un backup de la BD de producción. El detalle está en [`docs/plan_mantenimiento.md`](docs/plan_mantenimiento.md).
 
