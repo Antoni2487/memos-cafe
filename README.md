@@ -19,10 +19,10 @@ Proyecto Integrador 1.
 
 | Capa | Tecnologías |
 |---|---|
-| Backend | Python 3.12, Django 6, Django REST Framework, SimpleJWT, drf-spectacular, PostgreSQL |
+| Backend | Python 3.12, Django 6, Django REST Framework, Django Channels (WebSocket), SimpleJWT, drf-spectacular, PostgreSQL |
 | Frontend | React 19, TypeScript, Vite, Tailwind CSS 4, shadcn/ui (Radix), Recharts, Axios |
 | Calidad | pytest, import-linter, ruff, pre-commit, mypy |
-| Infraestructura | Docker, GitHub Actions, Render + Neon (API y BD), Vercel (frontend) |
+| Infraestructura | Docker, GitHub Actions, Render + Neon (API y BD) + Redis (tiempo real), Vercel (frontend y landing) |
 
 ## Estructura
 
@@ -132,18 +132,31 @@ npm run lint
 ## Despliegue
 
 - **API**: imagen de `compose/production/django/Dockerfile` desplegada en Render, con la base de datos en Neon (PostgreSQL). También hay configuración para Railway en `railway.json`.
-- **Frontend**: Vercel. `frontend/vercel.json` reescribe todas las rutas a `index.html` para que funcione el router de la SPA.
+- **Servidor**: `daphne` (ASGI). Atiende la API y los WebSocket de Cocina y meseros en un mismo proceso; lo arranca `compose/production/django/start`.
+- **Tiempo real**: Redis, usado por Django Channels. Si Redis no está disponible, la app sigue funcionando: las órdenes se crean igual y el tablero de Cocina se actualiza cada 60 s en vez de al instante.
+- **Base de datos**: pool de conexiones de psycopg (Django desaconseja las conexiones persistentes bajo ASGI). Verifica cada conexión antes de usarla, porque Neon cierra las conexiones cuando suspende el cómputo por inactividad.
+- **Frontend y landing**: Vercel. `frontend/vercel.json` reescribe todas las rutas a `index.html` para que funcione el router de la SPA. Los WebSocket usan el mismo dominio que `VITE_API_URL` (`https` → `wss`).
 
-Variables de entorno principales del backend en producción:
+### Poner en marcha el tiempo real en Render
+
+1. Crea una instancia de Redis: en Render es un servicio **Key Value**, en la misma región que la API. También sirve un Redis externo, como Upstash.
+2. Copia su URL de conexión y agrégala a las variables de entorno del servicio de la API como `REDIS_URL`. Si es externo, usa la URL `rediss://`, con TLS.
+3. Vuelve a desplegar la API.
+4. Abre `https://<tu-api>/api/health/`. Si todo está bien, verás `"tiempo_real": {"estado": "ok", "backend": "RedisChannelLayer"}`.
+5. En el panel de Cocina, el indicador de la esquina debe decir **En vivo**.
+
+### Variables de entorno del backend en producción
 
 | Variable | Descripción |
 |---|---|
 | `DATABASE_URL` | cadena de conexión a PostgreSQL |
+| `REDIS_URL` | cadena de conexión a Redis (tiempo real y caché) |
 | `DJANGO_SECRET_KEY` | clave secreta de Django |
 | `DJANGO_SETTINGS_MODULE` | `config.settings.production` |
 | `DJANGO_ALLOWED_HOSTS` | dominios permitidos, separados por coma |
 | `DJANGO_CORS_ALLOWED_ORIGINS` | URL del frontend desplegado |
 | `DJANGO_ADMIN_URL` | ruta del admin de Django |
+| `DB_POOL_MIN_SIZE` / `DB_POOL_MAX_SIZE` | opcionales: tamaño del pool de conexiones (por defecto 1 y 4) |
 
 ## Documentación adicional
 

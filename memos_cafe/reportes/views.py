@@ -33,6 +33,7 @@ from memos_cafe.caja.models import SolicitudCobro
 from memos_cafe.mesas.models import Mesa
 from memos_cafe.ordenes.models import DetalleOrden
 from memos_cafe.ordenes.models import Orden
+from memos_cafe.realtime.notificar import estado_tiempo_real
 from memos_cafe.utils.fechas import entre_fechas
 from memos_cafe.utils.fechas import inicio_del_dia
 from memos_cafe.utils.permissions import EsAdmin
@@ -1207,6 +1208,11 @@ class HealthCheckView(APIView):
                 "estado": "error",
                 "detalle": str(e),
             }
+
+        # -- Tiempo real (WebSocket de Cocina/meseros via Redis) -------------
+        # No afecta el estado general: sin Redis la app sigue funcionando y
+        # el tablero de Cocina se actualiza por polling.
+        health["tiempo_real"] = estado_tiempo_real()
 
         # -- Performance: CPU y memoria --------------------------------------
         health["performance"] = {

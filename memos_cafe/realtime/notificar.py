@@ -41,3 +41,18 @@ def notificar(grupos: list[str], evento: dict) -> None:
     """Encola `evento` para los `grupos` indicados; se envia al confirmar
     la transaccion actual (o de inmediato si no hay una abierta)."""
     transaction.on_commit(lambda: _enviar(grupos, evento))
+
+
+def estado_tiempo_real() -> dict:
+    """Para /api/health/: prueba un envio real al channel layer (Redis en
+    produccion). No incluye el detalle del error porque el endpoint es
+    publico y el mensaje de Redis puede traer el host."""
+    channel_layer = get_channel_layer()
+    if channel_layer is None:
+        return {"estado": "desactivado"}
+    backend = type(channel_layer).__name__
+    try:
+        async_to_sync(channel_layer.group_send)("health", {"type": "health.ping"})
+    except Exception as e:  # noqa: BLE001 -- se reporta, no se propaga
+        return {"estado": "error", "backend": backend, "error": type(e).__name__}
+    return {"estado": "ok", "backend": backend}

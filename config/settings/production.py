@@ -15,7 +15,23 @@ ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=["localhost"])
 
 # DATABASES
 # ------------------------------------------------------------------------------
-DATABASES["default"]["CONN_MAX_AGE"] = env.int("CONN_MAX_AGE", default=60)
+# El servidor es ASGI (daphne, ver compose/production/django/start) y Django
+# desaconseja las conexiones persistentes (CONN_MAX_AGE) bajo ASGI: en su
+# lugar se usa el pool de conexiones de psycopg.
+# - CONN_HEALTH_CHECKS: Django le pasa al pool check_connection, que
+#   verifica cada conexion antes de entregarla. Neon suspende el computo
+#   tras unos minutos sin trafico y cierra las conexiones abiertas; sin
+#   esto, la primera peticion despues de un rato inactivo fallaria con una
+#   conexion muerta.
+# - max_idle: descarta conexiones sin uso durante mas de 1 minuto.
+DATABASES["default"]["CONN_MAX_AGE"] = 0
+DATABASES["default"]["CONN_HEALTH_CHECKS"] = True
+DATABASES["default"].setdefault("OPTIONS", {})["pool"] = {
+    "min_size": env.int("DB_POOL_MIN_SIZE", default=1),
+    "max_size": env.int("DB_POOL_MAX_SIZE", default=4),
+    "max_idle": 60,
+    "timeout": 10,
+}
 
 # CACHES
 # ------------------------------------------------------------------------------
