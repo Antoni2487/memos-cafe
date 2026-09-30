@@ -3,7 +3,7 @@ default_stages: [pre-commit]
 minimum_pre_commit_version: "3.2.0"
 
 default_language_version:
-  python: python3.14
+  python: python3.12
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -12,6 +12,8 @@ repos:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-json
+        # tsconfig usa JSONC (admite comentarios), no JSON estricto
+        exclude: '^frontend/tsconfig.*\.json$'
       - id: check-toml
       - id: check-xml
       - id: check-yaml
