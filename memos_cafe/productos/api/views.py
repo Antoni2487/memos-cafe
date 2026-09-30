@@ -26,6 +26,9 @@ from memos_cafe.utils.permissions import EsAdmin
 from memos_cafe.utils.permissions import TodosAutenticados
 from memos_cafe.utils.throttles import CatalogoPublicoThrottle
 
+# Categoria "de sistema" que crea la migracion 0003_descartables.
+CATEGORIA_DESCARTABLES = "Descartables"
+
 
 class CategoriaViewSet(
     mixins.ListModelMixin,
@@ -222,8 +225,16 @@ class ProductoViewSet(
     def publico(self, request):
         """GET /api/productos/publico/ — catálogo sin login, para el
         pedido por QR. Mismo serializer que list(), sin datos sensibles."""
-        productos = Producto.objects.disponibles()
-        return Response(ProductoSerializer(productos, many=True).data)
+        # Los descartables (bolsas y envases para llevar) los agrega el
+        # personal; no se ofrecen en la carta del cliente sentado en la mesa.
+        productos = Producto.objects.disponibles().exclude(
+            categoria__nombre=CATEGORIA_DESCARTABLES,
+        )
+        # Con request en el contexto las fotos salen con URL completa: el
+        # celular del cliente las pide al dominio de la API, no al del front.
+        return Response(
+            ProductoSerializer(productos, many=True, context={"request": request}).data,
+        )
 
 
 class PromocionViewSet(
@@ -318,4 +329,10 @@ class PromocionViewSet(
     def publico(self, request):
         """GET /api/productos/promociones/publico/ — vigentes, sin login."""
         promociones = Promocion.objects.vigentes()
-        return Response(PromocionSerializer(promociones, many=True).data)
+        return Response(
+            PromocionSerializer(
+                promociones,
+                many=True,
+                context={"request": request},
+            ).data,
+        )

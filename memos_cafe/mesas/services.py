@@ -1,5 +1,6 @@
 from datetime import timedelta
 
+from django.db import models
 from django.db import transaction
 from django.utils import timezone
 
@@ -15,6 +16,7 @@ from memos_cafe.mesas.models import PedidoPorConfirmar
 from memos_cafe.mesas.models import SesionMesaQR
 from memos_cafe.mesas.models import generar_codigo_qr
 from memos_cafe.ordenes.models import Comanda
+from memos_cafe.ordenes.models import DetalleOrden
 from memos_cafe.ordenes.models import Orden
 from memos_cafe.ordenes.services import DetalleOrdenService
 from memos_cafe.ordenes.services import OrdenService
@@ -194,6 +196,28 @@ class SesionMesaService:
     def orden_abierta(mesa: Mesa) -> Orden | None:
         return (
             Orden.objects.filter(mesa=mesa, estado=Orden.Estado.ABIERTA)
+            .order_by("-fecha_creacion")
+            .first()
+        )
+
+    @staticmethod
+    def orden_abierta_para_cliente(mesa: Mesa) -> Orden | None:
+        """La orden abierta con todo lo que ve el cliente en su celular
+        (items, rondas y si pidio la cuenta), en un numero fijo de consultas:
+        esta pantalla se consulta cada pocos segundos."""
+        return (
+            Orden.objects.filter(mesa=mesa, estado=Orden.Estado.ABIERTA)
+            .prefetch_related(
+                models.Prefetch(
+                    "detalles",
+                    queryset=DetalleOrden.objects.select_related(
+                        "producto",
+                        "promocion",
+                    ),
+                ),
+                "comandas",
+                "solicitudes_cobro",
+            )
             .order_by("-fecha_creacion")
             .first()
         )

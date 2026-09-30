@@ -1,5 +1,5 @@
 import api from "./api";
-import type { OrdenQR, SesionMesaQREstado } from "../types";
+import type { OrdenQR, PedidoPorConfirmarQR, RespuestaPedidoQR, SesionMesaQREstado } from "../types";
 
 export interface ItemPedidoQRPayload {
   producto?: number | null;
@@ -50,8 +50,19 @@ const conDispositivo = () => ({ headers: { "X-Dispositivo-QR": idDispositivo() }
 const pedidoQRService = {
   estado: (codigo: string) =>
     api.get<SesionMesaQREstado>(`/mesas/qr/${codigo}/`, conDispositivo()),
-  pedir: (codigo: string, items: ItemPedidoQRPayload[]) =>
-    api.post<OrdenQR>(`/mesas/qr/${codigo}/pedido/`, { items }, conDispositivo()),
+  // 201: la mesa ya tenia pedido, va directo a Cocina.
+  // 202: primer pedido de una mesa libre, espera que el mesero lo confirme.
+  pedir: async (codigo: string, items: ItemPedidoQRPayload[]): Promise<RespuestaPedidoQR> => {
+    const { data, status } = await api.post<OrdenQR | { pedido_por_confirmar: PedidoPorConfirmarQR }>(
+      `/mesas/qr/${codigo}/pedido/`,
+      { items },
+      conDispositivo()
+    );
+    if (status === 202 && "pedido_por_confirmar" in data) {
+      return { tipo: "por_confirmar", pedido: data.pedido_por_confirmar };
+    }
+    return { tipo: "orden", orden: data as OrdenQR };
+  },
   solicitarCobro: (codigo: string, metodoPagoSugerido: string) =>
     api.post(
       `/mesas/qr/${codigo}/solicitar-cobro/`,

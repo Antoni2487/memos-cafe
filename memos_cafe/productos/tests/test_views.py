@@ -4,9 +4,11 @@ from decimal import Decimal
 import pytest
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
+from django.core.files.base import ContentFile
 from django.utils import timezone
 from rest_framework.test import APIClient
 
+from memos_cafe.productos.models import Categoria
 from memos_cafe.productos.tests.factories import CategoriaFactory
 from memos_cafe.productos.tests.factories import ProductoFactory
 from memos_cafe.productos.tests.factories import PromocionFactory
@@ -200,3 +202,27 @@ class TestPromocionViewSet:
         ids = [p["id"] for p in r.data]
         assert vigente.id in ids
         assert inactiva.id not in ids
+
+
+class TestCartaPublica:
+    """Lo que ve el cliente al escanear el QR de su mesa."""
+
+    def test_sin_descartables(self):
+        cafe = ProductoFactory(nombre="Capuchino")
+        # La categoria y sus productos los crea la migracion 0003_descartables
+        descartables = Categoria.objects.get(nombre="Descartables")
+        ProductoFactory(nombre="Bolsa", categoria=descartables)
+
+        r = APIClient().get("/api/productos/publico/")
+
+        assert [p["nombre"] for p in r.data] == [cafe.nombre]
+
+    def test_fotos_con_url_completa(self, tmp_path, settings):
+        settings.MEDIA_ROOT = tmp_path
+        settings.MEDIA_URL = "/media/"  # como en local y en Render
+        producto = ProductoFactory()
+        producto.imagen.save("foto.jpg", ContentFile(b"jpg"), save=True)
+
+        r = APIClient().get("/api/productos/publico/")
+
+        assert r.data[0]["imagen"].startswith("http://testserver/media/")

@@ -346,15 +346,53 @@ export interface DetalleQR {
   estado_preparacion: EstadoPreparacion;
 }
 
+export type EstadoComanda = "pendiente" | "en_preparacion" | "lista" | "entregada";
+
+/** Cada envío a Cocina (ronda) del pedido de la mesa. */
+export interface ComandaQR {
+  numero: number;
+  origen: "mesero" | "qr";
+  estado: EstadoComanda;
+  creada_en: string;
+}
+
 export interface OrdenQR {
   id: number;
   estado: EstadoOrden;
   total: number | string;
   detalles: DetalleQR[];
+  comandas: ComandaQR[];
+  cuenta_solicitada: boolean;
+}
+
+/** Item tal como lo vio el cliente (nombre y precio de ese momento). */
+export interface ItemPorConfirmar {
+  producto: number | null;
+  promocion: number | null;
+  cantidad: number;
+  nota: string;
+  nombre: string;
+  precio: string;
+}
+
+/** Primer pedido de una mesa libre: espera a que el mesero lo confirme. */
+export interface PedidoPorConfirmarQR {
+  id: number;
+  estado: "pendiente" | "confirmado" | "rechazado" | "expirado";
+  items: ItemPorConfirmar[];
+  total: string;
+  creado_en: string;
+  segundos_esperando: number;
 }
 
 export interface SesionMesaQREstado {
   sesion_activa: boolean;
   mesa_numero: number;
   orden: OrdenQR | null;
+  pedido_por_confirmar: PedidoPorConfirmarQR | null;
 }
+
+/** POST del pedido: va directo a Cocina (orden) o espera al mesero. */
+export type RespuestaPedidoQR =
+  | { tipo: "orden"; orden: OrdenQR }
+  | { tipo: "por_confirmar"; pedido: PedidoPorConfirmarQR };

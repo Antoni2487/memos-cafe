@@ -9,6 +9,7 @@ from memos_cafe.mesas.models import PLANO_ANCHO
 from memos_cafe.mesas.models import ElementoPlano
 from memos_cafe.mesas.models import Mesa
 from memos_cafe.mesas.models import PedidoPorConfirmar
+from memos_cafe.ordenes.models import Comanda
 from memos_cafe.ordenes.models import DetalleOrden
 from memos_cafe.ordenes.models import Orden
 from memos_cafe.productos.models import Producto
@@ -212,15 +213,31 @@ class DetalleQRSerializer(serializers.ModelSerializer):
         return ""
 
 
+class ComandaQRSerializer(serializers.ModelSerializer):
+    """Cada envio a Cocina (ronda) y como va: el cliente ve "en
+    preparacion" o "lista" por ronda, no por cada item."""
+
+    class Meta:
+        model = Comanda
+        fields = ["numero", "origen", "estado", "creada_en"]
+
+
 class OrdenQRSerializer(serializers.ModelSerializer):
     """Estado del pedido en curso de la mesa — sin exponer 'usuario' ni
     otros datos internos del staff a un endpoint publico."""
 
     detalles = DetalleQRSerializer(many=True, read_only=True)
+    comandas = ComandaQRSerializer(many=True, read_only=True)
+    # Queda en el servidor: si el cliente recarga o vuelve a escanear, sigue
+    # viendo que ya pidio la cuenta.
+    cuenta_solicitada = serializers.SerializerMethodField()
 
     class Meta:
         model = Orden
-        fields = ["id", "estado", "total", "detalles"]
+        fields = ["id", "estado", "total", "detalles", "comandas", "cuenta_solicitada"]
+
+    def get_cuenta_solicitada(self, obj):
+        return any(s.atendido_en is None for s in obj.solicitudes_cobro.all())
 
 
 class PedidoPorConfirmarSerializer(serializers.ModelSerializer):

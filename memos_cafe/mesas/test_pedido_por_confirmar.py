@@ -274,3 +274,47 @@ class TestApiDelPersonal:
         r = _cliente(_usuario("admin")).get("/api/alertas/")
 
         assert any(a["tipo"] == "pedido_por_confirmar" for a in r.data)
+
+
+class TestLoQueVeElCliente:
+    def _mesa_con_orden(self, mesa, producto):
+        _pedir(mesa, producto)
+        SesionMesaService.confirmar_pedido(
+            PedidoPorConfirmar.objects.get(mesa=mesa),
+            mesero=_usuario("mesero"),
+        )
+
+    def test_ve_sus_rondas_con_su_estado(self, mesa, producto):
+        self._mesa_con_orden(mesa, producto)
+        _pedir(mesa, producto, cantidad=2)
+
+        orden = _cliente().get(f"/api/mesas/qr/{mesa.codigo_qr}/").data["orden"]
+
+        assert [(c["numero"], c["origen"], c["estado"]) for c in orden["comandas"]] == [
+            (1, "qr", "pendiente"),
+            (2, "qr", "pendiente"),
+        ]
+        assert [d["ronda"] for d in orden["detalles"]] == [1, 2]
+
+    def test_pedir_la_cuenta_queda_guardado(self, mesa, producto):
+        self._mesa_con_orden(mesa, producto)
+        url = f"/api/mesas/qr/{mesa.codigo_qr}/"
+        assert _cliente().get(url).data["orden"]["cuenta_solicitada"] is False
+
+        _cliente().post(
+            f"{url}solicitar-cobro/",
+            {"metodo_pago_sugerido": "yape"},
+            format="json",
+        )
+
+        # Otro celular (o el mismo tras recargar) lo sigue viendo
+        assert _cliente().get(url).data["orden"]["cuenta_solicitada"] is True
+
+    def test_consultas_constantes(self, mesa, producto, django_assert_max_num_queries):
+        self._mesa_con_orden(mesa, producto)
+        for _ in range(4):
+            _pedir(mesa, ProductoFactory(), cantidad=1)
+
+        with django_assert_max_num_queries(10):
+            r = _cliente().get(f"/api/mesas/qr/{mesa.codigo_qr}/")
+        assert len(r.data["orden"]["detalles"]) == 5

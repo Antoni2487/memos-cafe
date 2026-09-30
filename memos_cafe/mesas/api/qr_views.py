@@ -44,7 +44,7 @@ class MesaQREstadoView(APIView):
         sesion = SesionMesaService.sesion_activa(mesa)
         # La orden abierta de la mesa aunque la haya abierto el mesero a
         # mano: el cliente puede ver lo pedido y sumar rondas.
-        orden = SesionMesaService.orden_abierta(mesa)
+        orden = SesionMesaService.orden_abierta_para_cliente(mesa)
 
         data = {
             "sesion_activa": sesion is not None or orden is not None,
