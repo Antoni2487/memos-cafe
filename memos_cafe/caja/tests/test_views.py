@@ -1,5 +1,8 @@
+from datetime import date
+from datetime import datetime
 from decimal import Decimal
 from http import HTTPStatus
+from zoneinfo import ZoneInfo
 
 import pytest
 from django.contrib.auth.models import Group
@@ -10,6 +13,7 @@ from memos_cafe.caja.models import Pago
 from memos_cafe.caja.tests.factories import CajaFactory
 from memos_cafe.caja.tests.factories import OrdenFactory
 from memos_cafe.users.tests.factories import UserFactory
+from memos_cafe.utils.fechas import entre_fechas
 
 pytestmark = pytest.mark.django_db
 
@@ -103,3 +107,43 @@ class TestPagoListadoPorCaja:
 
         assert r.status_code == HTTPStatus.OK
         assert [p["caja"] for p in r.data["results"]] == [caja_actual.id]
+
+
+class TestEntreFechasEquivaleADate:
+    """entre_fechas() reemplaza a los lookups __date en dashboard y
+    reportes: debe devolver exactamente los mismos registros, incluidos
+    los bordes del dia en hora de Lima (23:30 en Lima ya es el dia
+    siguiente en UTC)."""
+
+    def test_mismos_pagos_que_el_lookup_date(self):
+        lima = ZoneInfo("America/Lima")
+        caja = CajaFactory()
+        momentos = [
+            datetime(2026, 9, 29, 23, 59, tzinfo=lima),
+            datetime(2026, 9, 30, 0, 0, tzinfo=lima),
+            datetime(2026, 9, 30, 23, 30, tzinfo=lima),
+            datetime(2026, 10, 1, 0, 0, tzinfo=lima),
+        ]
+        for momento in momentos:
+            pago = Pago.objects.create(
+                orden=OrdenFactory(estado="cerrada", total=Decimal("10.00")),
+                caja=caja,
+                metodo_pago="efectivo",
+                monto=Decimal("10.00"),
+                vuelto=Decimal("0"),
+            )
+            Pago.objects.filter(pk=pago.pk).update(fecha=momento)
+
+        dia = date(2026, 9, 30)
+        con_date = set(
+            Pago.objects.filter(fecha__date=dia).values_list("pk", flat=True),
+        )
+        con_rango = set(
+            Pago.objects.filter(**entre_fechas("fecha", dia)).values_list(
+                "pk",
+                flat=True,
+            ),
+        )
+
+        assert con_rango == con_date
+        assert len(con_rango) == 2  # noqa: PLR2004

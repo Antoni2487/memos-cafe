@@ -14,8 +14,7 @@ interface EstadoCaja {
 
 // Un 404 en /caja/sesiones/estado/ significa "no hay sesion abierta", no un error.
 async function fetchEstadoCaja(): Promise<EstadoCaja> {
-    const todas = await ordenesService.listar();
-    const ordenesAbiertas = todas.filter((o) => o.estado === "abierta");
+    const ordenesAbiertas = await ordenesService.listarAbiertas();
 
     let caja: CajaSesion;
     try {
@@ -70,13 +69,12 @@ export default function useCaja() {
         return obtenerEstado();
     }, [obtenerEstado]);
 
-    // Polling liviano: solo recarga órdenes abiertas cada 5 segundos.
-    // Mantiene la lista del cajero actualizada sin recargar pagos/movimientos.
-    // Patrón idéntico al setInterval de OrdenesPage.jsx.
+    // Polling liviano: solo recarga órdenes abiertas cada 5 segundos
+    // (filtradas en el servidor con ?estado=abierta). Mantiene la lista del
+    // cajero actualizada sin recargar pagos/movimientos.
     const actualizarOrdenesAbiertas = useCallback(async () => {
         try {
-            const todas = await ordenesService.listar();
-            setOrdenesAbiertas(todas.filter((o) => o.estado === "abierta"));
+            setOrdenesAbiertas(await ordenesService.listarAbiertas());
         } catch { /* silencioso — no interrumpe el estado actual */ }
     }, []);
 

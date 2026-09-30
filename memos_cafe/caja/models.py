@@ -1,9 +1,13 @@
 # memos_cafe/caja/models.py
 from typing import ClassVar
+
 from django.conf import settings
 from django.db import models
+from django.utils import timezone
 
-from memos_cafe.caja.managers import CajaManager, MovimientoCajaManager, PagoManager
+from memos_cafe.caja.managers import CajaManager
+from memos_cafe.caja.managers import MovimientoCajaManager
+from memos_cafe.caja.managers import PagoManager
 from memos_cafe.ordenes.models import Orden
 
 
@@ -17,9 +21,18 @@ class Caja(models.Model):
         on_delete=models.PROTECT,
         related_name="sesiones_caja",
     )
-    estado = models.CharField(max_length=10, choices=Estado.choices, default=Estado.ABIERTA)
+    estado = models.CharField(
+        max_length=10,
+        choices=Estado.choices,
+        default=Estado.ABIERTA,
+    )
     monto_inicial = models.DecimalField(max_digits=10, decimal_places=2)
-    monto_final = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    monto_final = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+    )
     fecha_apertura = models.DateTimeField(auto_now_add=True)
     fecha_cierre = models.DateTimeField(null=True, blank=True)
     observaciones = models.TextField(blank=True)
@@ -43,14 +56,16 @@ class Caja(models.Model):
         return f"Caja #{self.id} - {self.usuario} ({self.estado})"
 
     def cerrar(self, monto_final, observaciones=""):
-        from django.utils import timezone
         if self.estado != self.Estado.ABIERTA:
-            raise ValueError("Esta sesion de caja ya esta cerrada.")
+            msg = "Esta sesion de caja ya esta cerrada."
+            raise ValueError(msg)
         self.estado = self.Estado.CERRADA
         self.monto_final = monto_final
         self.observaciones = observaciones
         self.fecha_cierre = timezone.now()
-        self.save(update_fields=["estado", "monto_final", "observaciones", "fecha_cierre"])
+        self.save(
+            update_fields=["estado", "monto_final", "observaciones", "fecha_cierre"],
+        )
 
     @property
     def esta_abierta(self):
@@ -100,15 +115,24 @@ class Pago(models.Model):
     metodo_pago = models.CharField(max_length=10, choices=MetodoPago.choices)
     monto = models.DecimalField(max_digits=10, decimal_places=2)
     monto_recibido = models.DecimalField(
-        max_digits=10, decimal_places=2, null=True, blank=True,
-        help_text="Solo para efectivo: monto físico entregado por el cliente."
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Solo para efectivo: monto físico entregado por el cliente.",
     )
     vuelto = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     numero_operacion = models.CharField(
-        max_length=50, blank=True, default="",
-        help_text="Número de operación para pagos con tarjeta."
+        max_length=50,
+        blank=True,
+        default="",
+        help_text="Número de operación para pagos con tarjeta.",
     )
-    estado = models.CharField(max_length=12, choices=Estado.choices, default=Estado.COMPLETADO)
+    estado = models.CharField(
+        max_length=12,
+        choices=Estado.choices,
+        default=Estado.COMPLETADO,
+    )
     fecha = models.DateTimeField(auto_now_add=True)
 
     objects: ClassVar[PagoManager] = PagoManager()
@@ -118,13 +142,19 @@ class Pago(models.Model):
         verbose_name = "Pago"
         verbose_name_plural = "Pagos"
         ordering = ["-fecha"]
+        indexes = [
+            # Ventas del dia en el dashboard y reportes por rango de fechas
+            # (ver memos_cafe.utils.fechas.entre_fechas).
+            models.Index(fields=["fecha"], name="pago_fecha_idx"),
+        ]
 
     def __str__(self):
         return f"Pago Orden #{self.orden_id} — {self.metodo_pago} S/.{self.monto}"
 
     def anular(self):
         if self.estado == self.Estado.ANULADO:
-            raise ValueError("Este pago ya está anulado.")
+            msg = "Este pago ya está anulado."
+            raise ValueError(msg)
         self.estado = self.Estado.ANULADO
         self.save(update_fields=["estado"])
 
@@ -141,7 +171,11 @@ class NotaCredito(models.Model):
         RECLAMO = "reclamo", "Producto no conforme / reclamo"
         OTRO = "otro", "Otro"
 
-    pago = models.OneToOneField(Pago, on_delete=models.PROTECT, related_name="nota_credito")
+    pago = models.OneToOneField(
+        Pago,
+        on_delete=models.PROTECT,
+        related_name="nota_credito",
+    )
     motivo = models.CharField(max_length=20, choices=Motivo.choices)
     detalle = models.CharField(max_length=255, blank=True)
     monto = models.DecimalField(max_digits=10, decimal_places=2)
@@ -167,7 +201,11 @@ class Comprobante(models.Model):
         BOLETA = "boleta", "Boleta"
         FACTURA = "factura", "Factura"
 
-    pago = models.OneToOneField(Pago, on_delete=models.PROTECT, related_name="comprobante")
+    pago = models.OneToOneField(
+        Pago,
+        on_delete=models.PROTECT,
+        related_name="comprobante",
+    )
     tipo = models.CharField(max_length=10, choices=TipoComprobante.choices)
     serie = models.CharField(max_length=10)
     numero = models.PositiveIntegerField()

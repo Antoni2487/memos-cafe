@@ -1,17 +1,22 @@
-from rest_framework import mixins, status
+from django.utils import timezone
+from rest_framework import mixins
+from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
+from memos_cafe.ordenes.api.serializers import DetalleOrdenWriteSerializer
+from memos_cafe.ordenes.api.serializers import MarcarImpresoSerializer
+from memos_cafe.ordenes.api.serializers import OrdenReadSerializer
+from memos_cafe.ordenes.api.serializers import OrdenWriteSerializer
 from memos_cafe.ordenes.models import Orden
-from memos_cafe.ordenes.services import DetalleOrdenService, OrdenService
-from memos_cafe.ordenes.api.serializers import (
-    DetalleOrdenWriteSerializer,
-    MarcarImpresoSerializer,
-    OrdenReadSerializer,
-    OrdenWriteSerializer,
-)
-from memos_cafe.utils.permissions import EsAdmin, EsAdminOMesero, TodosAutenticados, modulo_requerido
+from memos_cafe.ordenes.services import DetalleOrdenService
+from memos_cafe.ordenes.services import OrdenService
+from memos_cafe.utils.fechas import entre_fechas
+from memos_cafe.utils.permissions import EsAdmin
+from memos_cafe.utils.permissions import EsAdminOMesero
+from memos_cafe.utils.permissions import TodosAutenticados
+from memos_cafe.utils.permissions import modulo_requerido
 
 
 class OrdenViewSet(
@@ -27,7 +32,12 @@ class OrdenViewSet(
       list / retrieve      → todos los autenticados
       crear / detalles     → admin o mesero
       anular               → solo admin
+
+    ?estado=abierta devuelve solo las ordenes por cobrar: es lo que
+    consultan Caja y Ordenes cada 5 segundos.
     """
+
+    filterset_fields = ["estado"]
 
     def get_queryset(self):
         user = self.request.user
@@ -36,8 +46,10 @@ class OrdenViewSet(
         # Mesero: todas sus propias órdenes del día (todos los estados)
         # Incluye cerradas/anuladas para contexto y trazabilidad
         if user.groups.filter(name="mesero").exists():
-            from django.utils import timezone
-            return qs.filter(usuario=user, fecha_creacion__date=timezone.localdate())
+            return qs.filter(
+                usuario=user,
+                **entre_fechas("fecha_creacion", timezone.localdate()),
+            )
 
         # Cajero: todas las órdenes del turno actual
         # Se delimita por fecha_apertura de la caja abierta (no por fecha del día)
@@ -49,13 +61,17 @@ class OrdenViewSet(
             return qs.none()  # sin turno activo: vista vacía
 
         # Admin: todas las órdenes del día (todos los estados, todos los meseros)
-        from django.utils import timezone
-        return qs.filter(fecha_creacion__date=timezone.localdate())
+        return qs.filter(**entre_fechas("fecha_creacion", timezone.localdate()))
 
     def get_permissions(self):
         if self.action in ["list", "retrieve"]:
             return [TodosAutenticados(), modulo_requerido("ordenes")()]
-        if self.action in ["crear", "agregar_detalle", "eliminar_detalle", "marcar_impreso"]:
+        if self.action in [
+            "crear",
+            "agregar_detalle",
+            "eliminar_detalle",
+            "marcar_impreso",
+        ]:
             return [EsAdminOMesero(), modulo_requerido("ordenes")()]
         return [EsAdmin(), modulo_requerido("ordenes")()]
 
@@ -84,7 +100,12 @@ class OrdenViewSet(
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(OrdenReadSerializer(orden).data, status=status.HTTP_201_CREATED)
 
-    @action(detail=True, methods=["post"], url_path="anular", permission_classes=[EsAdmin])
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="anular",
+        permission_classes=[EsAdmin],
+    )
     def anular(self, request, pk=None):
         """POST /api/ordenes/{id}/anular/ — solo admin."""
         orden = self.get_object()
@@ -92,7 +113,8 @@ class OrdenViewSet(
             OrdenService.anular_orden(orden)
         except ValueError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        orden.refresh_from_db()  # Fix 5: asegurar estado actualizado antes de serializar
+        # Fix 5: asegurar estado actualizado antes de serializar
+        orden.refresh_from_db()
         return Response(OrdenReadSerializer(orden).data)
 
     @action(
@@ -107,7 +129,10 @@ class OrdenViewSet(
         serializer = DetalleOrdenWriteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         try:
-            DetalleOrdenService.agregar_detalle(orden=orden, **serializer.validated_data)
+            DetalleOrdenService.agregar_detalle(
+                orden=orden,
+                **serializer.validated_data,
+            )
         except ValueError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         orden.refresh_from_db()
@@ -141,10 +166,15 @@ class OrdenViewSet(
         permission_classes=[EsAdminOMesero],
     )
     def marcar_impreso(self, request, pk=None):
-        """POST /api/ordenes/{id}/marcar-impreso/ — marca ítems como enviados a cocina/barra."""
+        """POST /api/ordenes/{id}/marcar-impreso/
+
+        Marca ítems como enviados a cocina/barra."""
         orden = self.get_object()
         serializer = MarcarImpresoSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        DetalleOrdenService.marcar_impreso(orden, serializer.validated_data["detalle_ids"])
+        DetalleOrdenService.marcar_impreso(
+            orden,
+            serializer.validated_data["detalle_ids"],
+        )
         orden.refresh_from_db()
         return Response(OrdenReadSerializer(orden).data)
