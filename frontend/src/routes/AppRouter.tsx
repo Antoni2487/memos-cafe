@@ -11,7 +11,8 @@ import LoginPage from "../pages/auth/LoginPage";
 const DashboardPage = lazy(() => import("../pages/dashboard/DashboardPage"));
 const HomePage = lazy(() => import("../pages/home/HomePage"));
 const MesasPage = lazy(() => import("../pages/mesas/MesasPage"));
-const OrdenesPage = lazy(() => import("../pages/ordenes/OrdenesPage"));
+const PedidosPage = lazy(() => import("../pages/ordenes/PedidosPage"));
+const TomarPedidoPage = lazy(() => import("../pages/ordenes/TomarPedidoPage"));
 const ComandaPage = lazy(() => import("../pages/ordenes/ComandaPage"));
 const ProductosPage = lazy(() => import("../pages/productos/ProductosPage"));
 const CajaPage = lazy(() => import("../pages/caja/CajaPage"));
@@ -59,7 +60,8 @@ export default function AppRouter() {
             <Route path="/mesas" element={<MesasPage />} />
           </Route>
           <Route element={<PrivateRoute modulo="ordenes" />}>
-            <Route path="/ordenes" element={<OrdenesPage />} />
+            <Route path="/ordenes" element={<PedidosPage />} />
+            <Route path="/ordenes/nuevo" element={<TomarPedidoPage />} />
             <Route path="/comanda/:ordenId" element={<ComandaPage />} />
           </Route>
 

@@ -22,6 +22,11 @@ export interface CrearOrdenPayload {
 const ordenesService = {
   listar:          ()                                        => getAll<Orden>("/ordenes/"),
   listarAbiertas:  ()                                        => getAll<Orden>("/ordenes/", { estado: "abierta" }),
+  // Admin: ?fecha=AAAA-MM-DD para ver otro día; el resto ve su día o turno.
+  listarDelDia:    (fecha?: string)                          => getAll<Orden>("/ordenes/", fecha ? { fecha } : {}),
+  obtener:         (ordenId: number)                         => api.get<Orden>(`/ordenes/${ordenId}/`),
+  // Varios ítems a una orden abierta: llegan a Cocina como una sola comanda.
+  ronda:           (ordenId: number, detalles: DetalleOrdenPayload[]) => api.post<Orden>(`/ordenes/${ordenId}/ronda/`, { detalles }),
   crear:           (payload: CrearOrdenPayload)              => api.post<Orden>("/ordenes/crear/", payload),
   agregarDetalle:  (ordenId: number, payload: DetalleOrdenPayload) => api.post<Orden>(`/ordenes/${ordenId}/detalles/`, payload),
   eliminarDetalle: (ordenId: number, detalleId: number)      => api.delete<Orden>(`/ordenes/${ordenId}/detalles/${detalleId}/`),

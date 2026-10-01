@@ -11,6 +11,7 @@ from django.utils import timezone
 from rest_framework.test import APIClient
 
 from memos_cafe.caja.models import Caja
+from memos_cafe.caja.models import SolicitudCobro
 from memos_cafe.caja.tests.factories import CajaFactory
 from memos_cafe.caja.tests.factories import MesaFactory
 from memos_cafe.mesas.models import Mesa
@@ -331,3 +332,67 @@ class TestApi:
         ]
         assert _cliente("cajero").get(url).status_code == HTTPStatus.OK
         assert _cliente("cocina").get(url).status_code == HTTPStatus.FORBIDDEN
+
+
+class TestRondaDelMesero:
+    def test_otro_mesero_suma_una_ronda_de_un_solo_aviso(
+        self,
+        enviados,
+        django_capture_on_commit_callbacks,
+    ):
+        orden = _orden(cantidad_items=1)  # la abrió otro usuario
+        mesero = _cliente("mesero")
+        items = [
+            {"producto": ProductoFactory().id, "cantidad": 2, "nota": "tibio"}
+            for _ in range(3)
+        ]
+
+        with django_capture_on_commit_callbacks(execute=True):
+            r = mesero.post(
+                f"/api/ordenes/{orden.id}/ronda/",
+                {"detalles": items},
+                format="json",
+            )
+
+        assert r.status_code == HTTPStatus.CREATED, r.data
+        segunda = orden.comandas.get(numero=2)
+        assert segunda.origen == Comanda.Origen.MESERO
+        assert segunda.detalles.count() == 3
+        assert [d["ronda"] for d in r.data["detalles"]] == [1, 2, 2, 2]
+        assert enviados == [(("cocina",), "pedido.nuevo")]
+
+    def test_ronda_vacia_no(self):
+        orden = _orden()
+        r = _cliente("mesero").post(
+            f"/api/ordenes/{orden.id}/ronda/",
+            {"detalles": []},
+            format="json",
+        )
+        assert r.status_code == HTTPStatus.BAD_REQUEST
+
+    def test_la_orden_dice_si_pidieron_la_cuenta(self):
+        orden = _orden()
+        SolicitudCobro.objects.create(orden=orden, metodo_pago_sugerido="yape")
+
+        (fila,) = (
+            _cliente("admin")
+            .get("/api/ordenes/", {"estado": "abierta"})
+            .data["results"]
+        )
+
+        assert fila["cuenta_pedida"]["metodo"] == "Yape"
+
+    def test_historial_de_otro_dia_para_el_admin(self):
+        orden = _orden()
+        ayer = timezone.now() - timedelta(days=1)
+        Orden.objects.filter(pk=orden.pk).update(fecha_creacion=ayer)
+        admin = _cliente("admin")
+
+        hoy = admin.get("/api/ordenes/").data["results"]
+        de_ayer = admin.get(
+            "/api/ordenes/",
+            {"fecha": timezone.localdate(ayer).isoformat()},
+        ).data["results"]
+
+        assert orden.id not in [o["id"] for o in hoy]
+        assert [o["id"] for o in de_ayer] == [orden.id]

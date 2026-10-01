@@ -152,7 +152,7 @@ export default function FichaMesa({ mesa, onCerrar, onCambio }: { mesa: MesaPlan
         {/* Acciones */}
         <div className="flex flex-col gap-2 pt-1">
           {s !== "por_confirmar" && (
-            <button type="button" className={ordenId ? secundario : primario} onClick={() => navigate(`/ordenes?mesa=${mesa.id}`)}>
+            <button type="button" className={ordenId ? secundario : primario} onClick={() => navigate(`/ordenes/nuevo?mesa=${mesa.id}`)}>
               <ClipboardPlus className="size-4.5" /> {ordenId ? "Agregar al pedido" : "Tomar pedido"}
             </button>
           )}

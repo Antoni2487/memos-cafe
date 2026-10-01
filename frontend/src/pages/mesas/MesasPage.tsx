@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { PencilRuler } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { CheckCircle2, PencilRuler } from "lucide-react";
 import { PageHeader, LoadingSpinner } from "../../components/common";
 import authService from "../../services/authService";
 import ListaMesas from "./ListaMesas";
@@ -17,6 +18,16 @@ export default function MesasPage() {
   const [vista, setVista] = useState<Vista>("salon");
   const esAdmin = authService.hasRole("admin");
   const salon = useSalon(vista !== "lista");
+  // Aviso al volver de "Tomar pedido" (pedido enviado a cocina).
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [aviso, setAviso] = useState<string | null>((location.state as { aviso?: string } | null)?.aviso ?? null);
+  useEffect(() => {
+    if (!aviso) return;
+    navigate(location.pathname, { replace: true, state: null });
+    const t = setTimeout(() => setAviso(null), 4000);
+    return () => clearTimeout(t);
+  }, [aviso, navigate, location.pathname]);
 
   return (
     <>
@@ -35,6 +46,12 @@ export default function MesasPage() {
           ) : undefined
         }
       />
+
+      {aviso && (
+        <p role="status" className="mb-4 flex items-center gap-2 rounded-xl bg-exito-fondo px-4 py-3 text-sm font-medium text-exito">
+          <CheckCircle2 className="size-4" /> {aviso}
+        </p>
+      )}
 
       {vista !== "editor" && (
         <div className="mb-4 inline-flex rounded-xl bg-arena p-1" role="tablist" aria-label="Mesas">

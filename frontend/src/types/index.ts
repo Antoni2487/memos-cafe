@@ -152,9 +152,12 @@ export interface DetalleOrden {
   producto?: ItemRef | null;
   promocion?: ItemRef | null;
   cantidad: number;
+  precio_unitario?: number | string;
   subtotal?: number | string;
   nota?: string;
   impreso?: boolean;
+  ronda?: number;
+  estado_preparacion?: EstadoPreparacion;
 }
 
 export interface PagoResumen {
@@ -182,7 +185,11 @@ export interface Orden {
   total: number | string;
   fecha_creacion: string;
   usuario_nombre?: string;
+  estado_display?: string;
+  fecha_cierre?: string | null;
   pagos_resumen?: PagoResumen[];
+  /** El cliente pidió la cuenta por QR (y cómo quiere pagar). */
+  cuenta_pedida?: { metodo: string; solicitado_en: string } | null;
 }
 
 export interface Insumo {

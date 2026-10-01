@@ -30,6 +30,8 @@ class DetalleOrdenReadSerializer(serializers.ModelSerializer):
             "subtotal",
             "nota",
             "impreso",
+            "ronda",
+            "estado_preparacion",
         ]
 
 
@@ -81,6 +83,8 @@ class OrdenReadSerializer(serializers.ModelSerializer):
         read_only=True,
     )
     pagos_resumen = serializers.SerializerMethodField()
+    # El cliente pidió la cuenta por QR (y cómo dijo que va a pagar).
+    cuenta_pedida = serializers.SerializerMethodField()
 
     class Meta:
         model = Orden
@@ -104,7 +108,21 @@ class OrdenReadSerializer(serializers.ModelSerializer):
             "plataforma_otra",
             "detalles",
             "pagos_resumen",
+            "cuenta_pedida",
         ]
+
+    def get_cuenta_pedida(self, obj):
+        # Sin el prefetch (p. ej. tras crear la orden) se consulta directo.
+        pendientes = getattr(obj, "cuentas_pendientes", None)
+        if pendientes is None:
+            pendientes = list(obj.solicitudes_cobro.filter(atendido_en__isnull=True))
+        if not pendientes:
+            return None
+        ultima = max(pendientes, key=lambda s: s.solicitado_en)
+        return {
+            "metodo": ultima.get_metodo_pago_sugerido_display(),
+            "solicitado_en": ultima.solicitado_en,
+        }
 
     def get_pagos_resumen(self, obj):
         # .all() + filtro en Python, NO .filter(): un QuerySet.filter()
@@ -124,6 +142,12 @@ class OrdenReadSerializer(serializers.ModelSerializer):
             for p in obj.pagos.all()
             if p.estado == "completado"
         ]
+
+
+class RondaSerializer(serializers.Serializer):
+    """Varios ítems que el mesero manda juntos a una orden abierta."""
+
+    detalles = DetalleOrdenWriteSerializer(many=True, allow_empty=False)
 
 
 class OrdenWriteSerializer(serializers.Serializer):

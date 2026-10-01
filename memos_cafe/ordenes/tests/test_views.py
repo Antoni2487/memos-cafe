@@ -198,13 +198,13 @@ class TestTableroCocina:
         detalle.refresh_from_db()
         assert detalle.estado_preparacion == "pendiente"
 
-    def test_mesero_no_ve_ordenes_ajenas_para_cambiar_estado(self, mesero_client):
-        """El mesero ahora puede llegar a este endpoint (para marcar sus
-        propios items como 'entregado'), pero su queryset lo sigue
-        limitando a sus propias órdenes del día — esta orden es de otro
-        mesero, así que ni siquiera la ve (404, no 403).
-        La restricción de qué TRANSICIÓN puede pedir sobre una orden
-        propia se cubre en TestMeseroMarcaEntregado."""
+    def test_mesero_no_hace_las_transiciones_de_cocina_en_ordenes_ajenas(
+        self,
+        mesero_client,
+    ):
+        """El mesero ve las órdenes abiertas de otros (para sumarles una
+        ronda o servir lo que está listo), pero igual no puede hacer las
+        transiciones de Cocina sobre ellas."""
         orden = self._crear_orden_con_item()
         detalle = orden.detalles.first()
 
@@ -214,7 +214,9 @@ class TestTableroCocina:
             format="json",
         )
 
-        assert r.status_code == 404
+        assert r.status_code == 403
+        detalle.refresh_from_db()
+        assert detalle.estado_preparacion == "pendiente"
 
 
 class TestMeseroMarcaEntregado:

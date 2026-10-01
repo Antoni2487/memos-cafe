@@ -35,7 +35,7 @@ const ITEMS: ItemNav[] = [
   // Cocina no tiene inicio: su pantalla principal es Cocina.
   { icon: House, label: "Inicio", path: "/home", grupo: "Operación", roles: [ROLES.CAJERO, ROLES.MESERO], modulo: null },
   { icon: Table2, label: "Mesas", path: "/mesas", grupo: "Operación", roles: null, modulo: "mesas" },
-  { icon: ClipboardList, label: "Órdenes", path: "/ordenes", grupo: "Operación", roles: null, modulo: "ordenes" },
+  { icon: ClipboardList, label: "Pedidos", path: "/ordenes", grupo: "Operación", roles: null, modulo: "ordenes" },
   { icon: ChefHat, label: "Cocina", path: "/cocina", grupo: "Operación", roles: null, modulo: "ordenes_cocina" },
   { icon: Receipt, label: "Caja", path: "/caja", grupo: "Operación", roles: [ROLES.ADMIN, ROLES.CAJERO], modulo: "caja" },
   { icon: Package, label: "Productos", path: "/productos", grupo: "Carta", roles: [ROLES.ADMIN], modulo: null },
@@ -84,8 +84,13 @@ export function pestanasMovil(visibles: ItemNav[]): { principales: ItemNav[]; re
 const TITULOS_EXTRA: Record<string, string> = {
   "/comanda": "Comanda",
 };
+// Subrutas con título propio (se buscan antes que la sección).
+const TITULOS_RUTA: Record<string, string> = {
+  "/ordenes/nuevo": "Tomar pedido",
+};
 
 export function tituloDeRuta(pathname: string): string {
+  if (TITULOS_RUTA[pathname]) return TITULOS_RUTA[pathname];
   const item = ITEMS.find((i) => pathname === i.path || pathname.startsWith(`${i.path}/`));
   if (item) return item.label;
   const extra = Object.keys(TITULOS_EXTRA).find((p) => pathname.startsWith(p));

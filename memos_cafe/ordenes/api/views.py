@@ -1,5 +1,7 @@
 from django.db.models import Prefetch
+from django.db.models import Q
 from django.utils import timezone
+from django.utils.dateparse import parse_date
 from rest_framework import mixins
 from rest_framework import status
 from rest_framework.decorators import action
@@ -13,6 +15,7 @@ from memos_cafe.ordenes.api.serializers import DetalleOrdenWriteSerializer
 from memos_cafe.ordenes.api.serializers import MarcarImpresoSerializer
 from memos_cafe.ordenes.api.serializers import OrdenReadSerializer
 from memos_cafe.ordenes.api.serializers import OrdenWriteSerializer
+from memos_cafe.ordenes.api.serializers import RondaSerializer
 from memos_cafe.ordenes.api.serializers import TicketCocinaSerializer
 from memos_cafe.ordenes.models import Comanda
 from memos_cafe.ordenes.models import DetalleOrden
@@ -56,10 +59,12 @@ class OrdenViewSet(
 
         # Mesero: todas sus propias órdenes del día (todos los estados)
         # Incluye cerradas/anuladas para contexto y trazabilidad
+        # y cualquier orden abierta: la mesa la pudo abrir otro mesero (o
+        # el cliente por QR) y él igual tiene que poder sumarle una ronda.
         if user.groups.filter(name="mesero").exists():
             return qs.filter(
-                usuario=user,
-                **entre_fechas("fecha_creacion", timezone.localdate()),
+                Q(usuario=user, **entre_fechas("fecha_creacion", timezone.localdate()))
+                | Q(estado=Orden.Estado.ABIERTA),
             )
 
         # Cajero: todas las órdenes del turno actual
@@ -75,14 +80,20 @@ class OrdenViewSet(
         if user.groups.filter(name="cocina").exists():
             return qs.filter(**entre_fechas("fecha_creacion", timezone.localdate()))
 
-        # Admin: todas las órdenes del día (todos los estados, todos los meseros)
-        return qs.filter(**entre_fechas("fecha_creacion", timezone.localdate()))
+        # Admin: todas las órdenes del día (todos los estados, todos los
+        # meseros), o las de otro día con ?fecha=AAAA-MM-DD (historial).
+        dia = (
+            parse_date(self.request.query_params.get("fecha") or "")
+            or timezone.localdate()
+        )
+        return qs.filter(**entre_fechas("fecha_creacion", dia))
 
     def get_permissions(self):
         if self.action in ["list", "retrieve"]:
             return [TodosAutenticados(), modulo_requerido("ordenes")()]
         if self.action in [
             "crear",
+            "ronda",
             "agregar_detalle",
             "eliminar_detalle",
             "marcar_impreso",
@@ -124,6 +135,24 @@ class OrdenViewSet(
             )
         except ValueError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(OrdenReadSerializer(orden).data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=["post"], url_path="ronda")
+    def ronda(self, request, pk=None):
+        """POST /api/ordenes/{id}/ronda/ — el mesero suma varios ítems a una
+        orden abierta: van juntos a Cocina como una comanda (un solo aviso)."""
+        orden = self.get_object()
+        serializer = RondaSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            DetalleOrdenService.agregar_ronda(
+                orden,
+                serializer.validated_data["detalles"],
+                origen=Comanda.Origen.MESERO,
+            )
+        except ValueError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        orden = self.get_queryset().get(pk=orden.pk)
         return Response(OrdenReadSerializer(orden).data, status=status.HTTP_201_CREATED)
 
     @action(

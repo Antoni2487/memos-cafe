@@ -11,6 +11,7 @@ import { PageHeader } from "../../components/common";
 import { esSoloAlfanumerico, validarDocumentoComprobante, LIMITES, MENSAJES } from "../../utils/validators";
 import { getErrorMessage } from "../../utils/errors";
 import type { Orden, Pago, TipoComprobante, TipoMovimiento } from "../../types";
+import { paraQuien } from "../ordenes/pedidos";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const fmt = (n: number | string | undefined | null) => `S/ ${Number(n ?? 0).toFixed(2)}`;
@@ -166,7 +167,6 @@ function Metrica({ label, valor, color, sub }: MetricaProps) {
 // ── Card orden por cobrar ─────────────────────────────────────────────────────
 function OrdenCard({ orden, onCobrar }: { orden: Orden; onCobrar: (orden: Orden) => void }) {
     const [abierto, setAbierto] = useState(false);
-    const tipo = TIPO_LABEL[orden.tipo_orden] ?? orden.tipo_orden;
 
     // Calcular pendiente (en caso de pagos parciales ya registrados)
     const pagado = (orden.pagos_resumen ?? [])
@@ -184,13 +184,17 @@ function OrdenCard({ orden, onCobrar }: { orden: Orden; onCobrar: (orden: Orden)
                 justifyContent: "space-between", alignItems: "center",
             }}>
                 <div>
-                    <p style={{ margin: 0, fontWeight: 700, fontSize: 14, color: C.verde }}>
-                        Orden #{orden.id}
+                    <p style={{ margin: 0, fontWeight: 700, fontSize: 15, color: "var(--espresso)" }}>
+                        {paraQuien(orden)}
                     </p>
                     <p style={{ margin: "3px 0 0", fontSize: 12, color: "var(--tenue)" }}>
-                        {tipo}{orden.mesa_numero ? ` · Mesa ${orden.mesa_numero}` : ""}
-                        {orden.cliente_nombre ? ` · ${orden.cliente_nombre}` : ""}
+                        Pedido #{orden.id}
                     </p>
+                    {orden.cuenta_pedida && (
+                        <span className="mt-1.5 inline-block rounded-full bg-champan px-2.5 py-0.5 text-[11px] font-bold text-marfil">
+                            PIDIÓ LA CUENTA · {orden.cuenta_pedida.metodo.toUpperCase()}
+                        </span>
+                    )}
                     <div style={{ display: "flex", gap: 12, marginTop: 4 }}>
                         <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: C.verde }}>
                             Total: {fmt(orden.total)}
@@ -908,7 +912,7 @@ export default function CajaPage() {
                 titulo="Caja"
                 descripcion={`Turno abierto por ${caja.usuario_nombre}`}
                 accion={
-                    <div style={{ display: "flex", gap: 8 }}>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                         <Btn color={C.gris} outline onClick={() => setModalMovimiento(true)}>
                             <Plus size={14} /> Movimiento
                         </Btn>
@@ -934,7 +938,7 @@ export default function CajaPage() {
             </div>
 
             {/* Layout 2 columnas */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 24 }}>
+            <div className="mb-6 grid gap-5 lg:grid-cols-2">
 
                 {/* Órdenes por cobrar */}
                 <div style={{
@@ -948,9 +952,12 @@ export default function CajaPage() {
                         <p style={{ color: "var(--tenue)", fontSize: 13 }}>No hay órdenes abiertas.</p>
                     ) : (
                         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                            {ordenesAbiertas.map((o) => (
-                                <OrdenCard key={o.id} orden={o} onCobrar={setOrdenCobrar} />
-                            ))}
+                            {[...ordenesAbiertas]
+                                .sort((a, b) => Number(!!b.cuenta_pedida) - Number(!!a.cuenta_pedida)
+                                    || a.fecha_creacion.localeCompare(b.fecha_creacion))
+                                .map((o) => (
+                                    <OrdenCard key={o.id} orden={o} onCobrar={setOrdenCobrar} />
+                                ))}
                         </div>
                     )}
                 </div>
