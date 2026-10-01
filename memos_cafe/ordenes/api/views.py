@@ -25,6 +25,7 @@ from memos_cafe.utils.permissions import EsAdmin
 from memos_cafe.utils.permissions import EsAdminCocinaOMesero
 from memos_cafe.utils.permissions import EsAdminOCocina
 from memos_cafe.utils.permissions import EsAdminOMesero
+from memos_cafe.utils.permissions import EsPersonalDeSala
 from memos_cafe.utils.permissions import TodosAutenticados
 from memos_cafe.utils.permissions import modulo_requerido
 
@@ -295,6 +296,8 @@ class ComandaViewSet(GenericViewSet):
     def get_permissions(self):
         if self.action == "entregar":
             return [EsAdminCocinaOMesero()]
+        if self.action == "de_orden":
+            return [EsPersonalDeSala()]
         return [EsAdminOCocina(), modulo_requerido("ordenes_cocina")()]
 
     def _responder(self, comanda):
@@ -311,6 +314,14 @@ class ComandaViewSet(GenericViewSet):
                 Comanda.Estado.LISTA,
             ],
         )
+        return Response(self.get_serializer(comandas, many=True).data)
+
+    @action(detail=False, methods=["get"], url_path=r"de-orden/(?P<orden_id>[0-9]+)")
+    def de_orden(self, request, orden_id=None):
+        """GET /api/ordenes/comandas/de-orden/{orden}/ — las rondas de una
+        orden con sus items y su estado, para la ficha de la mesa del
+        mesero (incluye las ya entregadas)."""
+        comandas = self.get_queryset().filter(orden_id=orden_id)
         return Response(self.get_serializer(comandas, many=True).data)
 
     def _transicion(self, funcion):

@@ -1,14 +1,19 @@
 import api, { getAll } from "./api";
-import type { EstadoMesa, Mesa, PedidoPorConfirmarQR } from "../types";
+import type { ElementoPlano, EstadoMesa, GeometriaPlano, Mesa, PedidoPorConfirmarQR, Plano } from "../types";
 
 export interface PedidoPorConfirmar extends PedidoPorConfirmarQR {
   mesa: number;
   mesa_numero: number;
 }
 
-export interface MesaFormData {
+export interface MesaFormData extends Partial<GeometriaPlano> {
   numero: number;
   capacidad: number;
+}
+
+export interface GuardarPlano {
+  mesas: (Partial<GeometriaPlano> & { id: number })[];
+  elementos: ElementoPlano[];
 }
 
 export interface AbrirSesionQRResponse {
@@ -29,6 +34,9 @@ const mesasService = {
   porConfirmar:  ()                                  => api.get<PedidoPorConfirmar[]>("/mesas/pedidos-por-confirmar/"),
   confirmarPedido: (id: number)                      => api.post<{ orden_id: number; mesa_numero: number }>(`/mesas/pedidos-por-confirmar/${id}/confirmar/`),
   rechazarPedido: (id: number)                       => api.post(`/mesas/pedidos-por-confirmar/${id}/rechazar/`),
+  // Croquis del salón: el mesero lo ve con lo que pasa en cada mesa, el admin lo edita
+  plano:         ()                                  => api.get<Plano>("/mesas/plano/"),
+  guardarPlano:  (data: GuardarPlano)                => api.put<Plano>("/mesas/plano/", data),
 };
 
 export default mesasService;

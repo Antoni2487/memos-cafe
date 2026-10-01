@@ -85,6 +85,61 @@ export interface Mesa {
   codigo_qr?: string;
 }
 
+// ── Croquis del salón (GET/PUT /api/mesas/plano/) ────────────────────────
+
+export type FormaPlano = "redonda" | "rectangular";
+
+/** Posición y forma en el lienzo del plano (unidades del plano, no px). */
+export interface GeometriaPlano {
+  plano_x: number | null;
+  plano_y: number | null;
+  plano_ancho: number;
+  plano_alto: number;
+  forma: FormaPlano;
+  rotacion: number;
+}
+
+/** Lo que pasa en una mesa con movimiento (PlanoService.resumen_sala). */
+export interface SalaMesa {
+  orden_id: number | null;
+  total: string | null;
+  abierta_en: string | null;
+  cliente_nombre: string;
+  mesero: string;
+  comandas: Record<"pendiente" | "en_preparacion" | "lista" | "entregada", number>;
+  comanda_esperando_desde: string | null;
+  pide_cuenta: boolean;
+  pedido_por_confirmar_id: number | null;
+}
+
+export interface MesaPlano extends GeometriaPlano {
+  id: number;
+  numero: number;
+  capacidad: number;
+  estado: EstadoMesa;
+  estado_display: string;
+  codigo_qr: string;
+  sala: SalaMesa | null;
+}
+
+export type TipoElementoPlano = "barra" | "pared" | "entrada" | "texto";
+
+export interface ElementoPlano extends GeometriaPlano {
+  id?: number | null;
+  tipo: TipoElementoPlano;
+  etiqueta: string;
+  plano_x: number;
+  plano_y: number;
+}
+
+export interface Plano {
+  ancho: number;
+  alto: number;
+  siguiente_numero: number;
+  mesas: MesaPlano[];
+  elementos: ElementoPlano[];
+}
+
 export interface ItemRef {
   id: number;
   nombre: string;

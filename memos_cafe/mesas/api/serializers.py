@@ -115,6 +115,7 @@ class MesaPlanoSerializer(serializers.ModelSerializer):
             "capacidad",
             "estado",
             "estado_display",
+            "codigo_qr",  # solo personal de sala: para mostrar el QR desde la ficha
             *CAMPOS_PLANO,
             "sala",
         ]

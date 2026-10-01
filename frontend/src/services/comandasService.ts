@@ -9,6 +9,8 @@ const comandasService = {
     api.post<ComandaCocina>(`/ordenes/comandas/${id}/items/${detalleId}/check/`, { listo }),
   lista: (id: number) => api.post<ComandaCocina>(`/ordenes/comandas/${id}/lista/`),
   entregar: (id: number) => api.post<ComandaCocina>(`/ordenes/comandas/${id}/entregar/`),
+  // Rondas de una orden (todas, también las entregadas): ficha de la mesa
+  deOrden: (ordenId: number) => api.get<ComandaCocina[]>(`/ordenes/comandas/de-orden/${ordenId}/`),
 };
 
 export default comandasService;

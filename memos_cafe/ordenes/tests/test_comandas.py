@@ -310,3 +310,24 @@ class TestApi:
         segundos = tarjeta["segundos"]
         assert 12 * 60 <= segundos["desde_creada"] < 12 * 60 + 5
         assert segundos["desde_lista"] is None
+
+    def test_rondas_de_una_orden_para_la_ficha_de_la_mesa(self):
+        orden = _orden(cantidad_items=1)
+        segunda = DetalleOrdenService.agregar_ronda(
+            orden,
+            [{"producto": ProductoFactory(), "cantidad": 2}],
+            origen=Comanda.Origen.QR,
+        )
+        ComandaService.marcar_lista(segunda)
+        ComandaService.entregar(segunda)
+        url = f"/api/ordenes/comandas/de-orden/{orden.id}/"
+
+        r = _cliente("mesero").get(url)
+
+        assert r.status_code == HTTPStatus.OK
+        assert [(c["numero"], c["estado"]) for c in r.data] == [
+            (1, "pendiente"),
+            (2, "entregada"),
+        ]
+        assert _cliente("cajero").get(url).status_code == HTTPStatus.OK
+        assert _cliente("cocina").get(url).status_code == HTTPStatus.FORBIDDEN
