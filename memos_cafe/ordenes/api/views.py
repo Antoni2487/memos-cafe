@@ -67,13 +67,18 @@ class OrdenViewSet(
                 | Q(estado=Orden.Estado.ABIERTA),
             )
 
+        # Una orden abierta se ve siempre, sea del día que sea: una mesa que
+        # sigue abierta pasada la medianoche, o que quedó de un turno
+        # anterior, igual hay que poder cobrarla o anularla.
+        abierta = Q(estado=Orden.Estado.ABIERTA)
+
         # Cajero: todas las órdenes del turno actual
         # Se delimita por fecha_apertura de la caja abierta (no por fecha del día)
         # Esto es correcto con 2 turnos/día: el cajero del turno 2 no ve el turno 1
         if user.groups.filter(name="cajero").exists():
             fecha_apertura = OrdenService.fecha_apertura_caja_actual()
             if fecha_apertura:
-                return qs.filter(fecha_creacion__gte=fecha_apertura)
+                return qs.filter(Q(fecha_creacion__gte=fecha_apertura) | abierta)
             return qs.none()  # sin turno activo: vista vacía
 
         # Cocina: todas las órdenes abiertas del día (para ver qué preparar)
@@ -81,12 +86,14 @@ class OrdenViewSet(
             return qs.filter(**entre_fechas("fecha_creacion", timezone.localdate()))
 
         # Admin: todas las órdenes del día (todos los estados, todos los
-        # meseros), o las de otro día con ?fecha=AAAA-MM-DD (historial).
-        dia = (
-            parse_date(self.request.query_params.get("fecha") or "")
-            or timezone.localdate()
+        # meseros) más las abiertas, o solo las de otro día con
+        # ?fecha=AAAA-MM-DD (historial).
+        dia = parse_date(self.request.query_params.get("fecha") or "")
+        if dia:
+            return qs.filter(**entre_fechas("fecha_creacion", dia))
+        return qs.filter(
+            Q(**entre_fechas("fecha_creacion", timezone.localdate())) | abierta,
         )
-        return qs.filter(**entre_fechas("fecha_creacion", dia))
 
     def get_permissions(self):
         if self.action in ["list", "retrieve"]:

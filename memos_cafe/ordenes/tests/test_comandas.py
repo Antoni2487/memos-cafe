@@ -385,7 +385,10 @@ class TestRondaDelMesero:
     def test_historial_de_otro_dia_para_el_admin(self):
         orden = _orden()
         ayer = timezone.now() - timedelta(days=1)
-        Orden.objects.filter(pk=orden.pk).update(fecha_creacion=ayer)
+        Orden.objects.filter(pk=orden.pk).update(
+            fecha_creacion=ayer,
+            estado=Orden.Estado.CERRADA,
+        )
         admin = _cliente("admin")
 
         hoy = admin.get("/api/ordenes/").data["results"]
@@ -396,3 +399,19 @@ class TestRondaDelMesero:
 
         assert orden.id not in [o["id"] for o in hoy]
         assert [o["id"] for o in de_ayer] == [orden.id]
+
+    def test_orden_abierta_de_otro_dia_sigue_visible_para_cobrarla(self):
+        """Una mesa abierta desde ayer: el admin y Caja la siguen viendo
+        (si no, la mesa queda ocupada sin forma de cobrarla ni anularla)."""
+        orden = _orden()
+        Orden.objects.filter(pk=orden.pk).update(
+            fecha_creacion=timezone.now() - timedelta(days=2),
+        )
+
+        for rol in ("admin", "cajero"):
+            abiertas = (
+                _cliente(rol)
+                .get("/api/ordenes/", {"estado": "abierta"})
+                .data["results"]
+            )
+            assert [o["id"] for o in abiertas] == [orden.id], rol

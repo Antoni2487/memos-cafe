@@ -31,8 +31,10 @@ def _crear(estado, hace=timedelta(0)):
 
 
 def test_admin_ve_solo_las_ordenes_de_hoy(admin_client):
+    """Las cerradas de otro día van al historial (?fecha=); las abiertas de
+    otro día sí se ven (ver test_comandas, para poder cobrarlas)."""
     hoy = _crear("abierta")
-    _crear("abierta", hace=timedelta(days=1))
+    _crear("cerrada", hace=timedelta(days=1))
 
     r = admin_client.get("/api/ordenes/")
 
