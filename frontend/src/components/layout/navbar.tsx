@@ -1,23 +1,18 @@
 import { useLocation } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
-import { Bell, ShoppingBag, Receipt, Check, Wallet } from "lucide-react";
+import { Bell, ShoppingBag, Receipt, Wallet } from "lucide-react";
 import authService from "../../services/authService";
 import { useReloj } from "../../hooks/useReloj";
 import useStaffSocket from "../../hooks/useStaffSocket";
 import api from "../../services/api";
-import ordenesService from "../../services/ordenesService";
-import comandasService from "../../services/comandasService";
 import { sonarAviso } from "../../utils/sonido";
 import type { Alerta } from "../../types";
 import { tituloDeRuta } from "./navegacion";
 import { Marca } from "./sidebar";
 
-// Alertas en vivo (plato listo / pidió la cuenta) además llevan un id
-// propio para poder quitarlas de la lista tras una acción, y opcionalmente
-// la referencia al ítem para que el mesero lo marque "entregado" desde acá.
+// Las alertas en vivo (pidió la cuenta) llevan un id propio para la lista.
 interface AlertaLocal extends Alerta {
   id?: string;
-  accion?: { ordenId: number; detalleId: number } | { comandaId: number };
 }
 
 const ICONO_CONFIG: Record<string, { color: string; bg: string }> = {
@@ -51,8 +46,7 @@ export default function Navbar() {
   const hora = ahora.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit", hour12: true });
 
   const [alertas, setAlertas] = useState<Alerta[]>([]);
-  const [alertasListo, setAlertasListo] = useState<AlertaLocal[]>([]);
-  const [entregando, setEntregando] = useState<string | null>(null);
+  const [alertasEnVivo, setAlertasEnVivo] = useState<AlertaLocal[]>([]);
   const [abierto, setAbierto] = useState(false);
   const [ultimaLectura, setUltimaLectura] = useState(
     () => localStorage.getItem("notif_ultima_lectura") ?? new Date().toISOString()
@@ -75,81 +69,31 @@ export default function Navbar() {
   }, [esAdmin]);
 
   // ── Avisos en vivo por ws/meseros/ ──────────────────────────────────────
-  // "plato listo": solo le importa al mesero (quien lo lleva a la mesa).
-  // "pidió la cuenta": le importa a mesero Y cajero — según el método de
+  // "Pidió la cuenta": le importa a mesero Y cajero — según el método de
   // pago, cobra el cajero en caja o el mesero le lleva el POS a la mesa.
-  // Al admin NO se le agregan acá: ya le llegan por el polling de
-  // /alertas/, sumarlos también duplicaría la notificación.
-  // Se guardan solo en memoria (no persisten, son avisos efímeros de turno).
+  // "Listo para servir" NO va acá: tiene su propia tarjeta con timbre
+  // arriba de la pantalla (ver ListosParaServir).
+  // Al admin no se le agregan: ya le llegan por el polling de /alertas/.
+  // Se guardan solo en memoria (avisos efímeros de turno).
   // Sin useCallback a propósito: useStaffSocket sincroniza esta función a
-  // un ref en su propio efecto, así que una referencia nueva en cada
-  // render (por leer esMesero/esCajero/esAdmin directo) es segura acá.
+  // un ref en su propio efecto.
   const manejarEventoEnVivo = (evento: Record<string, unknown>) => {
-    const mesa = evento.mesa_numero != null ? `Mesa ${evento.mesa_numero}` : "Para llevar";
-
-    // Cocina terminó una comanda (una ronda completa): el mesero la lleva.
-    if (evento.type === "comanda.actualizada" && evento.estado === "lista" && (esMesero || esAdmin)) {
-      const ronda = Number(evento.numero) > 1 ? ` · ronda ${evento.numero}` : "";
-      sonarAviso();
-      setAlertasListo((prev) => [
-        {
-          id: crypto.randomUUID(),
-          icono: "orden",
-          mensaje: `${mesa}${ronda} lista para servir`,
-          fecha: new Date().toISOString(),
-          accion: { comandaId: Number(evento.comanda_id) },
-        },
-        ...prev,
-      ].slice(0, 20));
-      return;
-    }
-
-    if (evento.type === "detalle.actualizado" && evento.estado_preparacion === "listo" && (esMesero || esAdmin)) {
-      setAlertasListo((prev) => [
-        {
-          id: crypto.randomUUID(),
-          icono: "orden",
-          mensaje: `${evento.nombre} listo — ${mesa}`,
-          fecha: new Date().toISOString(),
-          accion: {
-            ordenId: Number(evento.orden_id),
-            detalleId: Number(evento.detalle_id),
-          },
-        },
-        ...prev,
-      ].slice(0, 20));
-      return;
-    }
-
     if (evento.type === "solicitud_cobro.nueva" && (esMesero || esCajero)) {
       const metodo = String(evento.metodo_pago_sugerido ?? "");
-      const metodoLabel = metodo.charAt(0).toUpperCase() + metodo.slice(1);
-      setAlertasListo((prev) => [
-        { id: crypto.randomUUID(), icono: "caja", mensaje: `${mesa} pidió la cuenta — ${metodoLabel}`, fecha: new Date().toISOString() },
+      const metodoLabel = metodo ? metodo.charAt(0).toUpperCase() + metodo.slice(1) : "";
+      sonarAviso();
+      setAlertasEnVivo((prev) => [
+        {
+          id: crypto.randomUUID(),
+          icono: "caja",
+          mensaje: `Mesa ${evento.mesa_numero ?? "?"} pidió la cuenta${metodoLabel ? ` · quiere pagar con ${metodoLabel}` : ""}`,
+          fecha: new Date().toISOString(),
+        },
         ...prev,
       ].slice(0, 20));
     }
   };
 
-  // ── El mesero marca "entregado" directo desde la notificación ───────────
-  const marcarEntregado = async (alerta: AlertaLocal) => {
-    if (!alerta.accion || !alerta.id) return;
-    setEntregando(alerta.id);
-    try {
-      if ("comandaId" in alerta.accion) {
-        await comandasService.entregar(alerta.accion.comandaId);
-      } else {
-        await ordenesService.actualizarEstadoPreparacion(
-          alerta.accion.ordenId, alerta.accion.detalleId, "entregado"
-        );
-      }
-      setAlertasListo((prev) => prev.filter((a) => a.id !== alerta.id));
-    } catch {
-      // se queda en la lista — el mesero puede reintentar
-    } finally {
-      setEntregando(null);
-    }
-  };
   useStaffSocket("meseros", manejarEventoEnVivo, puedeVerCampana);
 
   // ── Cerrar al hacer clic fuera ────────────────────────────────────────────
@@ -169,9 +113,9 @@ export default function Navbar() {
     localStorage.setItem("notif_ultima_lectura", ts);
   };
 
-  // Fusiona el feed polleado (admin) con los avisos de "plato listo" en
-  // vivo (admin + mesero), más recientes primero.
-  const alertasCombinadas: AlertaLocal[] = [...alertasListo, ...alertas].sort(
+  // Fusiona el feed polleado (admin) con los avisos en vivo, más recientes
+  // primero.
+  const alertasCombinadas: AlertaLocal[] = [...alertasEnVivo, ...alertas].sort(
     (a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime()
   );
 
@@ -256,17 +200,6 @@ export default function Navbar() {
                             </p>
                             <p className="mt-0.5 text-xs text-suave">{formatHora(alerta.fecha)}</p>
                           </div>
-                          {alerta.accion && (esMesero || esAdmin) && (
-                            <button
-                              type="button"
-                              onClick={() => marcarEntregado(alerta)}
-                              disabled={entregando === alerta.id}
-                              className="flex shrink-0 items-center gap-1 rounded-lg border border-linea-fuerte bg-marfil px-2.5 h-8 text-xs font-semibold text-salvia-osc hover:bg-salvia-clara disabled:opacity-60"
-                            >
-                              <Check className="size-3.5" strokeWidth={2.5} />
-                              {entregando === alerta.id ? "…" : "Entregado"}
-                            </button>
-                          )}
                         </div>
                       );
                     })

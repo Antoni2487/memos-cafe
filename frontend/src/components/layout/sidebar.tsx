@@ -2,6 +2,7 @@ import { NavLink } from "react-router-dom";
 import { LogOut } from "lucide-react";
 import authService from "../../services/authService";
 import { GRUPOS, iniciales, itemsVisibles, nombreRol } from "./navegacion";
+import { useListosParaServir } from "../../hooks/listosParaServir";
 
 export function Marca({ compacta = false }: { compacta?: boolean }) {
   return (
@@ -30,6 +31,7 @@ export function Marca({ compacta = false }: { compacta?: boolean }) {
  */
 export default function Sidebar() {
   const user = authService.getUser();
+  const porServir = useListosParaServir().length;
   const visibles = itemsVisibles();
   const grupos = GRUPOS.map((grupo) => ({
     grupo,
@@ -71,8 +73,18 @@ export default function Sidebar() {
                   ].join(" ")
                 }
               >
-                <Icon className="size-4.5 shrink-0" strokeWidth={1.8} aria-hidden />
+                <span className="relative">
+                  <Icon className="size-4.5 shrink-0" strokeWidth={1.8} aria-hidden />
+                  {path === "/mesas" && porServir > 0 && (
+                    <span className="absolute -right-1.5 -top-1.5 size-2.5 rounded-full bg-peligro ring-2 ring-arena lg:hidden" aria-hidden />
+                  )}
+                </span>
                 <span className="hidden lg:inline truncate">{label}</span>
+                {path === "/mesas" && porServir > 0 && (
+                  <span className="ml-auto hidden h-5 min-w-5 place-items-center rounded-full bg-peligro px-1.5 text-[11px] font-bold text-marfil lg:grid">
+                    {porServir}
+                  </span>
+                )}
               </NavLink>
             ))}
           </div>

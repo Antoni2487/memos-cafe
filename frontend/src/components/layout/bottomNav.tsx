@@ -3,6 +3,7 @@ import { NavLink, useLocation } from "react-router-dom";
 import { LogOut, Menu, X } from "lucide-react";
 import authService from "../../services/authService";
 import { iniciales, itemsVisibles, nombreRol, pestanasMovil, type ItemNav } from "./navegacion";
+import { useListosParaServir } from "../../hooks/listosParaServir";
 
 /**
  * Barra de pestañas del celular, como en una app: los 4 accesos que el rol
@@ -48,22 +49,34 @@ export default function BottomNav() {
 }
 
 function Pestana({ item }: { item: ItemNav }) {
+  // En "Mesas": cuántos pedidos salieron de cocina y esperan que los lleven.
+  const porServir = useListosParaServir().length;
+  const contador = item.path === "/mesas" ? porServir : 0;
   return (
-    <NavLink to={item.path} className="block h-full">
-      {({ isActive }) => <Contenido icon={item.icon} label={item.label} activo={isActive} />}
+    <NavLink
+      to={item.path}
+      className="block h-full"
+      aria-label={contador ? `${item.label}, ${contador} por servir` : undefined}
+    >
+      {({ isActive }) => <Contenido icon={item.icon} label={item.label} activo={isActive} contador={contador} />}
     </NavLink>
   );
 }
 
-function Contenido({ icon: Icon, label, activo }: { icon: ItemNav["icon"]; label: string; activo: boolean }) {
+function Contenido({ icon: Icon, label, activo, contador = 0 }: { icon: ItemNav["icon"]; label: string; activo: boolean; contador?: number }) {
   return (
     <span className="flex h-full flex-col items-center justify-center gap-1">
       <span
-        className={`grid h-8 w-14 place-items-center rounded-full transition-colors ${
+        className={`relative grid h-8 w-14 place-items-center rounded-full transition-colors ${
           activo ? "bg-salvia-clara text-salvia-osc" : "text-suave"
         }`}
       >
         <Icon className="size-5.5" strokeWidth={activo ? 2.1 : 1.8} aria-hidden />
+        {contador > 0 && (
+          <span className="absolute -top-1 right-1.5 grid h-5 min-w-5 place-items-center rounded-full bg-peligro px-1 text-[11px] font-bold text-marfil ring-2 ring-marfil">
+            {contador}
+          </span>
+        )}
       </span>
       <span className={`text-[11px] leading-none ${activo ? "font-semibold text-salvia-osc" : "text-suave"}`}>
         {label}

@@ -185,13 +185,22 @@ def test_mesero_solo_recibe_alerta_cuando_el_item_pasa_a_listo():
 
         detalle = await asyncio.to_thread(_crear_detalle_pendiente)
 
-        # pendiente -> en_preparacion: no es "listo", el mesero no debe ver nada.
+        async def recibidos():
+            eventos = []
+            while not await communicator.receive_nothing(timeout=0.5):
+                eventos.append(await communicator.receive_json_from())
+            return eventos
+
+        # pendiente -> en_preparacion: solo el cambio de estado de la comanda
+        # (con eso se actualizan los avisos), ninguna alerta de "listo".
         await asyncio.to_thread(
             DetalleOrdenService.actualizar_estado_preparacion,
             detalle,
             DetalleOrden.EstadoPreparacion.EN_PREPARACION,
         )
-        assert await communicator.receive_nothing(timeout=0.5) is True
+        eventos = await recibidos()
+        assert {e["type"] for e in eventos} <= {"comanda.actualizada"}
+        assert all(e["estado"] != "lista" for e in eventos)
 
         # en_preparacion -> listo: ahora si.
         await asyncio.to_thread(
@@ -199,7 +208,8 @@ def test_mesero_solo_recibe_alerta_cuando_el_item_pasa_a_listo():
             detalle,
             DetalleOrden.EstadoPreparacion.LISTO,
         )
-        evento = await communicator.receive_json_from(timeout=2)
+        eventos = await recibidos()
+        evento = next(e for e in eventos if e["type"] == "detalle.actualizado")
         assert evento["estado_preparacion"] == "listo"
         assert evento["nombre"]
         assert evento["mesa_numero"] == detalle.orden.mesa.numero

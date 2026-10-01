@@ -429,6 +429,9 @@ class ComandaService:
     @transaction.atomic
     def entregar(comanda: Comanda) -> Comanda:
         comanda = ComandaService._bloquear(comanda)
+        if comanda.estado == Comanda.Estado.ENTREGADA:
+            # Dos meseros tocaron "Servido" a la vez: ya está, no es error.
+            return comanda
         if comanda.estado != Comanda.Estado.LISTA:
             msg = f"La comanda {comanda.numero} todavia no esta lista."
             raise ValueError(msg)
@@ -502,7 +505,9 @@ class ComandaService:
 
     @staticmethod
     def notificar_cambio(comanda: Comanda) -> None:
-        grupos = ["cocina"]
-        if comanda.estado == Comanda.Estado.LISTA:
-            grupos.append("meseros")
-        notificar(grupos, ComandaService._payload(comanda, "comanda.actualizada"))
+        # Los meseros reciben todos los cambios, no solo "lista": cuando
+        # uno la sirve (o Cocina la reabre) el aviso desaparece para todos.
+        notificar(
+            ["cocina", "meseros"],
+            ComandaService._payload(comanda, "comanda.actualizada"),
+        )

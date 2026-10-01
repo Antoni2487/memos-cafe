@@ -203,6 +203,28 @@ class TestCicloYTiempos:
             ITEM.ENTREGADO,
         }
 
+    def test_servir_avisa_a_los_meseros_para_quitar_el_aviso(
+        self,
+        enviados,
+        django_capture_on_commit_callbacks,
+    ):
+        comanda = ComandaService.marcar_lista(_orden().comandas.get())
+
+        with django_capture_on_commit_callbacks(execute=True):
+            ComandaService.entregar(comanda)
+
+        assert enviados == [(("cocina", "meseros"), "comanda.actualizada")]
+
+    def test_servir_dos_veces_no_es_error(self):
+        """Dos meseros tocan "Servido" a la vez."""
+        comanda = ComandaService.marcar_lista(_orden().comandas.get())
+        primera = ComandaService.entregar(comanda)
+
+        segunda = ComandaService.entregar(comanda)
+
+        assert segunda.estado == Comanda.Estado.ENTREGADA
+        assert segunda.entregada_en == primera.entregada_en
+
     def test_tiempos_de_espera_y_preparacion(self):
         comanda = _orden().comandas.get()
         comanda.iniciada_en = comanda.creada_en + timedelta(minutes=3)
@@ -415,3 +437,28 @@ class TestRondaDelMesero:
                 .data["results"]
             )
             assert [o["id"] for o in abiertas] == [orden.id], rol
+
+
+class TestListasParaServir:
+    """GET /api/ordenes/comandas/listas/ — avisos "listo para servir"."""
+
+    def test_solo_las_listas_sin_servir_la_que_espera_mas_primero(self):
+        reciente = _orden(cantidad_items=1).comandas.get()
+        antigua = _orden(cantidad_items=1).comandas.get()
+        servida = _orden(cantidad_items=1).comandas.get()
+        _orden(cantidad_items=1)  # todavía en cocina
+        ComandaService.marcar_lista(antigua)
+        ComandaService.marcar_lista(reciente)
+        ComandaService.entregar(ComandaService.marcar_lista(servida))
+
+        r = _cliente("mesero").get("/api/ordenes/comandas/listas/")
+
+        assert r.status_code == HTTPStatus.OK
+        assert [c["id"] for c in r.data] == [antigua.id, reciente.id]
+        assert r.data[0]["mesero_id"] == antigua.orden.usuario_id
+        assert r.data[0]["mesa_numero"] == antigua.orden.mesa.numero
+
+    def test_el_cajero_no_la_usa(self):
+        r = _cliente("cajero").get("/api/ordenes/comandas/listas/")
+
+        assert r.status_code == HTTPStatus.FORBIDDEN

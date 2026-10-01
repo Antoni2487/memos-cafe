@@ -332,6 +332,7 @@ class ComandaCocinaSerializer(serializers.ModelSerializer):
         read_only=True,
     )
     mesero = serializers.SerializerMethodField()
+    mesero_id = serializers.IntegerField(source="orden.usuario_id", read_only=True)
     detalles = DetalleCocinaSerializer(many=True, read_only=True)
 
     # Segundos transcurridos segun el reloj del servidor: la tablet de
@@ -370,6 +371,7 @@ class ComandaCocinaSerializer(serializers.ModelSerializer):
             "tipo_orden_display",
             "cliente_nombre",
             "mesero",
+            "mesero_id",
             "segundos",
             "detalles",
         ]

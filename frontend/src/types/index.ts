@@ -427,6 +427,7 @@ export interface ComandaCocina {
   tipo_orden_display: string;
   cliente_nombre: string;
   mesero: string;
+  mesero_id: number | null;
   /** Segundos transcurridos según el reloj del servidor al responder. */
   segundos: { desde_creada: number; desde_iniciada: number | null; desde_lista: number | null };
   detalles: DetalleCocina[];

@@ -4,6 +4,7 @@ import Sidebar from "./sidebar";
 import Navbar from "./navbar";
 import BottomNav from "./bottomNav";
 import PedidosPorConfirmar from "./PedidosPorConfirmar";
+import ListosParaServir from "./ListosParaServir";
 import useApiErrors from "../../hooks/useApiErrors";
 
 /**
@@ -21,6 +22,7 @@ export default function Layout() {
 
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <Navbar />
+        <ListosParaServir />
         <PedidosPorConfirmar />
 
         {error && (

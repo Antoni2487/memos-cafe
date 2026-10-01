@@ -309,6 +309,7 @@ class ComandaViewSet(GenericViewSet):
     POST /api/ordenes/comandas/{id}/items/{detalle}/check/     cocina
     POST /api/ordenes/comandas/{id}/lista/                     cocina
     POST /api/ordenes/comandas/{id}/entregar/                  cocina o mesero
+    GET  /api/ordenes/comandas/listas/                         sala: por servir
     """
 
     serializer_class = ComandaCocinaSerializer
@@ -330,7 +331,7 @@ class ComandaViewSet(GenericViewSet):
         )
 
     def get_permissions(self):
-        if self.action == "entregar":
+        if self.action in ["entregar", "listas"]:
             return [EsAdminCocinaOMesero()]
         if self.action == "de_orden":
             return [EsPersonalDeSala()]
@@ -349,6 +350,19 @@ class ComandaViewSet(GenericViewSet):
                 Comanda.Estado.EN_PREPARACION,
                 Comanda.Estado.LISTA,
             ],
+        )
+        return Response(self.get_serializer(comandas, many=True).data)
+
+    @action(detail=False, methods=["get"], url_path="listas")
+    def listas(self, request):
+        """GET /api/ordenes/comandas/listas/ — lo que Cocina ya terminó y
+        nadie llevó todavía, de la que lleva más tiempo esperando a la más
+        reciente. Es la lista de avisos "listo para servir" de los meseros:
+        sale del servidor para que no se pierda al recargar la página."""
+        comandas = (
+            self.get_queryset()
+            .filter(estado=Comanda.Estado.LISTA)
+            .order_by("lista_en", "creada_en")
         )
         return Response(self.get_serializer(comandas, many=True).data)
 
