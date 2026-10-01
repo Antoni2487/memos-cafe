@@ -180,3 +180,16 @@
     @apply font-sans;
   }
 }
+
+/* Notificaciones tipo celular (ver components/notificaciones): entran desde
+   arriba con un pequeño rebote, como los avisos del teléfono. */
+@keyframes notif-entrar {
+    from { opacity: 0; transform: translateY(-14px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.notif-entrar {
+    animation: notif-entrar 420ms cubic-bezier(0.2, 0.9, 0.3, 1.15) both;
+}
+@media (prefers-reduced-motion: reduce) {
+    .notif-entrar { animation: none; }
+}

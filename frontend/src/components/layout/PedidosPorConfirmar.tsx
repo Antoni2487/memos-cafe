@@ -1,19 +1,22 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Check, QrCode, X } from "lucide-react";
+import { QrCode } from "lucide-react";
 import mesasService, { type PedidoPorConfirmar } from "../../services/mesasService";
 import useStaffSocket from "../../hooks/useStaffSocket";
 import authService from "../../services/authService";
 import { sonarAviso } from "../../utils/sonido";
 import { getErrorMessage } from "../../utils/errors";
+import Notificacion from "../notificaciones/Notificacion";
+import PilaNotificaciones from "../notificaciones/PilaNotificaciones";
+import { haceCuanto, listaNatural } from "../notificaciones/texto";
 
 const POLL_MS = 20000; // respaldo si el tiempo real no está disponible
 
 const soles = (n: string | number) => `S/ ${Number(n).toFixed(2)}`;
 
 /**
- * Primer pedido por QR de una mesa libre: aparece arriba en cualquier
- * pantalla del personal de sala, con sonido, para confirmarlo con un toque
- * (hay gente sentada → pasa a cocina) o rechazarlo (mesa vacía).
+ * Primer pedido por QR de una mesa libre: llega como notificación arriba de
+ * cualquier pantalla del personal de sala, con sonido, para confirmarlo con
+ * un toque (hay gente sentada → pasa a cocina) o rechazarlo (mesa vacía).
  */
 export default function PedidosPorConfirmar() {
   const roles = authService.getUser().roles;
@@ -68,52 +71,34 @@ export default function PedidosPorConfirmar() {
   if (!habilitado || pedidos.length === 0) return null;
 
   return (
-    <section aria-label="Pedidos por confirmar" aria-live="polite" className="mx-4 mt-3 flex flex-col gap-2 md:mx-6 lg:mx-8">
-      {error && <p className="rounded-xl bg-peligro-fondo px-4 py-2 text-sm text-peligro">{error}</p>}
-      {pedidos.map((p) => {
-        const resumen = p.items.map((i) => `${i.cantidad} ${i.nombre}`).join(", ");
-        const minutos = Math.floor(p.segundos_esperando / 60);
-        return (
-          <div
+    <div aria-live="polite" className="mx-3 mt-3 flex max-w-xl flex-col gap-2 md:mx-6 lg:mx-8">
+      <PilaNotificaciones titulo="Pedidos por QR">
+        {pedidos.map((p) => (
+          <Notificacion
             key={p.id}
-            className="flex flex-col gap-3 rounded-2xl border border-aviso/30 bg-aviso-fondo p-3.5 shadow-suave sm:flex-row sm:items-center"
+            ariaLabel={`Mesa ${p.mesa_numero} pidió por QR`}
+            icono={<QrCode className="size-5" strokeWidth={1.9} />}
+            colorIcono="champan"
+            origen="Pedido por QR"
+            hora={haceCuanto(p.segundos_esperando)}
+            urgencia={p.segundos_esperando >= 120 ? "atencion" : "normal"}
+            titulo={`Mesa ${p.mesa_numero}`}
+            pie="¿Hay gente sentada? Confírmalo y pasa a cocina."
+            ocupada={ocupado === p.id}
+            acciones={[
+              { etiqueta: "Mesa vacía", cierra: true, onClick: () => resolver(p, false) },
+              { etiqueta: "Confirmar", primaria: true, cierra: true, onClick: () => resolver(p, true) },
+            ]}
           >
-            <div className="flex min-w-0 flex-1 items-start gap-3">
-              <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-marfil text-aviso">
-                <QrCode className="size-5" />
-              </span>
-              <div className="min-w-0">
-                <p className="font-semibold text-espresso">
-                  Mesa {p.mesa_numero} pidió por QR · {soles(p.total)}
-                </p>
-                <p className="truncate text-sm text-suave">
-                  {resumen}
-                  {minutos > 0 && ` · hace ${minutos} min`}
-                </p>
-                <p className="text-xs text-aviso">¿Hay gente en la mesa? Confírmalo para que pase a cocina.</p>
-              </div>
-            </div>
-            <div className="flex gap-2 sm:shrink-0">
-              <button
-                type="button"
-                onClick={() => resolver(p, false)}
-                disabled={ocupado === p.id}
-                className="flex h-11 flex-1 items-center justify-center gap-1.5 rounded-xl border border-linea-fuerte bg-marfil px-4 text-sm font-semibold text-espresso disabled:opacity-60 sm:flex-none"
-              >
-                <X className="size-4" /> Mesa vacía
-              </button>
-              <button
-                type="button"
-                onClick={() => resolver(p, true)}
-                disabled={ocupado === p.id}
-                className="flex h-11 flex-1 items-center justify-center gap-1.5 rounded-xl bg-salvia px-4 text-sm font-semibold text-marfil disabled:opacity-60 sm:flex-none"
-              >
-                <Check className="size-4" /> {ocupado === p.id ? "…" : "Confirmar"}
-              </button>
-            </div>
-          </div>
-        );
-      })}
-    </section>
+            Pidió {listaNatural(p.items.map((i) => `${i.cantidad} ${i.nombre}`))} · {soles(p.total)}
+          </Notificacion>
+        ))}
+      </PilaNotificaciones>
+      {error && (
+        <p role="alert" className="notif-entrar rounded-2xl bg-espresso px-4 py-3 text-sm font-medium text-marfil shadow-alta">
+          {error}
+        </p>
+      )}
+    </div>
   );
 }
