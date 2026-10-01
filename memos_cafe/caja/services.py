@@ -26,15 +26,19 @@ class CajaService:
     @transaction.atomic
     def abrir_sesion(usuario, monto_inicial: Decimal) -> Caja:
         if Caja.objects.get_sesion_abierta():
-            raise ValueError(
-                "Ya existe una sesion de caja abierta. Cierrela antes de abrir una nueva."
+            msg = (
+                "Ya existe una sesion de caja abierta. "
+                "Cierrela antes de abrir una nueva."
             )
+            raise ValueError(msg)
         try:
             caja = Caja.objects.create(usuario=usuario, monto_inicial=monto_inicial)
-        except IntegrityError:
-            raise ValueError(
-                "Ya existe una sesion de caja abierta. Cierrela antes de abrir una nueva."
+        except IntegrityError as e:
+            msg = (
+                "Ya existe una sesion de caja abierta. "
+                "Cierrela antes de abrir una nueva."
             )
+            raise ValueError(msg) from e
         logger.info(
             "Caja #%s ABIERTA | usuario=%s | monto_inicial=%s",
             caja.id,
@@ -50,13 +54,15 @@ class CajaService:
 
         ordenes_pendientes = Orden.objects.filter(estado=Orden.Estado.ABIERTA).count()
         if ordenes_pendientes > 0:
-            raise ValueError(
+            msg = (
                 f"Hay {ordenes_pendientes} orden(es) sin cobrar. "
-                f"Cobralas o anulalas antes de cerrar la caja.",
+                f"Cobralas o anulalas antes de cerrar la caja."
             )
+            raise ValueError(msg)
 
         total_ventas = Pago.objects.filter(
-            caja=caja, estado=Pago.Estado.COMPLETADO
+            caja=caja,
+            estado=Pago.Estado.COMPLETADO,
         ).aggregate(total=Sum("monto"))["total"] or Decimal("0")
         movimientos_neto = MovimientoCaja.objects.neto_por_caja(caja)
         esperado = caja.monto_inicial + total_ventas + movimientos_neto
@@ -66,10 +72,12 @@ class CajaService:
             abs(diferencia) > UMBRAL_DIFERENCIA_SIN_OBSERVACION
             and not observaciones.strip()
         ):
-            raise ValueError(
-                f"La diferencia de caja (S/.{diferencia:.2f}) supera el margen permitido "
-                f"(S/.{UMBRAL_DIFERENCIA_SIN_OBSERVACION}). Debes indicar una observacion.",
+            msg = (
+                f"La diferencia de caja (S/.{diferencia:.2f}) supera el margen "
+                f"permitido (S/.{UMBRAL_DIFERENCIA_SIN_OBSERVACION}). "
+                "Debes indicar una observacion."
             )
+            raise ValueError(msg)
 
         caja.cerrar(monto_final=monto_final, observaciones=observaciones)
         logger.info(
@@ -84,10 +92,14 @@ class CajaService:
     @staticmethod
     def registrar_movimiento(tipo: str, monto: Decimal, motivo: str) -> MovimientoCaja:
         if monto <= 0:
-            raise ValueError("El monto debe ser mayor a 0.")
+            msg = "El monto debe ser mayor a 0."
+            raise ValueError(msg)
         caja = Caja.objects.get_sesion_abierta_o_error()
         return MovimientoCaja.objects.create(
-            caja=caja, tipo=tipo, monto=monto, motivo=motivo
+            caja=caja,
+            tipo=tipo,
+            monto=monto,
+            motivo=motivo,
         )
 
 
@@ -98,30 +110,36 @@ class PagoService:
         orden: Orden,
         metodo_pago: str,
         monto: Decimal,
-        monto_recibido: Decimal = None,
+        monto_recibido: Decimal | None = None,
         numero_operacion: str = "",
     ) -> Pago:
 
         orden = Orden.objects.select_for_update().get(pk=orden.pk)
 
         if orden.estado != Orden.Estado.ABIERTA:
-            raise ValueError("Solo se pueden cobrar ordenes abiertas.")
+            msg = "Solo se pueden cobrar ordenes abiertas."
+            raise ValueError(msg)
 
         if monto <= 0:
-            raise ValueError("El monto del pago debe ser mayor a 0.")
+            msg = "El monto del pago debe ser mayor a 0."
+            raise ValueError(msg)
 
         pagado_previo = Pago.objects.filter(
-            orden=orden, estado=Pago.Estado.COMPLETADO
+            orden=orden,
+            estado=Pago.Estado.COMPLETADO,
         ).aggregate(total=Sum("monto"))["total"] or Decimal("0")
         pendiente = orden.total - pagado_previo
 
         if pendiente <= 0:
-            raise ValueError("Esta orden ya esta completamente pagada.")
+            msg = "Esta orden ya esta completamente pagada."
+            raise ValueError(msg)
 
         if monto > pendiente:
-            raise ValueError(
-                f"El monto ingresado (S/.{monto}) supera el pendiente (S/.{pendiente:.2f}).",
+            msg = (
+                f"El monto ingresado (S/.{monto}) supera el pendiente "
+                f"(S/.{pendiente:.2f})."
             )
+            raise ValueError(msg)
 
         vuelto = Decimal("0")
         es_ultimo_pago = monto == pendiente
@@ -129,15 +147,13 @@ class PagoService:
         if metodo_pago == Pago.MetodoPago.EFECTIVO and es_ultimo_pago:
             recibido = monto_recibido if monto_recibido is not None else monto
             if recibido < monto:
-                raise ValueError(
-                    f"Monto recibido insuficiente. Se deben cubrir S/.{monto:.2f}.",
-                )
+                msg = f"Monto recibido insuficiente. Se deben cubrir S/.{monto:.2f}."
+                raise ValueError(msg)
             vuelto = recibido - monto
         elif metodo_pago == Pago.MetodoPago.EFECTIVO and monto_recibido is not None:
             if monto_recibido < monto:
-                raise ValueError(
-                    f"Monto recibido insuficiente. Se deben cubrir S/.{monto:.2f}.",
-                )
+                msg = f"Monto recibido insuficiente. Se deben cubrir S/.{monto:.2f}."
+                raise ValueError(msg)
 
         caja = Caja.objects.get_sesion_abierta_o_error()
 
@@ -182,11 +198,13 @@ class PagoService:
         ordenes ya cerradas reaparezcan mezcladas en 'por cobrar' sin que
         nadie lo decida explicitamente."""
         if pago.estado == Pago.Estado.ANULADO:
-            raise ValueError("Este pago ya esta anulado.")
+            msg = "Este pago ya esta anulado."
+            raise ValueError(msg)
 
         orden = Orden.objects.select_for_update().get(pk=pago.orden_id)
         if orden.estado == Orden.Estado.ANULADA:
-            raise ValueError("La orden asociada a este pago ya esta anulada.")
+            msg = "La orden asociada a este pago ya esta anulada."
+            raise ValueError(msg)
 
         pago.anular()
 
@@ -218,7 +236,7 @@ class PagoService:
 
 class ComprobanteService:
     @staticmethod
-    def emitir(
+    def emitir(  # noqa: PLR0913
         pago: Pago,
         tipo: str,
         serie: str,
@@ -229,18 +247,20 @@ class ComprobanteService:
     ) -> Comprobante:
 
         if hasattr(pago, "comprobante"):
-            raise ValueError("Este pago ya tiene un comprobante emitido.")
+            msg = "Este pago ya tiene un comprobante emitido."
+            raise ValueError(msg)
 
         if tipo == Comprobante.TipoComprobante.FACTURA:
             if not cliente_nombre or not cliente_ruc_dni:
-                raise ValueError(
-                    "Para emitir una factura se requiere nombre y RUC del cliente."
-                )
+                msg = "Para emitir una factura se requiere nombre y RUC del cliente."
+                raise ValueError(msg)
             if not es_ruc_valido(cliente_ruc_dni):
-                raise ValueError("El RUC debe tener exactamente 11 dígitos numéricos.")
+                msg = "El RUC debe tener exactamente 11 dígitos numéricos."
+                raise ValueError(msg)
         elif tipo == Comprobante.TipoComprobante.BOLETA:
             if cliente_ruc_dni and not es_dni_valido(cliente_ruc_dni):
-                raise ValueError("El DNI debe tener exactamente 8 dígitos numéricos.")
+                msg = "El DNI debe tener exactamente 8 dígitos numéricos."
+                raise ValueError(msg)
 
         comprobante = Comprobante.objects.create(
             pago=pago,

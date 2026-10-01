@@ -277,14 +277,18 @@ class TestPagoService:
         SolicitudCobro.objects.create(orden=orden, metodo_pago_sugerido="yape")
 
         PagoService.procesar_pago(
-            orden=orden, metodo_pago="yape", monto=Decimal("10.00")
+            orden=orden,
+            metodo_pago="yape",
+            monto=Decimal("10.00"),
         )
         assert (
             SolicitudCobro.objects.get(orden=orden).atendido_en is None
         )  # falta pagar
 
         PagoService.procesar_pago(
-            orden=orden, metodo_pago="yape", monto=Decimal("20.00")
+            orden=orden,
+            metodo_pago="yape",
+            monto=Decimal("20.00"),
         )
         assert SolicitudCobro.objects.get(orden=orden).atendido_en is not None
 

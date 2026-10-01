@@ -9,6 +9,7 @@ from django.utils import timezone
 # Las vistas de mesas/api/ nunca importan estos modulos directo (ver
 # .importlinter, contrato "vistas-no-cruzan-apps-de-negocio"): siempre
 # pasan por SesionMesaService, que es quien conoce el cruce.
+from memos_cafe.caja.models import Pago
 from memos_cafe.caja.models import SolicitudCobro
 from memos_cafe.mesas.models import ElementoPlano
 from memos_cafe.mesas.models import Mesa
@@ -515,7 +516,7 @@ class PlanoService:
             orden_id__in=por_orden,
             atendido_en__isnull=True,
         ).values_list("orden_id", "metodo_pago_sugerido")
-        metodos = dict(SolicitudCobro._meta.get_field("metodo_pago_sugerido").choices)
+        metodos = dict(Pago.MetodoPago.choices)
         for orden_id, metodo in cuentas:
             por_orden[orden_id]["pide_cuenta"] = True
             por_orden[orden_id]["metodo_cuenta"] = metodos.get(metodo, metodo)
