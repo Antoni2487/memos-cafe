@@ -1,4 +1,5 @@
 import { useState, useMemo, type CSSProperties, type ReactNode } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
     DollarSign, Plus, X, CreditCard, Banknote, Smartphone,
     FileText, Ban, ChevronDown, ChevronUp, Receipt,
@@ -749,6 +750,16 @@ export default function CajaPage() {
     const [modalCerrar, setModalCerrar] = useState(false);
     const [modalMovimiento, setModalMovimiento] = useState(false);
     const [ordenCobrar, setOrdenCobrar] = useState<Orden | null>(null);
+    // Desde el salón ("Cobrar" en la ficha de una mesa) llega ?orden=<id>:
+    // se abre directo el cobro de esa orden.
+    const [params, setParams] = useSearchParams();
+    const ordenPedida = Number(params.get("orden")) || null;
+    const ordenDesdeSalon = caja && ordenPedida ? ordenesAbiertas.find((o) => o.id === ordenPedida) ?? null : null;
+    const ordenActiva = ordenCobrar ?? ordenDesdeSalon;
+    const cerrarCobro = () => {
+        setOrdenCobrar(null);
+        if (ordenPedida) setParams({}, { replace: true });
+    };
     const [pagoComprobante, setPagoComprobante] = useState<Pago | null>(null);
     const [pagoAnular, setPagoAnular] = useState<Pago | null>(null);
 
@@ -859,7 +870,9 @@ export default function CajaPage() {
                     borderRadius: 12, padding: 16, marginBottom: 24
                 }}>
                     <p style={{ margin: 0, fontWeight: 700, color: C.amarillo, fontSize: 13 }}>
-                        ⚠ Hay {ordenesAbiertas.length} orden(es) abiertas — abre un turno para cobrar.
+                        {ordenPedida
+                            ? "Para cobrar esta mesa primero hay que abrir el turno de caja."
+                            : `Hay ${ordenesAbiertas.length} orden(es) abiertas: abre un turno para cobrar.`}
                     </p>
                 </div>
             )}
@@ -1041,10 +1054,10 @@ export default function CajaPage() {
             </div>
 
             {/* ── Modales ── */}
-            {ordenCobrar && (
+            {ordenActiva && (
                 <ModalCobrar
-                    orden={ordenCobrar}
-                    onCerrar={() => setOrdenCobrar(null)}
+                    orden={ordenActiva}
+                    onCerrar={cerrarCobro}
                     onPagado={recargar}
                 />
             )}

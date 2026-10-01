@@ -514,9 +514,11 @@ class PlanoService:
         cuentas = SolicitudCobro.objects.filter(
             orden_id__in=por_orden,
             atendido_en__isnull=True,
-        ).values_list("orden_id", flat=True)
-        for orden_id in cuentas:
+        ).values_list("orden_id", "metodo_pago_sugerido")
+        metodos = dict(SolicitudCobro._meta.get_field("metodo_pago_sugerido").choices)
+        for orden_id, metodo in cuentas:
             por_orden[orden_id]["pide_cuenta"] = True
+            por_orden[orden_id]["metodo_cuenta"] = metodos.get(metodo, metodo)
 
         for pedido in SesionMesaService.pendientes():
             resumen.setdefault(pedido.mesa_id, _resumen_vacio())
@@ -534,6 +536,7 @@ def _resumen_vacio() -> dict:
         "comandas": dict.fromkeys(Comanda.Estado.values, 0),
         "comanda_esperando_desde": None,
         "pide_cuenta": False,
+        "metodo_cuenta": None,
         "pedido_por_confirmar_id": None,
     }
 

@@ -1174,6 +1174,7 @@ class AlertasView(APIView):
         # ── Solicitudes de cobro (cliente pidio la cuenta por QR) ──────────
         solicitudes = SolicitudCobro.objects.filter(
             solicitado_en__gte=desde,
+            atendido_en__isnull=True,
         ).select_related("orden", "orden__mesa")
 
         for s in solicitudes:

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Check, ClipboardPlus, QrCode, Receipt, X } from "lucide-react";
+import { Check, ClipboardPlus, QrCode, Receipt, Users, X } from "lucide-react";
 import { DetailModal } from "../../../components/common";
 import MesaQRCodigo from "../../../components/mesas/MesaQRCodigo";
 import mesasService, { type PedidoPorConfirmar } from "../../../services/mesasService";
@@ -73,7 +73,7 @@ export default function FichaMesa({ mesa, onCerrar, onCambio }: { mesa: MesaPlan
       <DetailModal abierto titulo={`Mesa ${mesa.numero}`} onCerrar={onCerrar} maxWidth="520px">
         <div className="-mt-1 flex flex-wrap items-center gap-2 text-sm text-suave">
           <span className="rounded-full bg-arena px-2.5 py-1 font-medium text-espresso">{ETIQUETA[s]}</span>
-          <span>{mesa.capacidad} personas</span>
+          <span className="flex items-center gap-1"><Users className="size-3.5" /> Mesa para {mesa.capacidad}</span>
           {sala?.orden_id && <span>· abierta hace {duracion(sala.abierta_en, ahora)}</span>}
           {sala?.mesero && <span>· {sala.mesero}</span>}
         </div>
@@ -142,8 +142,8 @@ export default function FichaMesa({ mesa, onCerrar, onCambio }: { mesa: MesaPlan
               <span className="font-display text-2xl font-semibold text-espresso tabular-nums">{soles(sala?.total ?? 0)}</span>
             </div>
             {sala?.pide_cuenta && (
-              <p className="flex items-center gap-2 rounded-xl bg-champan-claro px-3.5 py-2.5 text-sm font-medium text-champan">
-                <Receipt className="size-4" /> Pidieron la cuenta
+              <p className="rounded-xl bg-champan-claro px-3.5 py-2.5 text-sm font-semibold text-champan">
+                El cliente pidió la cuenta{sala.metodo_cuenta ? ` · quiere pagar con ${sala.metodo_cuenta}` : ""}
               </p>
             )}
           </section>
@@ -158,7 +158,7 @@ export default function FichaMesa({ mesa, onCerrar, onCambio }: { mesa: MesaPlan
           )}
           {ordenId && puedeCobrar && (
             <button type="button" className={sala?.pide_cuenta ? primario : secundario} onClick={() => navigate(`/caja?orden=${ordenId}`)}>
-              <Receipt className="size-4.5" /> Cobrar
+              <Receipt className="size-4.5" /> Cobrar {soles(sala?.total ?? 0)}
             </button>
           )}
           <div className="grid auto-cols-fr grid-flow-col gap-2">

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { BellRing, Clock, LayoutGrid, List, QrCode, Receipt, Users } from "lucide-react";
+import { LayoutGrid, List, Users } from "lucide-react";
 import { useReloj } from "../../../hooks/useReloj";
 import { Lienzo, Elemento } from "./Lienzo";
 import { estiloPieza, letra } from "./geometria";
@@ -105,22 +105,24 @@ export default function SalonVista({ plano, onCambio }: { plano: Plano; onCambio
   );
 }
 
+// Aviso en palabras (no un ícono suelto): se entiende de un vistazo.
+const AVISO: Partial<Record<Situacion, { texto: string; clase: string }>> = {
+  por_confirmar: { texto: "QR", clase: "bg-aviso text-marfil" },
+  lista: { texto: "LISTO", clase: "bg-exito text-marfil" },
+  cuenta: { texto: "POR COBRAR", clase: "bg-champan text-marfil" },
+  demorada: { texto: "DEMORA", clase: "bg-peligro text-marfil" },
+};
+
 function Insignia({ s }: { s: Situacion }) {
-  const conf = {
-    por_confirmar: { Icono: QrCode, clase: "bg-aviso text-marfil" },
-    lista: { Icono: BellRing, clase: "bg-exito text-marfil animate-bounce" },
-    cuenta: { Icono: Receipt, clase: "bg-champan text-marfil" },
-    demorada: { Icono: Clock, clase: "bg-peligro text-marfil" },
-  }[s as "por_confirmar" | "lista" | "cuenta" | "demorada"];
-  if (!conf) return null;
-  const { Icono, clase } = conf;
+  const aviso = AVISO[s];
+  if (!aviso) return null;
   return (
     <span
-      className={`absolute -right-[12%] -top-[12%] grid place-items-center rounded-full shadow-suave ring-2 ring-marfil ${clase}`}
-      style={{ width: letra(34, 18), height: letra(34, 18) }}
+      className={`absolute left-1/2 top-0 -translate-x-1/2 -translate-y-[85%] whitespace-nowrap rounded-full px-[0.7em] py-[0.3em] font-bold tracking-wide shadow-suave ring-2 ring-marfil ${aviso.clase}`}
+      style={{ fontSize: letra(11, 9) }}
       aria-hidden
     >
-      <Icono style={{ width: "55%", height: "55%" }} />
+      {aviso.texto}
     </span>
   );
 }
@@ -154,7 +156,7 @@ function MesaEnPlano({ mesa: m, plano, ahora, onAbrir }: { mesa: MesaPlano; plan
           </span>
         ) : (
           <span className="mt-[6%] hidden items-center gap-[0.3em] opacity-70 @2xl:flex" style={{ fontSize: letra(11, 8) }}>
-            <Users style={{ width: "1em", height: "1em" }} />{m.capacidad}
+            <Users style={{ width: "1em", height: "1em" }} aria-label="capacidad" />{m.capacidad}
           </span>
         )}
       </span>
@@ -176,7 +178,7 @@ function MesaEnLista({ mesa: m, ahora, onAbrir }: { mesa: MesaPlano; ahora: numb
         <span className="block truncate text-sm text-suave">
           {sala?.orden_id
             ? `${soles(sala.total)} · ${duracion(sala.abierta_en, ahora)}${sala.mesero ? ` · ${sala.mesero}` : ""}`
-            : `${m.capacidad} personas`}
+            : `Mesa para ${m.capacidad}`}
         </span>
       </span>
       <span className={`size-3 shrink-0 rounded-full ${PUNTO[s]}`} aria-hidden />

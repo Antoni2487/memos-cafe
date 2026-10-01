@@ -236,6 +236,12 @@ class TestAgregarYQuitarMesas:
         assert mesa.plano_x == 40
 
 
+def test_capacidad_razonable():
+    admin, _ = _cliente("admin")
+    r = admin.post("/api/mesas/", {"numero": 30, "capacidad": 55}, format="json")
+    assert r.status_code == HTTPStatus.BAD_REQUEST
+
+
 class TestVistaDelMesero:
     @pytest.fixture(autouse=True)
     def _caja(self):
@@ -274,6 +280,7 @@ class TestVistaDelMesero:
         assert sala["comandas"][Comanda.Estado.LISTA] == 1
         assert sala["comanda_esperando_desde"] is not None
         assert sala["pide_cuenta"] is True
+        assert sala["metodo_cuenta"] == "Efectivo"
 
     def test_primer_pedido_qr_esperando(self):
         mesa = MesaFactory(numero=9, estado=Mesa.Estado.LIBRE)

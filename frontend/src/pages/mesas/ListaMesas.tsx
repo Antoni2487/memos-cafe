@@ -8,7 +8,7 @@ import authService from "../../services/authService";
 import { urlPedidoQR } from "../../services/pedidoQRService";
 import { getErrorMessage } from "../../utils/errors";
 import {
-  DataTable,
+  DataTable, StatusBadge,
   SearchBar, ConfirmDialog, DetailModal,
 } from "../../components/common";
 import type { Columna, EstadoMesa, Mesa } from "../../types";
@@ -162,6 +162,14 @@ export default function ListaMesas() {
       width: "160px",
       render: (m) => {
         const cfg = ESTADO_COLOR[m.estado] || ESTADO_COLOR.libre;
+        // Ocupada no se elige a mano: la ocupa un pedido y la libera el cobro.
+        if (m.estado === "ocupada") {
+          return (
+            <span title="Se libera sola al cobrar o anular su pedido">
+              <StatusBadge estado="ocupada" />
+            </span>
+          );
+        }
         return (
           <select
             value={m.estado}

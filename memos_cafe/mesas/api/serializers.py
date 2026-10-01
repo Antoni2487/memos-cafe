@@ -31,6 +31,7 @@ class MesaSerializer(serializers.ModelSerializer):
     # unicidad la valida MesaService.crear, que ademas reactiva una mesa
     # dada de baja con ese mismo numero.
     numero = serializers.IntegerField(min_value=1, max_value=32767)
+    capacidad = serializers.IntegerField(min_value=1, max_value=30)
     estado_display = serializers.CharField(
         source="get_estado_display",
         read_only=True,
@@ -100,6 +101,7 @@ class ResumenMesaSerializer(serializers.Serializer):
     comandas = serializers.DictField(child=serializers.IntegerField())
     comanda_esperando_desde = serializers.DateTimeField(allow_null=True)
     pide_cuenta = serializers.BooleanField()
+    metodo_cuenta = serializers.CharField(allow_null=True)
     pedido_por_confirmar_id = serializers.IntegerField(allow_null=True)
 
 

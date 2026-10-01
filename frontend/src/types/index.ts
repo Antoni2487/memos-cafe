@@ -109,6 +109,8 @@ export interface SalaMesa {
   comandas: Record<"pendiente" | "en_preparacion" | "lista" | "entregada", number>;
   comanda_esperando_desde: string | null;
   pide_cuenta: boolean;
+  /** Cómo dijo el cliente que va a pagar al pedir la cuenta por QR. */
+  metodo_cuenta: string | null;
   pedido_por_confirmar_id: number | null;
 }
 

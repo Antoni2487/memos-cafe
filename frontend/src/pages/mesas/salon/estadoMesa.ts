@@ -25,7 +25,7 @@ export function situacion(m: MesaPlano, ahora: number): Situacion {
 export const ETIQUETA: Record<Situacion, string> = {
   por_confirmar: "Pidió por QR",
   lista: "Pedido listo",
-  cuenta: "Pidió la cuenta",
+  cuenta: "Por cobrar",
   demorada: "Demorada",
   ocupada: "Ocupada",
   reservada: "Reservada",

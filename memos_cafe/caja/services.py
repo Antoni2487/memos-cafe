@@ -1,12 +1,20 @@
-﻿import logging
+import logging
 from decimal import Decimal
 
-from django.db import IntegrityError, transaction
+from django.db import IntegrityError
+from django.db import transaction
 from django.db.models import Sum
+from django.utils import timezone
 
-from memos_cafe.caja.models import Caja, Comprobante, MovimientoCaja, NotaCredito, Pago
+from memos_cafe.caja.models import Caja
+from memos_cafe.caja.models import Comprobante
+from memos_cafe.caja.models import MovimientoCaja
+from memos_cafe.caja.models import NotaCredito
+from memos_cafe.caja.models import Pago
+from memos_cafe.caja.models import SolicitudCobro
 from memos_cafe.ordenes.models import Orden
-from memos_cafe.utils.validators import es_dni_valido, es_ruc_valido
+from memos_cafe.utils.validators import es_dni_valido
+from memos_cafe.utils.validators import es_ruc_valido
 
 logger = logging.getLogger("memos_cafe.caja")
 
@@ -14,19 +22,24 @@ UMBRAL_DIFERENCIA_SIN_OBSERVACION = Decimal("5.00")
 
 
 class CajaService:
-
     @staticmethod
     @transaction.atomic
     def abrir_sesion(usuario, monto_inicial: Decimal) -> Caja:
         if Caja.objects.get_sesion_abierta():
-            raise ValueError("Ya existe una sesion de caja abierta. Cierrela antes de abrir una nueva.")
+            raise ValueError(
+                "Ya existe una sesion de caja abierta. Cierrela antes de abrir una nueva."
+            )
         try:
             caja = Caja.objects.create(usuario=usuario, monto_inicial=monto_inicial)
         except IntegrityError:
-            raise ValueError("Ya existe una sesion de caja abierta. Cierrela antes de abrir una nueva.")
+            raise ValueError(
+                "Ya existe una sesion de caja abierta. Cierrela antes de abrir una nueva."
+            )
         logger.info(
             "Caja #%s ABIERTA | usuario=%s | monto_inicial=%s",
-            caja.id, usuario, monto_inicial,
+            caja.id,
+            usuario,
+            monto_inicial,
         )
         return caja
 
@@ -39,28 +52,32 @@ class CajaService:
         if ordenes_pendientes > 0:
             raise ValueError(
                 f"Hay {ordenes_pendientes} orden(es) sin cobrar. "
-                f"Cobralas o anulalas antes de cerrar la caja."
+                f"Cobralas o anulalas antes de cerrar la caja.",
             )
 
-        total_ventas = (
-            Pago.objects
-            .filter(caja=caja, estado=Pago.Estado.COMPLETADO)
-            .aggregate(total=Sum("monto"))["total"] or Decimal("0")
-        )
+        total_ventas = Pago.objects.filter(
+            caja=caja, estado=Pago.Estado.COMPLETADO
+        ).aggregate(total=Sum("monto"))["total"] or Decimal("0")
         movimientos_neto = MovimientoCaja.objects.neto_por_caja(caja)
         esperado = caja.monto_inicial + total_ventas + movimientos_neto
         diferencia = Decimal(monto_final) - esperado
 
-        if abs(diferencia) > UMBRAL_DIFERENCIA_SIN_OBSERVACION and not observaciones.strip():
+        if (
+            abs(diferencia) > UMBRAL_DIFERENCIA_SIN_OBSERVACION
+            and not observaciones.strip()
+        ):
             raise ValueError(
                 f"La diferencia de caja (S/.{diferencia:.2f}) supera el margen permitido "
-                f"(S/.{UMBRAL_DIFERENCIA_SIN_OBSERVACION}). Debes indicar una observacion."
+                f"(S/.{UMBRAL_DIFERENCIA_SIN_OBSERVACION}). Debes indicar una observacion.",
             )
 
         caja.cerrar(monto_final=monto_final, observaciones=observaciones)
         logger.info(
             "Caja #%s CERRADA | monto_final=%s | esperado=%s | diferencia=%s",
-            caja.id, monto_final, esperado, diferencia,
+            caja.id,
+            monto_final,
+            esperado,
+            diferencia,
         )
         return caja
 
@@ -69,11 +86,12 @@ class CajaService:
         if monto <= 0:
             raise ValueError("El monto debe ser mayor a 0.")
         caja = Caja.objects.get_sesion_abierta_o_error()
-        return MovimientoCaja.objects.create(caja=caja, tipo=tipo, monto=monto, motivo=motivo)
+        return MovimientoCaja.objects.create(
+            caja=caja, tipo=tipo, monto=monto, motivo=motivo
+        )
 
 
 class PagoService:
-
     @staticmethod
     @transaction.atomic
     def procesar_pago(
@@ -92,11 +110,9 @@ class PagoService:
         if monto <= 0:
             raise ValueError("El monto del pago debe ser mayor a 0.")
 
-        pagado_previo = (
-            Pago.objects
-            .filter(orden=orden, estado=Pago.Estado.COMPLETADO)
-            .aggregate(total=Sum("monto"))["total"] or Decimal("0")
-        )
+        pagado_previo = Pago.objects.filter(
+            orden=orden, estado=Pago.Estado.COMPLETADO
+        ).aggregate(total=Sum("monto"))["total"] or Decimal("0")
         pendiente = orden.total - pagado_previo
 
         if pendiente <= 0:
@@ -104,7 +120,7 @@ class PagoService:
 
         if monto > pendiente:
             raise ValueError(
-                f"El monto ingresado (S/.{monto}) supera el pendiente (S/.{pendiente:.2f})."
+                f"El monto ingresado (S/.{monto}) supera el pendiente (S/.{pendiente:.2f}).",
             )
 
         vuelto = Decimal("0")
@@ -114,13 +130,13 @@ class PagoService:
             recibido = monto_recibido if monto_recibido is not None else monto
             if recibido < monto:
                 raise ValueError(
-                    f"Monto recibido insuficiente. Se deben cubrir S/.{monto:.2f}."
+                    f"Monto recibido insuficiente. Se deben cubrir S/.{monto:.2f}.",
                 )
             vuelto = recibido - monto
         elif metodo_pago == Pago.MetodoPago.EFECTIVO and monto_recibido is not None:
             if monto_recibido < monto:
                 raise ValueError(
-                    f"Monto recibido insuficiente. Se deben cubrir S/.{monto:.2f}."
+                    f"Monto recibido insuficiente. Se deben cubrir S/.{monto:.2f}.",
                 )
 
         caja = Caja.objects.get_sesion_abierta_o_error()
@@ -130,18 +146,30 @@ class PagoService:
             caja=caja,
             metodo_pago=metodo_pago,
             monto=monto,
-            monto_recibido=monto_recibido if metodo_pago == Pago.MetodoPago.EFECTIVO else None,
+            monto_recibido=monto_recibido
+            if metodo_pago == Pago.MetodoPago.EFECTIVO
+            else None,
             vuelto=vuelto,
-            numero_operacion=numero_operacion if metodo_pago == Pago.MetodoPago.TARJETA else "",
+            numero_operacion=numero_operacion
+            if metodo_pago == Pago.MetodoPago.TARJETA
+            else "",
         )
 
         total_pagado = pagado_previo + monto
         if total_pagado >= orden.total:
             orden.cerrar()
+            # Ya se cobró: el "pidió la cuenta" del cliente queda atendido.
+            SolicitudCobro.objects.filter(orden=orden, atendido_en__isnull=True).update(
+                atendido_en=timezone.now(),
+            )
 
         logger.info(
             "Pago #%s PROCESADO | orden=#%s | metodo=%s | monto=%s | caja=#%s",
-            pago.id, orden.id, metodo_pago, monto, caja.id,
+            pago.id,
+            orden.id,
+            metodo_pago,
+            monto,
+            caja.id,
         )
         return pago
 
@@ -179,13 +207,16 @@ class PagoService:
 
         logger.warning(
             "Pago #%s ANULADO | orden=#%s | monto=%s | usuario=%s | motivo=%s",
-            pago.id, orden.id, pago.monto, usuario, motivo,
+            pago.id,
+            orden.id,
+            pago.monto,
+            usuario,
+            motivo,
         )
         return pago
 
 
 class ComprobanteService:
-
     @staticmethod
     def emitir(
         pago: Pago,
@@ -202,7 +233,9 @@ class ComprobanteService:
 
         if tipo == Comprobante.TipoComprobante.FACTURA:
             if not cliente_nombre or not cliente_ruc_dni:
-                raise ValueError("Para emitir una factura se requiere nombre y RUC del cliente.")
+                raise ValueError(
+                    "Para emitir una factura se requiere nombre y RUC del cliente."
+                )
             if not es_ruc_valido(cliente_ruc_dni):
                 raise ValueError("El RUC debe tener exactamente 11 dígitos numéricos.")
         elif tipo == Comprobante.TipoComprobante.BOLETA:
@@ -220,6 +253,9 @@ class ComprobanteService:
         )
         logger.info(
             "Comprobante emitido | tipo=%s | serie=%s-%s | pago=#%s",
-            tipo, serie, numero, pago.id,
+            tipo,
+            serie,
+            numero,
+            pago.id,
         )
         return comprobante

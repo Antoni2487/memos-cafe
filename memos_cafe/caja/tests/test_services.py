@@ -7,6 +7,7 @@ from memos_cafe.caja.models import Caja
 from memos_cafe.caja.models import MovimientoCaja
 from memos_cafe.caja.models import NotaCredito
 from memos_cafe.caja.models import Pago
+from memos_cafe.caja.models import SolicitudCobro
 from memos_cafe.caja.services import CajaService
 from memos_cafe.caja.services import ComprobanteService
 from memos_cafe.caja.services import PagoService
@@ -174,7 +175,7 @@ class TestMovimientoCajaNeto:
             motivo="Compra de insumos",
         )
         assert MovimientoCaja.objects.neto_por_caja(caja) == Decimal("70.00")
-        assert caja.movimientos.count() == 2  # noqa: PLR2004
+        assert caja.movimientos.count() == 2
 
     def test_neto_por_caja_sin_movimientos_es_cero(self):
         caja = CajaFactory()
@@ -267,6 +268,25 @@ class TestPagoService:
         )
         orden.refresh_from_db()
         assert orden.estado == Orden.Estado.CERRADA
+
+    def test_cobrar_atiende_el_pedido_de_cuenta(self):
+        """Si el cliente pidio la cuenta por QR, al cobrarse la orden deja
+        de figurar como pendiente (en el salon y en las alertas)."""
+        CajaFactory()
+        orden = OrdenFactory(estado="abierta", total=Decimal("30.00"))
+        SolicitudCobro.objects.create(orden=orden, metodo_pago_sugerido="yape")
+
+        PagoService.procesar_pago(
+            orden=orden, metodo_pago="yape", monto=Decimal("10.00")
+        )
+        assert (
+            SolicitudCobro.objects.get(orden=orden).atendido_en is None
+        )  # falta pagar
+
+        PagoService.procesar_pago(
+            orden=orden, metodo_pago="yape", monto=Decimal("20.00")
+        )
+        assert SolicitudCobro.objects.get(orden=orden).atendido_en is not None
 
     def test_procesar_pago_monto_insuficiente_lanza_error(self):
         CajaFactory()
