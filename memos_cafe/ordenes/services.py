@@ -71,8 +71,21 @@ class OrdenService:
 
         if mesa:
             mesa = Mesa.objects.select_for_update().get(pk=mesa.pk)
-            if not mesa_ya_ocupada and mesa.estado != Mesa.Estado.LIBRE:
-                msg = f"La mesa {mesa.numero} no esta libre."
+            # Lo que impide abrir otra orden es que la mesa ya tenga una
+            # abierta. Una mesa "ocupada" sin orden (se activo su QR y el
+            # cliente aun no pidio, o quedo asi por un dato viejo) si
+            # admite que el mesero le tome el pedido.
+            if (
+                not mesa_ya_ocupada
+                and Orden.objects.filter(
+                    mesa=mesa,
+                    estado=Orden.Estado.ABIERTA,
+                ).exists()
+            ):
+                msg = (
+                    f"La mesa {mesa.numero} ya tiene un pedido en curso: "
+                    "agrega los productos como otra ronda."
+                )
                 raise ValueError(msg)
 
         if not detalles:
@@ -94,7 +107,7 @@ class OrdenService:
             else "",
         )
 
-        if mesa and not mesa_ya_ocupada:
+        if mesa and mesa.estado != Mesa.Estado.OCUPADA:
             mesa.ocupar()
 
         comanda = ComandaService.crear(orden, origen)

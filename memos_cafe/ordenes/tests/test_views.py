@@ -106,8 +106,14 @@ class TestCrearOrdenReflejaMesaOcupadaSinPolling:
 
     def test_post_ordenes_crear_con_mesa_ya_ocupada_rechaza(self, mesero_client):
         CajaFactory()
-        mesa = MesaFactory(estado=Mesa.Estado.OCUPADA)
+        mesa = MesaFactory(estado=Mesa.Estado.LIBRE)
         producto = ProductoFactory(precio=Decimal("10.00"))
+        OrdenService.crear_orden(
+            usuario=UserFactory(),
+            tipo_orden="mesa",
+            mesa=mesa,
+            detalles=[{"producto": producto, "cantidad": 1}],
+        )
 
         r_crear = mesero_client.post(
             "/api/ordenes/crear/",
