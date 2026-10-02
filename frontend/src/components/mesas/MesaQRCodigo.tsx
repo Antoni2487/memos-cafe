@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { QRCodeCanvas } from "qrcode.react";
-import { Download, Printer, RefreshCw } from "lucide-react";
+import { Check, Copy, Download, ExternalLink, Printer, RefreshCw } from "lucide-react";
 import { getErrorMessage } from "../../utils/errors";
 
 interface MesaQRCodigoProps {
@@ -18,6 +18,18 @@ export default function MesaQRCodigo({ mesaNumero, url, onRegenerar }: MesaQRCod
   const [confirmando, setConfirmando] = useState(false);
   const [regenerando, setRegenerando] = useState(false);
   const [errorRegenerar, setErrorRegenerar] = useState<string | null>(null);
+  const [copiado, setCopiado] = useState(false);
+
+  // Para probar la carta del cliente desde la computadora, sin escanear.
+  const handleCopiar = async () => {
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 2000);
+    } catch {
+      // sin permiso de portapapeles (http): el link igual se ve y se selecciona
+    }
+  };
 
   const handleRegenerar = async () => {
     if (!onRegenerar) return;
@@ -73,6 +85,24 @@ export default function MesaQRCodigo({ mesaNumero, url, onRegenerar }: MesaQRCod
         <QRCodeCanvas value={url} size={220} level="M" />
       </div>
       <p className="font-display text-lg font-semibold text-brand">Mesa {mesaNumero}</p>
+      <div className="flex w-full items-center gap-2 rounded-lg border border-linea bg-beige px-3 py-2">
+        <span className="min-w-0 flex-1 select-all truncate font-body text-xs text-suave" title={url}>{url}</span>
+        <button
+          type="button"
+          onClick={handleCopiar}
+          className="flex shrink-0 items-center gap-1 rounded-md border border-linea-fuerte bg-marfil px-2.5 py-1.5 font-body text-xs font-semibold text-espresso hover:bg-arena"
+        >
+          {copiado ? <Check size={13} /> : <Copy size={13} />} {copiado ? "Copiado" : "Copiar"}
+        </button>
+        <a
+          href={url}
+          target="_blank"
+          rel="noreferrer"
+          className="flex shrink-0 items-center gap-1 rounded-md bg-salvia px-2.5 py-1.5 font-body text-xs font-semibold text-marfil hover:bg-salvia-osc"
+        >
+          <ExternalLink size={13} /> Abrir
+        </a>
+      </div>
       <div className="flex w-full gap-2">
         <button
           onClick={handleDescargar}
