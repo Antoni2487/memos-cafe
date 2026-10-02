@@ -7,11 +7,14 @@ from rest_framework.test import APIClient
 from memos_cafe.caja.models import SolicitudCobro
 from memos_cafe.caja.tests.factories import CajaFactory
 from memos_cafe.caja.tests.factories import MesaFactory
+from memos_cafe.mesas.ayudas_pruebas import atender_mesa_por_qr
 from memos_cafe.mesas.models import Mesa
 from memos_cafe.mesas.models import PedidoPorConfirmar
+from memos_cafe.mesas.models import SesionMesaQR
 from memos_cafe.mesas.services import SesionMesaService
 from memos_cafe.ordenes.models import Orden
 from memos_cafe.productos.tests.factories import ProductoFactory
+from memos_cafe.realtime import notificar as notificar_mod
 from memos_cafe.roles.models import PermisoRol
 from memos_cafe.users.tests.factories import UserFactory
 
@@ -23,8 +26,8 @@ def mesero():
     grupo, _ = Group.objects.get_or_create(name="mesero")
     usuario = UserFactory()
     usuario.groups.add(grupo)
-    # abrir-qr esta gateado por el modulo "mesas", igual que "estado" —
-    # ver mesas/tests.py::TestMesaModuloHabilitado para el mismo patron.
+    # Las acciones de mesas estan gateadas por el modulo "mesas" — ver
+    # mesas/tests.py::TestMesaModuloHabilitado para el mismo patron.
     PermisoRol.objects.update_or_create(
         modulo="mesas",
         rol="mesero",
@@ -40,32 +43,33 @@ def mesero_client(mesero):
     return client
 
 
-class TestSesionMesaServiceAbrirSesion:
-    def test_abre_sesion_y_ocupa_la_mesa(self, mesero):
-        mesa = MesaFactory(estado=Mesa.Estado.LIBRE)
-        sesion = SesionMesaService.abrir_sesion(mesa, mesero=mesero)
-
-        mesa.refresh_from_db()
-        assert mesa.estado == Mesa.Estado.OCUPADA
-        assert sesion.mesa_id == mesa.id
-        assert sesion.mesero_id == mesero.id
-        assert sesion.esta_activa is True
-
-    def test_no_se_puede_abrir_si_la_mesa_no_esta_libre(self, mesero):
-        mesa = MesaFactory(estado=Mesa.Estado.OCUPADA)
-        with pytest.raises(ValueError, match="no está libre"):
-            SesionMesaService.abrir_sesion(mesa, mesero=mesero)
-
+class TestSesionDeLaMesa:
     def test_sesion_activa_none_si_no_hay_ninguna(self):
         mesa = MesaFactory()
         assert SesionMesaService.sesion_activa(mesa) is None
+
+    def test_confirmar_el_primer_pedido_abre_la_sesion_a_nombre_del_mesero(
+        self,
+        mesero,
+    ):
+        CajaFactory()
+        mesa = MesaFactory(estado=Mesa.Estado.LIBRE)
+
+        atender_mesa_por_qr(mesa, mesero)
+
+        mesa.refresh_from_db()
+        sesion = SesionMesaService.sesion_activa(mesa)
+        assert mesa.estado == Mesa.Estado.OCUPADA
+        assert sesion.mesero_id == mesero.id
 
     def test_liberar_mesa_cierra_la_sesion_sola(self, mesero):
         """Mesa.liberar() (llamado por Orden.cerrar()/anular()) debe
         invalidar la sesion QR sin que ordenes/services.py sepa que
         SesionMesaQR existe."""
+        CajaFactory()
         mesa = MesaFactory(estado=Mesa.Estado.LIBRE)
-        sesion = SesionMesaService.abrir_sesion(mesa, mesero=mesero)
+        atender_mesa_por_qr(mesa, mesero)
+        sesion = SesionMesaService.sesion_activa(mesa)
 
         mesa.liberar()
 
@@ -75,8 +79,8 @@ class TestSesionMesaServiceAbrirSesion:
 
 
 class TestSesionMesaServiceRegistrarPedido:
-    def test_sin_sesion_activa_queda_por_confirmar(self):
-        """Mesa libre: el pedido espera a un mesero y no crea orden."""
+    def test_mesa_sin_pedido_queda_por_confirmar(self):
+        """El primer pedido siempre espera a un mesero y no crea orden."""
         CajaFactory()
         mesa = MesaFactory(estado=Mesa.Estado.LIBRE)
         producto = ProductoFactory(precio=Decimal("10.00"))
@@ -87,42 +91,73 @@ class TestSesionMesaServiceRegistrarPedido:
         assert isinstance(resultado, PedidoPorConfirmar)
         assert not Orden.objects.filter(mesa=mesa).exists()
 
-    def test_primer_pedido_crea_la_orden_en_ronda_1(self, mesero):
+    def test_una_sesion_vieja_sin_pedido_no_salta_la_confirmacion(self, mesero):
+        """Antes el mesero podia "abrir la mesa para QR" y el primer pedido
+        iba directo a cocina. Una sesion que quedo asi no debe saltarse la
+        confirmacion."""
+        CajaFactory()
+        mesa = MesaFactory(estado=Mesa.Estado.OCUPADA)
+        SesionMesaQR.objects.create(mesa=mesa, mesero=mesero)
+
+        resultado = SesionMesaService.registrar_pedido(
+            mesa,
+            items=[{"producto": ProductoFactory(), "cantidad": 1}],
+        )
+
+        assert isinstance(resultado, PedidoPorConfirmar)
+        assert not Orden.objects.filter(mesa=mesa).exists()
+
+    def test_al_confirmar_se_crea_la_orden_en_ronda_1_a_nombre_del_mesero(
+        self,
+        mesero,
+    ):
         CajaFactory()
         mesa = MesaFactory(estado=Mesa.Estado.LIBRE)
-        SesionMesaService.abrir_sesion(mesa, mesero=mesero)
         producto = ProductoFactory(precio=Decimal("10.00"))
 
-        orden = SesionMesaService.registrar_pedido(
+        orden = atender_mesa_por_qr(
             mesa,
+            mesero,
             items=[{"producto": producto, "cantidad": 2}],
         )
 
         assert orden.mesa_id == mesa.id
-        assert orden.usuario_id == mesero.id  # atribuido a quien abrio la sesion
+        assert orden.usuario_id == mesero.id
         assert orden.estado == Orden.Estado.ABIERTA
         detalle = orden.detalles.get()
         assert detalle.ronda == 1
         assert detalle.cantidad == 2
 
-    def test_segundo_pedido_agrega_una_ronda_nueva_a_la_misma_orden(self, mesero):
+    def test_lo_siguiente_va_directo_como_otra_ronda_y_avisa_a_los_meseros(
+        self,
+        mesero,
+        monkeypatch,
+        django_capture_on_commit_callbacks,
+    ):
+        enviados = []
+        monkeypatch.setattr(
+            notificar_mod,
+            "_enviar",
+            lambda grupos, evento: enviados.append((tuple(grupos), evento)),
+        )
         CajaFactory()
         mesa = MesaFactory(estado=Mesa.Estado.LIBRE)
-        SesionMesaService.abrir_sesion(mesa, mesero=mesero)
-        producto = ProductoFactory(precio=Decimal("10.00"))
+        orden1 = atender_mesa_por_qr(mesa, mesero)
+        producto = ProductoFactory(nombre="Latte", precio=Decimal("10.00"))
 
-        orden1 = SesionMesaService.registrar_pedido(
-            mesa,
-            items=[{"producto": producto, "cantidad": 1}],
-        )
-        orden2 = SesionMesaService.registrar_pedido(
-            mesa,
-            items=[{"producto": producto, "cantidad": 3}],
-        )
+        with django_capture_on_commit_callbacks(execute=True):
+            orden2 = SesionMesaService.registrar_pedido(
+                mesa,
+                items=[{"producto": producto, "cantidad": 3}],
+            )
 
         assert orden1.id == orden2.id  # misma orden, no una nueva
         rondas = sorted(orden2.detalles.values_list("ronda", flat=True))
         assert rondas == [1, 2]
+        aviso = next(e for g, e in enviados if e["type"] == "pedido.ronda_qr")
+        assert aviso["mesa_numero"] == mesa.numero
+        assert aviso["ronda"] == 2
+        assert aviso["resumen"] == "3 Latte"
 
 
 class TestSesionMesaServiceSolicitarCobro:
@@ -134,12 +169,7 @@ class TestSesionMesaServiceSolicitarCobro:
     def test_crea_la_solicitud(self, mesero):
         CajaFactory()
         mesa = MesaFactory(estado=Mesa.Estado.LIBRE)
-        SesionMesaService.abrir_sesion(mesa, mesero=mesero)
-        producto = ProductoFactory(precio=Decimal("10.00"))
-        orden = SesionMesaService.registrar_pedido(
-            mesa,
-            items=[{"producto": producto, "cantidad": 1}],
-        )
+        orden = atender_mesa_por_qr(mesa, mesero)
 
         solicitud = SesionMesaService.solicitar_cobro(mesa, metodo_pago_sugerido="yape")
 
@@ -149,87 +179,17 @@ class TestSesionMesaServiceSolicitarCobro:
         assert SolicitudCobro.objects.filter(orden=orden).count() == 1
 
 
-class TestMesaAbrirSesionQREndpoint:
-    def test_requiere_autenticacion(self):
+class TestYaNoSeAbreLaMesaParaQR:
+    def test_los_endpoints_viejos_no_existen(self, mesero_client):
         mesa = MesaFactory(estado=Mesa.Estado.LIBRE)
-        client = APIClient()
-        r = client.post(f"/api/mesas/{mesa.id}/abrir-qr/")
-        assert r.status_code == 401
 
-    def test_mesero_abre_sesion_ok(self, mesero_client):
-        mesa = MesaFactory(estado=Mesa.Estado.LIBRE)
-        r = mesero_client.post(f"/api/mesas/{mesa.id}/abrir-qr/")
-        assert r.status_code == 201
-        assert "token" in r.data
-        # el body de la respuesta debe reflejar el estado real, no una
-        # copia en memoria desactualizada de antes de abrir_sesion().
-        assert r.data["mesa"]["estado"] == "ocupada"
-        mesa.refresh_from_db()
-        assert mesa.estado == Mesa.Estado.OCUPADA
+        abrir = mesero_client.post(f"/api/mesas/{mesa.id}/abrir-qr/")
+        cerrar = mesero_client.post(f"/api/mesas/{mesa.id}/cerrar-qr/")
 
-    def test_no_se_puede_abrir_mesa_ya_ocupada(self, mesero_client):
-        mesa = MesaFactory(estado=Mesa.Estado.OCUPADA)
-        r = mesero_client.post(f"/api/mesas/{mesa.id}/abrir-qr/")
-        assert r.status_code == 400
-
-
-class TestCancelarSesionQR:
-    """Tapa el hueco de la mesa que queda 'ocupada' sin salida si se abre
-    una sesion QR por error y nunca se genera ningun pedido."""
-
-    def test_cancela_sesion_sin_pedidos_y_libera_la_mesa(self, mesero):
-        mesa = MesaFactory(estado=Mesa.Estado.LIBRE)
-        SesionMesaService.abrir_sesion(mesa, mesero=mesero)
-
-        SesionMesaService.cancelar_sesion(mesa)
-
+        assert abrir.status_code == 404
+        assert cerrar.status_code == 404
         mesa.refresh_from_db()
         assert mesa.estado == Mesa.Estado.LIBRE
-        assert SesionMesaService.sesion_activa(mesa) is None
-
-    def test_rechaza_si_no_hay_sesion_activa(self):
-        mesa = MesaFactory(estado=Mesa.Estado.LIBRE)
-        with pytest.raises(ValueError, match="no tiene una sesión"):
-            SesionMesaService.cancelar_sesion(mesa)
-
-    def test_rechaza_si_ya_hay_un_pedido_en_curso(self, mesero):
-        CajaFactory()
-        mesa = MesaFactory(estado=Mesa.Estado.LIBRE)
-        SesionMesaService.abrir_sesion(mesa, mesero=mesero)
-        producto = ProductoFactory(precio=Decimal("10.00"))
-        SesionMesaService.registrar_pedido(
-            mesa,
-            items=[{"producto": producto, "cantidad": 1}],
-        )
-
-        with pytest.raises(ValueError, match="ya tiene un pedido en curso"):
-            SesionMesaService.cancelar_sesion(mesa)
-
-        mesa.refresh_from_db()
-        assert mesa.estado == Mesa.Estado.OCUPADA
-
-    def test_endpoint_mesero_cancela_ok(self, mesero_client, mesero):
-        mesa = MesaFactory(estado=Mesa.Estado.LIBRE)
-        SesionMesaService.abrir_sesion(mesa, mesero=mesero)
-
-        r = mesero_client.post(f"/api/mesas/{mesa.id}/cerrar-qr/")
-
-        assert r.status_code == 200
-        assert r.data["estado"] == "libre"
-
-    def test_endpoint_rechaza_con_pedido_en_curso(self, mesero_client, mesero):
-        CajaFactory()
-        mesa = MesaFactory(estado=Mesa.Estado.LIBRE)
-        SesionMesaService.abrir_sesion(mesa, mesero=mesero)
-        producto = ProductoFactory(precio=Decimal("10.00"))
-        SesionMesaService.registrar_pedido(
-            mesa,
-            items=[{"producto": producto, "cantidad": 1}],
-        )
-
-        r = mesero_client.post(f"/api/mesas/{mesa.id}/cerrar-qr/")
-
-        assert r.status_code == 400
 
 
 class TestMesaQREndpointsPublicos:
@@ -244,14 +204,15 @@ class TestMesaQREndpointsPublicos:
         assert r.data["sesion_activa"] is False
         assert r.data["orden"] is None
 
-    def test_estado_con_sesion_activa_sin_pedido_aun(self, mesero):
+    def test_estado_con_la_mesa_atendida(self, mesero):
+        CajaFactory()
         mesa = MesaFactory(estado=Mesa.Estado.LIBRE)
-        SesionMesaService.abrir_sesion(mesa, mesero=mesero)
+        orden = atender_mesa_por_qr(mesa, mesero)
         client = APIClient()
         r = client.get(f"/api/mesas/qr/{mesa.codigo_qr}/")
         assert r.status_code == 200
         assert r.data["sesion_activa"] is True
-        assert r.data["orden"] is None
+        assert r.data["orden"]["id"] == orden.id
 
     def test_pedido_sin_sesion_activa_queda_por_confirmar(self):
         CajaFactory()
@@ -269,18 +230,21 @@ class TestMesaQREndpointsPublicos:
     def test_pedido_completo_end_to_end(self, mesero):
         CajaFactory()
         mesa = MesaFactory(estado=Mesa.Estado.LIBRE)
-        SesionMesaService.abrir_sesion(mesa, mesero=mesero)
         producto = ProductoFactory(precio=Decimal("12.50"))
         client = APIClient()
 
+        # primer pedido: espera al mesero
         r1 = client.post(
             f"/api/mesas/qr/{mesa.codigo_qr}/pedido/",
             {"items": [{"producto": producto.id, "cantidad": 2}]},
             format="json",
         )
-        assert r1.status_code == 201
-        orden_id = r1.data["id"]
-        assert len(r1.data["detalles"]) == 1
+        assert r1.status_code == 202
+        orden = SesionMesaService.confirmar_pedido(
+            PedidoPorConfirmar.objects.get(pk=r1.data["pedido_por_confirmar"]["id"]),
+            mesero=mesero,
+        )
+        orden_id = orden.id
 
         # segunda ronda
         r2 = client.post(

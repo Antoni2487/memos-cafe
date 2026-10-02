@@ -69,6 +69,7 @@ export default function Navbar() {
   }, [esAdmin]);
 
   // ── Avisos en vivo por ws/meseros/ ──────────────────────────────────────
+  // "Pidió más por QR": la ronda ya fue a cocina; el mesero solo se entera.
   // "Pidió la cuenta": le importa a mesero Y cajero — según el método de
   // pago, cobra el cajero en caja o el mesero le lleva el POS a la mesa.
   // "Listo para servir" NO va acá: tiene su propia tarjeta con timbre
@@ -78,6 +79,22 @@ export default function Navbar() {
   // Sin useCallback a propósito: useStaffSocket sincroniza esta función a
   // un ref en su propio efecto.
   const manejarEventoEnVivo = (evento: Record<string, unknown>) => {
+    // Una mesa ya atendida pidió algo más por QR: va directo a cocina, pero
+    // el mesero se entera (por si quiere pasar a verla).
+    if (evento.type === "pedido.ronda_qr" && (esMesero || esAdmin)) {
+      sonarAviso();
+      setAlertasEnVivo((prev) => [
+        {
+          id: crypto.randomUUID(),
+          icono: "orden",
+          mensaje: `Mesa ${evento.mesa_numero} pidió más por QR: ${evento.resumen}. Ya está en cocina.`,
+          fecha: new Date().toISOString(),
+        },
+        ...prev,
+      ].slice(0, 20));
+      return;
+    }
+
     if (evento.type === "solicitud_cobro.nueva" && (esMesero || esCajero)) {
       const metodo = String(evento.metodo_pago_sugerido ?? "");
       const metodoLabel = metodo ? metodo.charAt(0).toUpperCase() + metodo.slice(1) : "";

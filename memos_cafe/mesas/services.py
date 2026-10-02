@@ -143,49 +143,17 @@ class SesionMesaService:
     dependen de que exista como maximo una sesion activa por mesa."""
 
     @staticmethod
-    @transaction.atomic
-    def abrir_sesion(mesa: Mesa, mesero) -> SesionMesaQR:
-        mesa = Mesa.objects.select_for_update().get(pk=mesa.pk)
-        if mesa.estado != Mesa.Estado.LIBRE:
-            msg = f"La mesa {mesa.numero} no está libre para abrir un pedido por QR."
-            raise ValueError(
-                msg,
-            )
-        sesion = SesionMesaQR.objects.create(mesa=mesa, mesero=mesero)
-        mesa.ocupar()
-        return sesion
-
-    @staticmethod
     def sesion_activa(mesa: Mesa) -> SesionMesaQR | None:
         return SesionMesaQR.objects.filter(mesa=mesa, cerrada_en__isnull=True).first()
 
     @staticmethod
-    @transaction.atomic
-    def cancelar_sesion(mesa: Mesa) -> None:
-        """Cierra una sesion de pedido por QR que se abrio por error y
-        nunca genero ningun pedido (el mesero se equivoco de mesa, o el
-        cliente nunca llego a pedir). Libera la mesa.
-
-        Si ya hay una Orden abierta para la mesa, se rechaza: esa orden
-        hay que anularla o cerrarla (lo que ya libera la mesa y cierra la
-        sesion solo, via Mesa.liberar()) -- esto no es un atajo para
-        descartar pedidos reales."""
-        mesa = Mesa.objects.select_for_update().get(pk=mesa.pk)
-        sesion = SesionMesaQR.objects.filter(mesa=mesa, cerrada_en__isnull=True).first()
-        if not sesion:
-            msg = f"La mesa {mesa.numero} no tiene una sesión de pedido por QR activa."
-            raise ValueError(
-                msg,
-            )
-        if Orden.objects.filter(mesa=mesa, estado=Orden.Estado.ABIERTA).exists():
-            msg = (
-                f"La mesa {mesa.numero} ya tiene un pedido en curso — "
-                "anúlalo o ciérralo, eso libera la mesa automáticamente."
-            )
-            raise ValueError(
-                msg,
-            )
-        mesa.liberar()
+    def _asegurar_sesion(mesa: Mesa, mesero) -> SesionMesaQR:
+        """La sesion la abre el mesero al confirmar el primer pedido; vive
+        hasta que la mesa se libera (Mesa.liberar() la cierra)."""
+        return SesionMesaService.sesion_activa(mesa) or SesionMesaQR.objects.create(
+            mesa=mesa,
+            mesero=mesero,
+        )
 
     # Un primer pedido que nadie confirma expira; a los ESCALA minutos se
     # marca como urgente en las alertas del admin (los cajeros ya reciben
@@ -226,34 +194,28 @@ class SesionMesaService:
     @staticmethod
     @transaction.atomic
     def registrar_pedido(mesa: Mesa, items: list[dict]) -> Orden | PedidoPorConfirmar:
-        """Pedido del cliente desde el QR:
+        """Pedido del cliente desde el QR. Hay un solo flujo:
 
-        - la mesa ya tiene una orden abierta: es una ronda mas, va directo
-          a Cocina como comanda nueva;
-        - un mesero abrio la mesa (sesion activa) pero aun no hay orden:
-          se crea la orden directo, a nombre de ese mesero;
-        - la mesa estaba libre: queda como PedidoPorConfirmar hasta que un
-          mesero lo confirme. Si ya habia uno pendiente (otro celular de la
-          misma mesa), los items se suman a ese.
+        - la mesa no tiene pedido: queda como PedidoPorConfirmar hasta que
+          un mesero vea que hay gente sentada y lo confirme (evita pedidos
+          con una foto del QR). Si ya habia uno pendiente (otro celular de
+          la misma mesa), los items se suman a ese;
+        - la mesa ya tiene una orden (confirmada o tomada por el mesero):
+          es una ronda mas y va directo a Cocina. A los meseros les llega
+          un aviso para que sepan que la mesa pidio algo mas.
         """
         mesa = Mesa.objects.select_for_update().get(pk=mesa.pk)
 
         orden = SesionMesaService.orden_abierta(mesa)
         if orden is not None:
-            DetalleOrdenService.agregar_ronda(orden, items, origen=Comanda.Origen.QR)
-            orden.refresh_from_db()
-            return orden
-
-        sesion = SesionMesaService.sesion_activa(mesa)
-        if sesion is not None:
-            return OrdenService.crear_orden(
-                usuario=sesion.mesero,
-                tipo_orden=Orden.TipoOrden.MESA,
-                mesa=mesa,
-                detalles=items,
-                mesa_ya_ocupada=True,  # abrir_sesion() ya la ocupo al abrir
+            comanda = DetalleOrdenService.agregar_ronda(
+                orden,
+                items,
                 origen=Comanda.Origen.QR,
             )
+            notificar(["meseros"], _evento_ronda_qr(mesa, comanda.numero, items))
+            orden.refresh_from_db()
+            return orden
 
         SesionMesaService.expirar_vencidos()
         pedido = PedidoPorConfirmar.objects.filter(
@@ -281,21 +243,14 @@ class SesionMesaService:
             # Mientras tanto alguien abrio la mesa a mano: va como ronda.
             DetalleOrdenService.agregar_ronda(orden, items, origen=Comanda.Origen.QR)
         else:
-            if SesionMesaService.sesion_activa(mesa) is None:
-                if mesa.estado == Mesa.Estado.OCUPADA:
-                    msg = (
-                        f"La mesa {mesa.numero} figura ocupada sin un pedido. "
-                        "Libérala y vuelve a confirmar."
-                    )
-                    raise ValueError(msg)
-                SesionMesaQR.objects.create(mesa=mesa, mesero=mesero)
-                mesa.ocupar()
+            SesionMesaService._asegurar_sesion(mesa, mesero)
+            # crear_orden ocupa la mesa (si figuraba ocupada sin pedido, igual
+            # se puede: lo que no admite es una segunda orden abierta).
             orden = OrdenService.crear_orden(
                 usuario=mesero,
                 tipo_orden=Orden.TipoOrden.MESA,
                 mesa=mesa,
                 detalles=items,
-                mesa_ya_ocupada=True,
                 origen=Comanda.Origen.QR,
             )
 
@@ -573,6 +528,22 @@ def _item_desde_json(item: dict) -> dict:
             raise ValueError(msg)
         datos["promocion"] = promocion
     return datos
+
+
+def _nombre_item(item: dict) -> str:
+    return (item.get("producto") or item.get("promocion")).nombre
+
+
+def _evento_ronda_qr(mesa: Mesa, numero: int, items: list[dict]) -> dict:
+    """Una mesa que ya estaba atendida pidio otra ronda desde el QR."""
+    return {
+        "type": "pedido.ronda_qr",
+        "mesa_numero": mesa.numero,
+        "ronda": numero,
+        "resumen": ", ".join(
+            f"{item['cantidad']} {_nombre_item(item)}" for item in items
+        ),
+    }
 
 
 def _evento_por_confirmar(pedido: PedidoPorConfirmar, tipo: str) -> dict:

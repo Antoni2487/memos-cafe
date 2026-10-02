@@ -61,7 +61,13 @@ class _StaffConsumer(AsyncJsonWebsocketConsumer):
     async def comanda_actualizada(self, event):
         """type='comanda.actualizada' — una comanda cambio de estado
         (empezada, lista, entregada) o se le sumo un item. Lo reciben
-        Cocina y, cuando queda lista, los meseros."""
+        Cocina y los meseros (con eso aparece y desaparece el aviso
+        "listo para servir" en todas las pantallas)."""
+        await self.send_json(event)
+
+    async def pedido_ronda_qr(self, event):
+        """type='pedido.ronda_qr' — una mesa ya atendida pidio algo mas por
+        QR. Ya fue directo a Cocina; el mesero solo se entera."""
         await self.send_json(event)
 
     async def pedido_por_confirmar(self, event):

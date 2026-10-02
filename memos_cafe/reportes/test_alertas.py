@@ -1,14 +1,12 @@
-from decimal import Decimal
-
 import pytest
 from django.contrib.auth.models import Group
 from rest_framework.test import APIClient
 
 from memos_cafe.caja.tests.factories import CajaFactory
 from memos_cafe.caja.tests.factories import MesaFactory
+from memos_cafe.mesas.ayudas_pruebas import atender_mesa_por_qr
 from memos_cafe.mesas.models import Mesa
 from memos_cafe.mesas.services import SesionMesaService
-from memos_cafe.productos.tests.factories import ProductoFactory
 from memos_cafe.users.tests.factories import UserFactory
 
 pytestmark = pytest.mark.django_db
@@ -34,12 +32,7 @@ def test_solicitud_cobro_aparece_en_alertas(admin_client):
     mesero.groups.add(mesero_grupo)
 
     mesa = MesaFactory(estado=Mesa.Estado.LIBRE, numero=42)
-    SesionMesaService.abrir_sesion(mesa, mesero=mesero)
-    producto = ProductoFactory(precio=Decimal("10.00"))
-    SesionMesaService.registrar_pedido(
-        mesa,
-        items=[{"producto": producto, "cantidad": 1}],
-    )
+    atender_mesa_por_qr(mesa, mesero)
     SesionMesaService.solicitar_cobro(mesa, metodo_pago_sugerido="yape")
 
     r = admin_client.get("/api/alertas/")

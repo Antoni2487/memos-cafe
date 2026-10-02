@@ -57,7 +57,7 @@ export default function PedidoQRPage() {
   const enviar = async () => {
     const r = await pedido.enviar();
     if (r === "orden") setAviso("¡Listo! Tu pedido ya está en cocina.");
-    if (r === "por_confirmar") setAviso("Enviado. Tu mesero lo confirmará en un momento.");
+    if (r === "por_confirmar") setAviso("¡Pedido enviado! En un momento pasa a cocina.");
   };
 
   const activo = pedido.orden !== null || pedido.porConfirmar?.estado === "pendiente";

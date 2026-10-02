@@ -1,6 +1,6 @@
 import { useState } from "react";
 import {
-  AlertCircle, BellRing, Check, ChefHat, Clock, CreditCard, Flower2, HandPlatter, Receipt, ShoppingBag, Trash2, Wallet,
+  AlertCircle, BellRing, Check, ChefHat, CreditCard, Flower2, HandPlatter, Receipt, ShoppingBag, Trash2, Wallet,
 } from "lucide-react";
 import Hoja from "./Hoja";
 import { Contador } from "./FichaProducto";
@@ -50,7 +50,7 @@ export default function MiPedido({
 
       {carrito.length > 0 && <PorEnviar pedido={pedido} onEnviar={onEnviar} />}
 
-      {porConfirmar && !orden && <EsperandoMesero pedido={porConfirmar} />}
+      {porConfirmar && !orden && <EstadoPrimerPedido pedido={porConfirmar} />}
 
       {orden && orden.detalles.length > 0 && <Rondas pedido={pedido} />}
 
@@ -108,41 +108,34 @@ function PorEnviar({ pedido, onEnviar }: { pedido: PedidoMesa; onEnviar: () => v
         ))}
       </ul>
 
-      {!orden && !esperando && (
-        <p className="mt-2 flex items-start gap-2 rounded-2xl bg-beige px-3.5 py-3 text-sm text-suave">
-          <Clock className="mt-0.5 size-4 shrink-0" />
-          Tu mesero confirmará tu primer pedido en un momento y pasará a cocina. Los siguientes van directo.
-        </p>
-      )}
-
       <button
         type="button"
         onClick={onEnviar}
         disabled={enviando}
         className="mt-4 flex h-13 w-full items-center justify-between rounded-2xl bg-salvia px-5 text-[15px] font-semibold text-marfil transition-colors active:bg-salvia-osc disabled:opacity-60"
       >
-        <span>{enviando ? "Enviando…" : orden ? "Enviar a cocina" : "Enviar pedido"}</span>
+        <span>{enviando ? "Enviando…" : "Enviar pedido"}</span>
         <span className="tabular-nums">{soles(totalCarrito)}</span>
       </button>
     </section>
   );
 }
 
-function EsperandoMesero({ pedido }: { pedido: PedidoPorConfirmarQR }) {
+function EstadoPrimerPedido({ pedido }: { pedido: PedidoPorConfirmarQR }) {
   if (pedido.estado === "confirmado") return null;
   const textos = {
     pendiente: {
-      titulo: "Esperando a tu mesero",
-      detalle: "Ya le llegó tu pedido. Apenas lo confirme pasa a cocina; suele tardar un par de minutos.",
+      titulo: "Recibimos tu pedido",
+      detalle: "En un momento pasa a cocina.",
       tono: "bg-aviso-fondo text-aviso",
     },
     rechazado: {
-      titulo: "Tu mesero no pudo confirmar el pedido",
-      detalle: "Si estás en el local, llámalo y lo resuelven juntos. También puedes volver a enviarlo.",
+      titulo: "No pudimos tomar tu pedido",
+      detalle: "Llama a tu mesero y lo resuelven al toque. También puedes volver a enviarlo.",
       tono: "bg-peligro-fondo text-peligro",
     },
     expirado: {
-      titulo: "Nadie confirmó tu pedido a tiempo",
+      titulo: "Tu pedido no llegó a cocina",
       detalle: "Lo sentimos. Vuelve a enviarlo o llama a tu mesero.",
       tono: "bg-peligro-fondo text-peligro",
     },

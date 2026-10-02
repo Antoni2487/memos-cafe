@@ -16,8 +16,8 @@ from rest_framework.test import APIClient
 from memos_cafe.caja.tests.factories import CajaFactory
 from memos_cafe.caja.tests.factories import MesaFactory
 from memos_cafe.mesas.api import throttles
+from memos_cafe.mesas.ayudas_pruebas import atender_mesa_por_qr
 from memos_cafe.mesas.models import Mesa
-from memos_cafe.mesas.services import SesionMesaService
 from memos_cafe.ordenes.models import Orden
 from memos_cafe.ordenes.services import OrdenService
 from memos_cafe.productos.tests.factories import ProductoFactory
@@ -36,7 +36,7 @@ def _limpiar_throttles():
 def mesa_abierta():
     CajaFactory()
     mesa = MesaFactory(estado=Mesa.Estado.LIBRE)
-    SesionMesaService.abrir_sesion(mesa, mesero=UserFactory())
+    atender_mesa_por_qr(mesa, UserFactory())
     return mesa
 
 
@@ -69,7 +69,8 @@ class TestCodigoSecreto:
 
         assert r_get.status_code == HTTPStatus.NOT_FOUND
         assert r_post.status_code == HTTPStatus.NOT_FOUND
-        assert not Orden.objects.filter(mesa=mesa_abierta).exists()
+        # solo lo que pidió la mesa al abrirse; nada nuevo por la URL vieja
+        assert Orden.objects.get(mesa=mesa_abierta).detalles.count() == 1
 
     def test_codigo_inventado_da_404(self, mesa_abierta):
         r = _cliente().get("/api/mesas/qr/codigoInventado/")
