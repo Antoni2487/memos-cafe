@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { FormModal, InputField, ImageUpload } from "../common";
-import { esSoloAlfanumerico, LIMITES, MENSAJES } from "../../utils/validators";
+import { esSoloAlfanumerico, LIMITES, MENSAJES, RANGOS, errorDeRango } from "../../utils/validators";
 import type { Promocion } from "../../types";
 import type { PromocionFormData } from "../../services/promocionService";
 
@@ -68,7 +68,7 @@ export default function PromocionForm({ abierto, promocion, onGuardar, onCerrar,
     const errNombre = validarNombre(form.nombre);
     if (errNombre)                   e.nombre      = errNombre;
     if (!form.precio)               e.precio      = "El precio es obligatorio";
-    if (Number(form.precio) <= 0)   e.precio      = "El precio debe ser mayor a 0";
+    else { const r = errorDeRango(form.precio, RANGOS.PRECIO, "El precio"); if (r) e.precio = r; }
 
     if (!form.fecha_inicio) {
       e.fecha_inicio = "La fecha de inicio es obligatoria";
@@ -110,7 +110,7 @@ export default function PromocionForm({ abierto, promocion, onGuardar, onCerrar,
         maxLength={LIMITES.DESCRIPCION}
         placeholder="Descripción opcional" rows={3} />
       <InputField label="Precio (S/)" type="number" value={form.precio} onChange={set("precio")}
-        placeholder="0.00" required error={errores.precio} />
+        placeholder="0.00" rango={RANGOS.PRECIO} required error={errores.precio} />
 
       <ImageUpload
         label="Imagen"

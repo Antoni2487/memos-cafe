@@ -23,5 +23,12 @@ export default function useApiErrors() {
     };
   }, []);
 
+  // Se va solo a los 6 s (como un aviso del teléfono).
+  useEffect(() => {
+    if (!error) return;
+    const t = setTimeout(() => setError(null), 6000);
+    return () => clearTimeout(t);
+  }, [error]);
+
   return { error, clearError: () => setError(null) };
 }

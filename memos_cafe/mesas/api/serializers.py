@@ -14,6 +14,11 @@ from memos_cafe.ordenes.models import DetalleOrden
 from memos_cafe.ordenes.models import Orden
 from memos_cafe.productos.models import Producto
 from memos_cafe.productos.models import Promocion
+from memos_cafe.utils.limites import ELEMENTOS_EN_PLANO_MAX
+from memos_cafe.utils.limites import LINEAS_POR_PEDIDO_MAX
+from memos_cafe.utils.limites import MESA_NUMERO_MAX
+from memos_cafe.utils.limites import MESAS_EN_PLANO_MAX
+from memos_cafe.utils.limites import campo_cantidad_item
 
 # Limites del croquis (ver PLANO_ANCHO/PLANO_ALTO en mesas/models.py).
 CAMPOS_PLANO = ["plano_x", "plano_y", "plano_ancho", "plano_alto", "forma", "rotacion"]
@@ -30,7 +35,7 @@ class MesaSerializer(serializers.ModelSerializer):
     # Declarado a mano para no heredar el UniqueValidator del modelo: la
     # unicidad la valida MesaService.crear, que ademas reactiva una mesa
     # dada de baja con ese mismo numero.
-    numero = serializers.IntegerField(min_value=1, max_value=32767)
+    numero = serializers.IntegerField(min_value=1, max_value=MESA_NUMERO_MAX)
     capacidad = serializers.IntegerField(min_value=1, max_value=30)
     estado_display = serializers.CharField(
         source="get_estado_display",
@@ -79,8 +84,8 @@ class MesaPosicionSerializer(serializers.ModelSerializer):
 
 
 class PlanoGuardarSerializer(serializers.Serializer):
-    mesas = MesaPosicionSerializer(many=True)
-    elementos = ElementoPlanoSerializer(many=True)
+    mesas = MesaPosicionSerializer(many=True, max_length=MESAS_EN_PLANO_MAX)
+    elementos = ElementoPlanoSerializer(many=True, max_length=ELEMENTOS_EN_PLANO_MAX)
 
     def validate_mesas(self, mesas):
         ids = [m["id"] for m in mesas]
@@ -155,7 +160,7 @@ class ItemPedidoQRSerializer(serializers.Serializer):
         required=False,
         allow_null=True,
     )
-    cantidad = serializers.IntegerField(min_value=1)
+    cantidad = campo_cantidad_item()
     nota = serializers.CharField(
         max_length=150,
         required=False,
@@ -175,7 +180,7 @@ class ItemPedidoQRSerializer(serializers.Serializer):
 class PedidoQRSerializer(serializers.Serializer):
     """Body de POST /api/mesas/qr/<mesa_id>/pedido/ — una ronda completa."""
 
-    items = ItemPedidoQRSerializer(many=True)
+    items = ItemPedidoQRSerializer(many=True, max_length=LINEAS_POR_PEDIDO_MAX)
 
     def validate_items(self, value):
         if not value:

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { FormModal, InputField, ImageUpload } from "../common";
 import categoriaService from "../../services/categoriaService";
-import { esSoloAlfanumerico, LIMITES, MENSAJES } from "../../utils/validators";
+import { esSoloAlfanumerico, LIMITES, MENSAJES, RANGOS, errorDeRango } from "../../utils/validators";
 import type { Categoria, Producto } from "../../types";
 import type { ProductoFormData } from "../../services/productoService";
 
@@ -72,7 +72,7 @@ export default function ProductoForm({ abierto, producto, onGuardar, onCerrar, c
     const errNombre = validarNombre(form.nombre);
     if (errNombre)                 e.nombre    = errNombre;
     if (!form.precio)             e.precio    = "El precio es obligatorio";
-    if (Number(form.precio) <= 0) e.precio    = "El precio debe ser mayor a 0";
+    else { const r = errorDeRango(form.precio, RANGOS.PRECIO, "El precio"); if (r) e.precio = r; }
     if (!form.categoria)          e.categoria = "Selecciona una categoría";
     setErrores(e);
     return Object.keys(e).length === 0;
@@ -102,7 +102,7 @@ export default function ProductoForm({ abierto, producto, onGuardar, onCerrar, c
         maxLength={LIMITES.DESCRIPCION}
         placeholder="Descripción opcional" rows={3} />
       <InputField label="Precio (S/)" type="number" value={form.precio} onChange={set("precio")}
-        placeholder="0.00" required error={errores.precio} />
+        placeholder="0.00" rango={RANGOS.PRECIO} required error={errores.precio} />
       <InputField label="Categoría" value={form.categoria} onChange={set("categoria")}
         options={opcionesCategoria} required error={errores.categoria} />
 

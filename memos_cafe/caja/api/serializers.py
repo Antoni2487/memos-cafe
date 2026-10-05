@@ -1,38 +1,57 @@
 from rest_framework import serializers
 
-from memos_cafe.caja.models import Caja, Comprobante, MovimientoCaja, NotaCredito, Pago
+from memos_cafe.caja.models import Caja
+from memos_cafe.caja.models import Comprobante
+from memos_cafe.caja.models import MovimientoCaja
+from memos_cafe.caja.models import NotaCredito
+from memos_cafe.caja.models import Pago
 from memos_cafe.ordenes.api.serializers import OrdenReadSerializer
 from memos_cafe.ordenes.models import Orden  # fix 3: import directo, sin __import__
-from memos_cafe.utils.validators import es_dni_valido, es_ruc_valido
+from memos_cafe.utils.limites import NUMERO_COMPROBANTE_MAX
+from memos_cafe.utils.limites import UN_CENTIMO
+from memos_cafe.utils.limites import campo_monto
+from memos_cafe.utils.validators import es_dni_valido
+from memos_cafe.utils.validators import es_ruc_valido
 
 
 class AbrirCajaSerializer(serializers.Serializer):
     """Valida los datos para abrir una sesión de caja."""
-    monto_inicial = serializers.DecimalField(max_digits=10, decimal_places=2)
+
+    monto_inicial = campo_monto()
 
     def validate_monto_inicial(self, value):
         if value < 0:
-            raise serializers.ValidationError("El monto inicial no puede ser negativo.")
+            msg = "El monto inicial no puede ser negativo."
+            raise serializers.ValidationError(msg)
         return value
 
 
 class CerrarCajaSerializer(serializers.Serializer):
     """Valida los datos para cerrar una sesión de caja."""
-    monto_final = serializers.DecimalField(max_digits=10, decimal_places=2)
-    observaciones = serializers.CharField(max_length=500, required=False, allow_blank=True, default="")
+
+    monto_final = campo_monto()
+    observaciones = serializers.CharField(
+        max_length=500,
+        required=False,
+        allow_blank=True,
+        default="",
+    )
 
     def validate_monto_final(self, value):
         if value < 0:
-            raise serializers.ValidationError("El monto final no puede ser negativo.")
+            msg = "El monto final no puede ser negativo."
+            raise serializers.ValidationError(msg)
         return value
 
 
 class CajaReadSerializer(serializers.ModelSerializer):
     """Representación completa de una sesión de caja."""
+
     usuario_nombre = serializers.SerializerMethodField()
 
     def get_usuario_nombre(self, obj):
         return obj.usuario.name or obj.usuario.email
+
     total_ventas = serializers.SerializerMethodField()
     movimientos_neto = serializers.SerializerMethodField()
     esperado_en_caja = serializers.SerializerMethodField()
@@ -90,13 +109,15 @@ class CajaReadSerializer(serializers.ModelSerializer):
 
 class MovimientoCajaSerializer(serializers.Serializer):
     """Valida datos para registrar un movimiento de caja."""
+
     tipo = serializers.ChoiceField(choices=MovimientoCaja.Tipo.choices)
-    monto = serializers.DecimalField(max_digits=10, decimal_places=2)
+    monto = campo_monto(minimo=UN_CENTIMO)
     motivo = serializers.CharField(max_length=200)
 
     def validate_monto(self, value):
         if value <= 0:
-            raise serializers.ValidationError("El monto debe ser mayor a 0.")
+            msg = "El monto debe ser mayor a 0."
+            raise serializers.ValidationError(msg)
         return value
 
 
@@ -108,49 +129,72 @@ class MovimientoCajaReadSerializer(serializers.ModelSerializer):
 
 class PagoWriteSerializer(serializers.Serializer):
     orden = serializers.PrimaryKeyRelatedField(
-        queryset=Orden.objects.filter(estado="abierta")
+        queryset=Orden.objects.filter(estado="abierta"),
     )
     metodo_pago = serializers.ChoiceField(choices=Pago.MetodoPago.choices)
-    monto = serializers.DecimalField(max_digits=10, decimal_places=2)
-    monto_recibido = serializers.DecimalField(
-        max_digits=10, decimal_places=2, required=False, allow_null=True
-    )
+    monto = campo_monto(minimo=UN_CENTIMO)
+    monto_recibido = campo_monto(required=False, allow_null=True)
     numero_operacion = serializers.CharField(
-        max_length=50, required=False, allow_blank=True, default=""
+        max_length=50,
+        required=False,
+        allow_blank=True,
+        default="",
     )
 
     def validate_monto(self, value):
         if value <= 0:
-            raise serializers.ValidationError("El monto debe ser mayor a 0.")
+            msg = "El monto debe ser mayor a 0."
+            raise serializers.ValidationError(msg)
         return value
 
 
 class NotaCreditoWriteSerializer(serializers.Serializer):
     """Valida el motivo obligatorio al anular un pago."""
+
     motivo = serializers.ChoiceField(choices=NotaCredito.Motivo.choices)
-    detalle = serializers.CharField(max_length=255, required=False, allow_blank=True, default="")
+    detalle = serializers.CharField(
+        max_length=255,
+        required=False,
+        allow_blank=True,
+        default="",
+    )
 
     def validate(self, data):
-        if data["motivo"] == NotaCredito.Motivo.OTRO and not data.get("detalle", "").strip():
+        if (
+            data["motivo"] == NotaCredito.Motivo.OTRO
+            and not data.get("detalle", "").strip()
+        ):
             raise serializers.ValidationError(
-                {"detalle": "Para el motivo 'Otro' debes especificar un detalle."}
+                {"detalle": "Para el motivo 'Otro' debes especificar un detalle."},
             )
         return data
 
 
 class NotaCreditoReadSerializer(serializers.ModelSerializer):
     motivo_display = serializers.CharField(source="get_motivo_display", read_only=True)
-    usuario_nombre = serializers.CharField(source="usuario.get_full_name", read_only=True)
+    usuario_nombre = serializers.CharField(
+        source="usuario.get_full_name",
+        read_only=True,
+    )
 
     class Meta:
         model = NotaCredito
-        fields = ["id", "motivo", "motivo_display", "detalle", "monto", "usuario_nombre", "fecha"]
+        fields = [
+            "id",
+            "motivo",
+            "motivo_display",
+            "detalle",
+            "monto",
+            "usuario_nombre",
+            "fecha",
+        ]
 
 
 class PagoReadSerializer(serializers.ModelSerializer):
     orden = OrdenReadSerializer(read_only=True)
     metodo_pago_display = serializers.CharField(
-        source="get_metodo_pago_display", read_only=True
+        source="get_metodo_pago_display",
+        read_only=True,
     )
     comprobante = serializers.SerializerMethodField()
     nota_credito = serializers.SerializerMethodField()
@@ -175,7 +219,7 @@ class PagoReadSerializer(serializers.ModelSerializer):
 
     def get_comprobante(self, obj):
         if hasattr(obj, "comprobante"):
-            from memos_cafe.caja.api.serializers import ComprobanteReadSerializer
+            # Definido más abajo en este mismo módulo: ya existe al llamarse.
             return ComprobanteReadSerializer(obj.comprobante).data
         return None
 
@@ -187,15 +231,31 @@ class PagoReadSerializer(serializers.ModelSerializer):
 
 class ComprobanteWriteSerializer(serializers.Serializer):
     """Valida datos para emitir un comprobante."""
+
     pago = serializers.PrimaryKeyRelatedField(
-        queryset=Pago.objects.filter(estado="completado")
+        queryset=Pago.objects.filter(estado="completado"),
     )
     tipo = serializers.ChoiceField(choices=Comprobante.TipoComprobante.choices)
     serie = serializers.CharField(max_length=10)
-    numero = serializers.IntegerField(min_value=1)
-    cliente_nombre = serializers.CharField(max_length=150, required=False, allow_blank=True, default="")
-    cliente_ruc_dni = serializers.CharField(max_length=11, required=False, allow_blank=True, default="")
-    cliente_direccion = serializers.CharField(max_length=255, required=False, allow_blank=True, default="")
+    numero = serializers.IntegerField(min_value=1, max_value=NUMERO_COMPROBANTE_MAX)
+    cliente_nombre = serializers.CharField(
+        max_length=150,
+        required=False,
+        allow_blank=True,
+        default="",
+    )
+    cliente_ruc_dni = serializers.CharField(
+        max_length=11,
+        required=False,
+        allow_blank=True,
+        default="",
+    )
+    cliente_direccion = serializers.CharField(
+        max_length=255,
+        required=False,
+        allow_blank=True,
+        default="",
+    )
 
     def validate(self, data):
         tipo = data.get("tipo")
@@ -204,16 +264,28 @@ class ComprobanteWriteSerializer(serializers.Serializer):
         if tipo == Comprobante.TipoComprobante.FACTURA:
             if not data.get("cliente_nombre", "").strip():
                 raise serializers.ValidationError(
-                    {"cliente_nombre": "Para emitir una factura se requiere el nombre del cliente."}
+                    {
+                        "cliente_nombre": (
+                            "Para emitir una factura se requiere el nombre del cliente."
+                        ),
+                    },
                 )
             if not es_ruc_valido(ruc_dni):
                 raise serializers.ValidationError(
-                    {"cliente_ruc_dni": "El RUC debe tener exactamente 11 dígitos numéricos."}
+                    {
+                        "cliente_ruc_dni": (
+                            "El RUC debe tener exactamente 11 dígitos numéricos."
+                        ),
+                    },
                 )
         elif tipo == Comprobante.TipoComprobante.BOLETA:
             if ruc_dni and not es_dni_valido(ruc_dni):
                 raise serializers.ValidationError(
-                    {"cliente_ruc_dni": "El DNI debe tener exactamente 8 dígitos numéricos."}
+                    {
+                        "cliente_ruc_dni": (
+                            "El DNI debe tener exactamente 8 dígitos numéricos."
+                        ),
+                    },
                 )
         return data
 

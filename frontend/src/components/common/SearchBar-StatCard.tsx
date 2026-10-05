@@ -34,6 +34,7 @@ export function SearchBar({ placeholder = "Buscar…", onBuscar, delay = 400, cl
       <Search className="size-4 shrink-0 text-tenue" aria-hidden />
       <input
         type="search"
+        maxLength={60}
         value={valor}
         onChange={handleChange}
         placeholder={placeholder}

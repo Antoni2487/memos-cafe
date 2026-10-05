@@ -8,7 +8,7 @@ import {
 import useCaja from "../../hooks/useCaja";
 import cajaService from "../../services/cajaService";
 import { PageHeader } from "../../components/common";
-import { esSoloAlfanumerico, validarDocumentoComprobante, LIMITES, MENSAJES } from "../../utils/validators";
+import { esSoloAlfanumerico, validarDocumentoComprobante, LIMITES, MENSAJES, RANGOS, admiteNumero, type Rango } from "../../utils/validators";
 import { getErrorMessage } from "../../utils/errors";
 import type { Orden, Pago, TipoComprobante, TipoMovimiento } from "../../types";
 import { paraQuien } from "../ordenes/pedidos";
@@ -76,9 +76,11 @@ interface CampoProps {
   hint?: string;
   maxLength?: number;
   error?: string;
+  /** Campo numérico: no deja escribir fuera de este rango (ver RANGOS). */
+  rango?: Rango;
 }
 
-function Campo({ label, type = "text", value, onChange, onBlur, placeholder, readOnly, hint, maxLength, error }: CampoProps) {
+function Campo({ label, type = "text", value, onChange, onBlur, placeholder, readOnly, hint, maxLength, error, rango }: CampoProps) {
     return (
         <div style={{ marginBottom: 14 }}>
             <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: C.verde, marginBottom: 4 }}>
@@ -86,7 +88,12 @@ function Campo({ label, type = "text", value, onChange, onBlur, placeholder, rea
             </label>
             <input
                 type={type} value={value}
-                onChange={readOnly ? undefined : (e) => onChange(e.target.value)}
+                onChange={readOnly ? undefined : (e) => {
+                    if (rango && !admiteNumero(e.target.value, rango)) return;
+                    onChange(e.target.value);
+                }}
+                min={rango?.min} max={rango?.max} step={rango ? (rango.decimales ? 0.01 : 1) : undefined}
+                inputMode={rango ? (rango.decimales ? "decimal" : "numeric") : undefined}
                 onBlur={readOnly ? undefined : (e) => onBlur?.(e.target.value)}
                 readOnly={readOnly} placeholder={placeholder} maxLength={maxLength}
                 style={{
@@ -414,7 +421,7 @@ function ModalCobrar({ orden, onCerrar, onPagado }: { orden: Orden; onCerrar: ()
                 label={pendiente < Number(orden.total)
                     ? `Monto de este pago (S/) — pendiente: ${fmt(pendiente)}`
                     : "Monto a cobrar (S/)"}
-                type="number"
+                type="number" rango={RANGOS.MONTO}
                 value={monto}
                 onChange={setMonto}
                 placeholder={String(pendiente.toFixed(2))}
@@ -425,7 +432,7 @@ function ModalCobrar({ orden, onCerrar, onPagado }: { orden: Orden; onCerrar: ()
             {esEfectivo && (
                 <Campo
                     label="Monto recibido del cliente (S/)"
-                    type="number"
+                    type="number" rango={RANGOS.MONTO}
                     value={montoRecibido}
                     onChange={setMontoRecibido}
                     placeholder={String(montoNum.toFixed(2))}
@@ -553,7 +560,7 @@ function ModalComprobante({ pago, onCerrar, onEmitido }: { pago: Pago; onCerrar:
                         maxLength={LIMITES.SERIE} placeholder="B001" />
                 </div>
                 <div style={{ flex: 1 }}>
-                    <Campo label="Número" type="number" value={numero}
+                    <Campo label="Número" type="number" rango={RANGOS.NUMERO_COMPROBANTE} value={numero}
                         onChange={setNumero} placeholder="1" />
                 </div>
             </div>
@@ -891,7 +898,7 @@ export default function CajaPage() {
             </div>
             {modalAbrir && (
                 <Modal titulo="Abrir turno" onCerrar={() => { setModalAbrir(false); limpiar(); }}>
-                    <Campo label="Monto inicial en caja (S/)" type="number"
+                    <Campo label="Monto inicial en caja (S/)" type="number" rango={RANGOS.MONTO}
                         value={montoInicial} onChange={setMontoInicial} placeholder="0.00" />
                     <ErrMsg msg={errMsg} />
                     <Btn onClick={handleAbrir} disabled={guardando} full>
@@ -1147,7 +1154,7 @@ export default function CajaPage() {
                             </button>
                         ))}
                     </div>
-                    <Campo label="Monto (S/)" type="number" value={montoMov}
+                    <Campo label="Monto (S/)" type="number" rango={RANGOS.MONTO} value={montoMov}
                         onChange={setMontoMov} placeholder="0.00" />
                     <Campo label="Motivo" value={motivoMov} onChange={setMotivoMov}
                         maxLength={LIMITES.MOTIVO}
@@ -1176,7 +1183,7 @@ export default function CajaPage() {
                             </strong>
                         </p>
                     </div>
-                    <Campo label="Monto final contado (S/)" type="number"
+                    <Campo label="Monto final contado (S/)" type="number" rango={RANGOS.MONTO}
                         value={montoFinal} onChange={setMontoFinal} placeholder="0.00" />
                     <Campo label="Observaciones (opcional)" value={obsCierre}
                         onChange={setObsCierre} maxLength={LIMITES.DESCRIPCION}

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { FormModal, InputField } from "../common";
 import type { Mesa } from "../../types";
+import { RANGOS, errorDeRango } from "../../utils/validators";
 import type { MesaFormData } from "../../services/mesasService";
 
 interface MesaFormProps {
@@ -40,10 +41,10 @@ export default function MesaForm({ abierto, mesa, onGuardar, onCerrar, cargando 
 
   const validar = (): boolean => {
     const e: Partial<Record<keyof FormState, string>> = {};
-    if (!form.numero) e.numero = "El número es obligatorio";
-    if (Number(form.numero) <= 0) e.numero = "El número debe ser mayor a 0";
-    if (!form.capacidad) e.capacidad = "La capacidad es obligatoria";
-    if (Number(form.capacidad) <= 0) e.capacidad = "La capacidad debe ser mayor a 0";
+    const numero = form.numero ? errorDeRango(form.numero, RANGOS.MESA_NUMERO, "El número") : "El número es obligatorio";
+    const capacidad = form.capacidad ? errorDeRango(form.capacidad, RANGOS.CAPACIDAD, "La capacidad") : "La capacidad es obligatoria";
+    if (numero) e.numero = numero;
+    if (capacidad) e.capacidad = capacidad;
     setErrores(e);
     return Object.keys(e).length === 0;
   };
@@ -72,6 +73,7 @@ export default function MesaForm({ abierto, mesa, onGuardar, onCerrar, cargando 
         value={form.numero}
         onChange={set("numero")}
         placeholder="Ej: 5"
+        rango={RANGOS.MESA_NUMERO}
         required
         error={errores.numero}
       />
@@ -81,6 +83,7 @@ export default function MesaForm({ abierto, mesa, onGuardar, onCerrar, cargando 
         value={form.capacidad}
         onChange={set("capacidad")}
         placeholder="Ej: 4"
+        rango={RANGOS.CAPACIDAD}
         required
         error={errores.capacidad}
       />

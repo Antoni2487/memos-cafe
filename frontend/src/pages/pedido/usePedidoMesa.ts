@@ -23,6 +23,8 @@ export const precioNum = (p: number | string): number => (typeof p === "number" 
 export const soles = (n: number | string): string => `S/ ${precioNum(n).toFixed(2)}`;
 
 const POLL_MS = 8000;
+// Tope por producto en un pedido del cliente (el backend acepta hasta 99).
+export const MAX_POR_PRODUCTO = 20;
 const POLL_ESPERANDO_MS = 4000; // mientras el mesero confirma, se consulta más seguido
 
 // El carrito vive en este celular (localStorage), por mesa: si se recarga la
@@ -139,7 +141,7 @@ export function usePedidoMesa(codigo: string) {
     setCarrito((prev) => {
       const existe = prev.find((i) => i.key === key);
       if (existe) {
-        return prev.map((i) => (i.key === key ? { ...i, cantidad: i.cantidad + entrada.cantidad } : i));
+        return prev.map((i) => (i.key === key ? { ...i, cantidad: Math.min(MAX_POR_PRODUCTO, i.cantidad + entrada.cantidad) } : i));
       }
       return [...prev, { ...entrada, nota, key }];
     });
@@ -148,7 +150,7 @@ export function usePedidoMesa(codigo: string) {
   const cambiarCantidad = useCallback((key: string, delta: number) => {
     setCarrito((prev) =>
       prev
-        .map((i) => (i.key === key ? { ...i, cantidad: Math.min(20, i.cantidad + delta) } : i))
+        .map((i) => (i.key === key ? { ...i, cantidad: Math.min(MAX_POR_PRODUCTO, i.cantidad + delta) } : i))
         .filter((i) => i.cantidad > 0)
     );
   }, []);

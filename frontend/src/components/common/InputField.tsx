@@ -1,5 +1,6 @@
 import { useId } from "react";
 import type { SelectOption } from "../../types";
+import { admiteNumero, type Rango } from "../../utils/validators";
 
 interface InputFieldProps {
   label?: string;
@@ -16,6 +17,8 @@ interface InputFieldProps {
   min?: string | number;
   max?: string | number;
   maxLength?: number;
+  /** Campo numérico: no deja escribir fuera de este rango (ver RANGOS). */
+  rango?: Rango;
 }
 
 // 16px en el celular: con menos, el iPhone hace zoom al tocar el campo.
@@ -37,6 +40,7 @@ export default function InputField({
   min,
   max,
   maxLength,
+  rango,
 }: InputFieldProps) {
   const id = useId();
   const idAyuda = `${id}-ayuda`;
@@ -88,13 +92,17 @@ export default function InputField({
           {...comunes}
           type={type}
           value={value}
-          onChange={(e) => onChange?.(e.target.value)}
+          onChange={(e) => {
+            if (rango && !admiteNumero(e.target.value, rango)) return;
+            onChange?.(e.target.value);
+          }}
           onBlur={(e) => onBlur?.(e.target.value)}
           placeholder={placeholder}
-          min={min}
-          max={max}
+          min={rango?.min ?? min}
+          max={rango?.max ?? max}
+          step={rango ? (rango.decimales ? 0.01 : 1) : undefined}
           maxLength={maxLength}
-          inputMode={type === "number" ? "decimal" : undefined}
+          inputMode={type === "number" ? (rango && !rango.decimales ? "numeric" : "decimal") : undefined}
           className={`${base} ${borde} h-11`}
         />
       )}

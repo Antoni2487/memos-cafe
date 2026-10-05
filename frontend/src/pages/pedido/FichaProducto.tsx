@@ -1,3 +1,4 @@
+import { MAX_POR_PRODUCTO } from "./usePedidoMesa";
 import { useState } from "react";
 import { Minus, Plus } from "lucide-react";
 import Hoja from "./Hoja";
@@ -114,8 +115,8 @@ export function Contador({
       </span>
       <button
         type="button"
-        onClick={() => onCambiar(Math.min(20, valor + 1))}
-        disabled={valor >= 20}
+        onClick={() => onCambiar(Math.min(MAX_POR_PRODUCTO, valor + 1))}
+        disabled={valor >= MAX_POR_PRODUCTO}
         aria-label="Agregar uno"
         className={`${tam} grid place-items-center rounded-full text-espresso transition-colors active:bg-arena disabled:opacity-35`}
       >

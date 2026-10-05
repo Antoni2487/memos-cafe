@@ -101,7 +101,8 @@ export default function CartaCliente({ pedido }: { pedido: PedidoMesa }) {
               type="search"
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
-              placeholder="¿Qué se te antoja?"
+              maxLength={60}
+            placeholder="¿Qué se te antoja?"
               aria-label="Buscar en la carta"
               className="min-w-0 flex-1 bg-transparent text-base text-espresso placeholder:text-tenue outline-none [&::-webkit-search-cancel-button]:hidden"
             />

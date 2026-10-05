@@ -7,7 +7,7 @@ import registroInsumoService from "../../services/registroInsumoService";
 import DataTable from "../../components/common/DataTable";
 import { SearchBar, StatCard } from "../../components/common/SearchBar-StatCard";
 import { FormModal, ConfirmDialog } from "../../components/common/Modals";
-import { esSoloAlfanumerico, LIMITES, MENSAJES } from "../../utils/validators";
+import { esSoloAlfanumerico, LIMITES, MENSAJES, RANGOS, admiteNumero } from "../../utils/validators";
 import { getErrorMessage } from "../../utils/errors";
 import type { Columna, Insumo } from "../../types";
 import type { RegistrarInsumoPayload } from "../../services/registroInsumoService";
@@ -369,11 +369,11 @@ export default function InsumosPage() {
                 <div className="flex gap-3">
                     <div style={{ flex: 1 }}>
                         <label style={labelStyle}>Cantidad</label>
-                        <input type="number" step="0.01" value={form.cantidad} onChange={(e) => setForm({ ...form, cantidad: e.target.value })} required style={inputStyle} />
+                        <input type="number" step="0.01" min={RANGOS.CANTIDAD_INSUMO.min} max={RANGOS.CANTIDAD_INSUMO.max} inputMode="decimal" value={form.cantidad} onChange={(e) => admiteNumero(e.target.value, RANGOS.CANTIDAD_INSUMO) && setForm({ ...form, cantidad: e.target.value })} required style={inputStyle} />
                     </div>
                     <div style={{ flex: 1 }}>
                         <label style={labelStyle}>Costo unitario (S/)</label>
-                        <input type="number" step="0.01" value={form.costo_unitario} onChange={(e) => setForm({ ...form, costo_unitario: e.target.value })} required style={inputStyle} />
+                        <input type="number" step="0.01" min={RANGOS.MONTO.min} max={RANGOS.MONTO.max} inputMode="decimal" value={form.costo_unitario} onChange={(e) => admiteNumero(e.target.value, RANGOS.MONTO) && setForm({ ...form, costo_unitario: e.target.value })} required style={inputStyle} />
                     </div>
                 </div>
 
@@ -435,9 +435,10 @@ export default function InsumosPage() {
                 <div>
                     <label style={labelStyle}>Stock mínimo (opcional)</label>
                     <input
-                        type="number" step="0.01"
+                        type="number" step="0.01" inputMode="decimal"
+                        min={RANGOS.CANTIDAD_INSUMO.min} max={RANGOS.CANTIDAD_INSUMO.max}
                         value={formInsumo.stock_minimo}
-                        onChange={(e) => setFormInsumo({ ...formInsumo, stock_minimo: e.target.value })}
+                        onChange={(e) => admiteNumero(e.target.value, RANGOS.CANTIDAD_INSUMO) && setFormInsumo({ ...formInsumo, stock_minimo: e.target.value })}
                         style={inputStyle}
                     />
                 </div>

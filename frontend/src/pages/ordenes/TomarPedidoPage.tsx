@@ -8,7 +8,7 @@ import mesasService from "../../services/mesasService";
 import ordenesService, { type DetalleOrdenPayload } from "../../services/ordenesService";
 import productoService from "../../services/productoService";
 import { getErrorMessage } from "../../utils/errors";
-import { esSoloAlfabetico, esSoloAlfanumerico, esSoloNumerico, MENSAJES } from "../../utils/validators";
+import { esSoloAlfabetico, esSoloAlfanumerico, esSoloNumerico, LIMITES, MENSAJES, RANGOS } from "../../utils/validators";
 import { PLATAFORMA_DELIVERY, TIPO_ORDEN } from "../../utils/constants";
 import type { MesaPlano, Orden, Producto, Promocion, TipoOrden } from "../../types";
 
@@ -48,6 +48,7 @@ interface Cliente {
 }
 
 const soles = (n: number | string) => `S/ ${Number(n).toFixed(2)}`;
+const TOPE_CANTIDAD = RANGOS.CANTIDAD.max; // por producto, igual que el backend
 const PASOS = ["Para quién", "Productos", "Revisar"];
 
 /**
@@ -113,14 +114,20 @@ export default function TomarPedidoPage() {
     setItems((prev) => {
       const existe = prev.find((i) => i.key === key);
       if (existe) {
-        return prev.map((i) => (i.key === key ? { ...i, cantidad: Math.max(0, i.cantidad + delta) } : i)).filter((i) => i.cantidad > 0);
+        return prev
+          .map((i) => (i.key === key ? { ...i, cantidad: Math.min(TOPE_CANTIDAD, Math.max(0, i.cantidad + delta)) } : i))
+          .filter((i) => i.cantidad > 0);
       }
       if (delta < 0) return prev;
       return [...prev, { key, tipo: tipoItem, id: p.id, nombre: p.nombre, precio: Number(p.precio), cantidad: delta, nota: "" }];
     });
   };
   const cambiar = (key: string, cambio: Partial<Item>) =>
-    setItems((prev) => prev.map((i) => (i.key === key ? { ...i, ...cambio } : i)).filter((i) => i.cantidad > 0));
+    setItems((prev) =>
+      prev
+        .map((i) => (i.key === key ? { ...i, ...cambio, cantidad: Math.min(TOPE_CANTIDAD, cambio.cantidad ?? i.cantidad) } : i))
+        .filter((i) => i.cantidad > 0)
+    );
   const cantidadDe = (key: string) => items.find((i) => i.key === key)?.cantidad ?? 0;
 
   // ── Paso 1: validar destino ────────────────────────────────────────────
@@ -341,11 +348,20 @@ function PasoDestino({
   errores: Record<string, string>;
   onSiguiente: () => void;
 }) {
+  // Mismos topes que el backend (ver LIMITES).
+  const TOPE: Record<keyof Cliente, number> = {
+    nombre: LIMITES.NOMBRE_PERSONA,
+    telefono: LIMITES.TELEFONO,
+    direccion: LIMITES.DIRECCION,
+    plataforma: 20,
+    plataformaOtra: LIMITES.PLATAFORMA_OTRA,
+  };
   const campo = (k: keyof Cliente, label: string, extra: { placeholder?: string; inputMode?: "tel" | "text" } = {}) => (
     <label className="flex flex-col gap-1.5 text-sm font-medium text-espresso">
       {label}
       <input
         value={cliente[k]}
+        maxLength={TOPE[k]}
         onChange={(e) => setCliente({ ...cliente, [k]: e.target.value })}
         placeholder={extra.placeholder}
         inputMode={extra.inputMode}
@@ -498,7 +514,8 @@ function PasoProductos({
             type="search"
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
-            placeholder="Buscar producto"
+            maxLength={60}
+              placeholder="Buscar producto"
             aria-label="Buscar producto"
             className="min-w-0 flex-1 bg-transparent text-base text-espresso outline-none placeholder:text-tenue sm:text-sm"
           />

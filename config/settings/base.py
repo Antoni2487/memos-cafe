@@ -21,7 +21,10 @@ if READ_DOT_ENV_FILE:
 # ------------------------------------------------------------------------------
 DEBUG = env.bool("DJANGO_DEBUG", False)
 TIME_ZONE = "America/Lima"
-LANGUAGE_CODE = "en-us"
+LANGUAGE_CODE = "es"
+# Solo español: los mensajes de validación (y del admin) salen siempre en
+# español, aunque el navegador o la app no manden Accept-Language.
+LANGUAGES = [("es", "Español")]
 SITE_ID = 1
 USE_I18N = True
 USE_TZ = True

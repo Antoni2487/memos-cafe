@@ -64,3 +64,45 @@ export const LIMITES = {
   EMAIL: 254,
   PASSWORD: 128,
 };
+
+// Rangos de los campos numéricos — los mismos que valida el backend
+// (memos_cafe/utils/limites.py). Con ellos el campo ni siquiera deja
+// escribir un número negativo, con más decimales de la cuenta o más grande
+// que el máximo (antes se podía escribir "8888888888…" como número de mesa).
+export interface Rango {
+  min: number;
+  max: number;
+  decimales: number;
+}
+
+export const RANGOS = {
+  MESA_NUMERO: { min: 1, max: 999, decimales: 0 },
+  CAPACIDAD: { min: 1, max: 30, decimales: 0 },
+  CANTIDAD: { min: 1, max: 99, decimales: 0 },
+  PRECIO: { min: 0.1, max: 9999.99, decimales: 2 },
+  MONTO: { min: 0, max: 99999.99, decimales: 2 },
+  CANTIDAD_INSUMO: { min: 0, max: 999999.99, decimales: 2 },
+  NUMERO_COMPROBANTE: { min: 1, max: 99999999, decimales: 0 },
+} satisfies Record<string, Rango>;
+
+/** ¿Se puede seguir escribiendo este valor en un campo con este rango? */
+export function admiteNumero(valor: string, rango: Rango): boolean {
+  if (valor === "") return true;
+  const patron = rango.decimales
+    ? new RegExp(`^\\d+(\\.\\d{0,${rango.decimales}})?$`)
+    : /^\d+$/;
+  return patron.test(valor) && Number(valor) <= rango.max;
+}
+
+const formatoNumero = (n: number, decimales: number) =>
+  n.toLocaleString("es-PE", { minimumFractionDigits: decimales ? 2 : 0, maximumFractionDigits: decimales });
+
+/** Mensaje de error si el valor está fuera del rango (o null si está bien). */
+export function errorDeRango(valor: string, rango: Rango, nombre = "El valor"): string | null {
+  if (valor.trim() === "") return null;
+  const n = Number(valor);
+  if (!Number.isFinite(n)) return `${nombre} debe ser un número`;
+  if (n < rango.min) return `${nombre} debe ser al menos ${formatoNumero(rango.min, rango.decimales)}`;
+  if (n > rango.max) return `${nombre} puede ser como máximo ${formatoNumero(rango.max, rango.decimales)}`;
+  return null;
+}

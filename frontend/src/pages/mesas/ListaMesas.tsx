@@ -152,6 +152,8 @@ export default function ListaMesas() {
             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "white"}>
             <ScanLine size={13} strokeWidth={2} />
           </button>
+          {esAdmin && (
+            <>
           <button onClick={() => { setMesaEditar(m); setShowForm(true); }} title="Editar"
             style={{ width: 30, height: 30, borderRadius: 6, border: "1px solid var(--linea-fuerte)",
               backgroundColor: "var(--marfil)", cursor: "pointer", display: "flex",
@@ -168,6 +170,8 @@ export default function ListaMesas() {
             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "white"}>
             <Trash2 size={13} strokeWidth={2} />
           </button>
+            </>
+          )}
         </div>
       ),
     },
@@ -175,7 +179,9 @@ export default function ListaMesas() {
 
   return (
     <>
-      <div className="mb-4 flex justify-end">
+      {/* Crear, editar y dar de baja mesas es solo del admin (el servidor lo
+          rechaza para los demás): al mesero ni se le muestran. */}
+      {esAdmin && <div className="mb-4 flex justify-end">
         <button
           type="button"
           onClick={() => { setMesaEditar(null); setShowForm(true); }}
@@ -183,7 +189,7 @@ export default function ListaMesas() {
         >
           <Plus size={16} strokeWidth={2.5} /> Nueva mesa
         </button>
-      </div>
+      </div>}
 
       <div className="mb-4">
         <SearchBar placeholder="Buscar por número de mesa..." onBuscar={(t) => { setBusqueda(t); setPagina(1); }} />

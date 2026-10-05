@@ -1,3 +1,4 @@
+import { LIMITES } from "../../utils/validators";
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { AlertCircle, Eye, EyeOff, Lock, Mail } from "lucide-react";
@@ -69,6 +70,7 @@ export default function LoginPage() {
                   autoComplete="username"
                   autoCapitalize="none"
                   value={email}
+                  maxLength={LIMITES.EMAIL}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="tu@correo.com"
                   required
@@ -86,6 +88,7 @@ export default function LoginPage() {
                   type={showPassword ? "text" : "password"}
                   autoComplete="current-password"
                   value={password}
+                  maxLength={LIMITES.PASSWORD}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   required

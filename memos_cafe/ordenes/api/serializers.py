@@ -9,6 +9,8 @@ from memos_cafe.productos.api.serializers import ProductoSerializer
 from memos_cafe.productos.api.serializers import PromocionSerializer
 from memos_cafe.productos.models import Producto
 from memos_cafe.productos.models import Promocion
+from memos_cafe.utils.limites import LINEAS_POR_PEDIDO_MAX
+from memos_cafe.utils.limites import campo_cantidad_item
 from memos_cafe.utils.validators import es_alfanumerico_extendido
 from memos_cafe.utils.validators import es_telefono_valido
 
@@ -48,7 +50,7 @@ class DetalleOrdenWriteSerializer(serializers.Serializer):
         required=False,
         allow_null=True,
     )
-    cantidad = serializers.IntegerField(min_value=1)
+    cantidad = campo_cantidad_item()
     nota = serializers.CharField(
         max_length=150,
         required=False,
@@ -147,7 +149,11 @@ class OrdenReadSerializer(serializers.ModelSerializer):
 class RondaSerializer(serializers.Serializer):
     """Varios ítems que el mesero manda juntos a una orden abierta."""
 
-    detalles = DetalleOrdenWriteSerializer(many=True, allow_empty=False)
+    detalles = DetalleOrdenWriteSerializer(
+        many=True,
+        allow_empty=False,
+        max_length=LINEAS_POR_PEDIDO_MAX,
+    )
 
 
 class OrdenWriteSerializer(serializers.Serializer):
@@ -159,7 +165,7 @@ class OrdenWriteSerializer(serializers.Serializer):
         allow_null=True,
     )
     tipo_orden = serializers.ChoiceField(choices=Orden.TipoOrden.choices)
-    detalles = DetalleOrdenWriteSerializer(many=True)
+    detalles = DetalleOrdenWriteSerializer(many=True, max_length=LINEAS_POR_PEDIDO_MAX)
 
     # Campos delivery (opcionales según tipo_orden)
     cliente_nombre = serializers.CharField(
