@@ -5,8 +5,16 @@ name: Mantenimiento diario
 # servicio de cron pago (Render Cron Jobs requiere plan de pago) porque es
 # gratuito y no depende de infraestructura adicional.
 #
-# Requiere un secret DATABASE_URL en Settings -> Secrets and variables ->
-# Actions, con la misma cadena de conexion de Neon que usa Render.
+# Requiere estos secrets en Settings -> Secrets and variables -> Actions:
+#   DATABASE_URL       la misma cadena de conexion de Neon que usa Render
+#   DJANGO_SECRET_KEY  la misma que en Render
+#   DJANGO_ADMIN_URL   la misma que en Render
+#   BACKUP_PASSPHRASE  una clave larga solo para cifrar los backups
+#
+# El repositorio es publico: los artefactos de Actions los puede descargar
+# cualquier persona con cuenta de GitHub. Por eso el backup (clientes,
+# ventas, usuarios) se sube CIFRADO con BACKUP_PASSPHRASE y nunca en claro.
+# Para restaurarlo: docs/plan_mantenimiento.md, seccion "Restaurar un backup".
 
 on:
   schedule:
@@ -28,6 +36,22 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v4
 
+      - name: Revisar que esten los secrets
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
+          DJANGO_ADMIN_URL: ${{ secrets.DJANGO_ADMIN_URL }}
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          faltan=""
+          for v in DATABASE_URL DJANGO_SECRET_KEY DJANGO_ADMIN_URL BACKUP_PASSPHRASE; do
+            [ -z "${!v}" ] && faltan="$faltan $v"
+          done
+          if [ -n "$faltan" ]; then
+            echo "::error::Faltan secrets en Settings -> Secrets and variables -> Actions:$faltan"
+            exit 1
+          fi
+
       - name: Instalar dependencias
         run: uv sync --locked --no-dev
 
@@ -47,9 +71,20 @@ jobs:
           DJANGO_ADMIN_URL: ${{ secrets.DJANGO_ADMIN_URL }}
         run: uv run python manage.py backup_bd
 
-      - name: Subir backup como artefacto
+      - name: Cifrar el backup
+        env:
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          for f in backups/*.json; do
+            gpg --batch --yes --pinentry-mode loopback --passphrase "$BACKUP_PASSPHRASE" \
+              --symmetric --cipher-algo AES256 --output "$f.gpg" "$f"
+            rm "$f"
+          done
+
+      - name: Subir backup cifrado como artefacto
         uses: actions/upload-artifact@v4
         with:
           name: backup-bd-${{ github.run_id }}
-          path: backups/*.json
+          path: backups/*.json.gpg
+          if-no-files-found: error
           retention-days: 30

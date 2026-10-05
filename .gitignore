@@ -309,3 +309,7 @@ backend_context_dump2.txt
 frontend_context_dump.txt
 frontend_context_dump2.txt
 project_dump.txt
+
+# Backups de la base de datos (datos de clientes y ventas): nunca al repo
+backups/
+*.json.gpg

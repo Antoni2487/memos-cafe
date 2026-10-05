@@ -69,12 +69,34 @@ on:
     - cron: '0 5 * * *'  # 05:00 UTC = 00:00 hora de Lima, todos los dias
   workflow_dispatch: {}   # tambien se puede correr manualmente desde Actions
 ```
-Corre `flushexpiredtokens` y `backup_bd` contra la base de datos de producción (Neon), usando `DATABASE_URL` como GitHub Secret, y sube el archivo de backup generado como artefacto descargable (retención de 30 días) desde la pestaña "Actions" del repositorio.
+Corre `flushexpiredtokens` y `backup_bd` contra la base de datos de producción (Neon), **cifra** el backup y lo sube como artefacto descargable (retención de 30 días) desde la pestaña "Actions" del repositorio.
 
-**Pendiente de activar:** hay que agregar estos 3 secrets en `Settings → Secrets and variables → Actions` del repositorio de GitHub (los mismos valores que ya están configurados como variables de entorno en Render):
+**Por qué cifrado:** el repositorio es público y los artefactos de Actions los puede descargar cualquier persona con cuenta de GitHub. El backup tiene clientes, ventas y usuarios, así que se cifra con AES-256 (`gpg`) usando el secret `BACKUP_PASSPHRASE` y nunca se sube en claro.
+
+**Para activarlo** hay que agregar estos 4 secrets en `Settings → Secrets and variables → Actions` (los 3 primeros son los mismos valores que ya están en Render):
 - `DATABASE_URL`
 - `DJANGO_SECRET_KEY`
 - `DJANGO_ADMIN_URL`
+- `BACKUP_PASSPHRASE`: una clave larga, inventada solo para esto. **Guárdala aparte** (gestor de contraseñas): sin ella el backup no se puede abrir.
+
+Si falta alguno, el primer paso del job falla diciendo cuál.
+
+### 3.5 Restaurar un backup
+
+1. En GitHub → Actions → "Mantenimiento diario" → la ejecución del día que quieras → descarga el artefacto `backup-bd-…` y descomprímelo (trae un `backup_AAAAMMDD_HHMMSS.json.gpg`).
+2. Descífralo (pide la `BACKUP_PASSPHRASE`):
+   ```bash
+   gpg --decrypt --output backup.json backup_AAAAMMDD_HHMMSS.json.gpg
+   ```
+3. Crea una base vacía, aplica las migraciones y carga el backup:
+   ```bash
+   export DATABASE_URL=postgres://…/base_nueva
+   uv run python manage.py migrate
+   uv run python manage.py loaddata backup.json
+   ```
+4. Revisa que estén los datos (pedidos, productos, mesas, usuarios) y recién entonces apunta Render a esa base.
+
+Probado el 5 de octubre de 2026 con la base de demostración: backup → cifrado → descifrado → `loaddata` en una base vacía, con los mismos conteos de pedidos, productos, mesas y usuarios.
 
 ---
 
