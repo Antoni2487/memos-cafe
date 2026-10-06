@@ -21,7 +21,8 @@ function paraQuien(c: ComandaCocina): string {
  */
 export default function ListosParaServir() {
   const usuario = authService.getUser();
-  const habilitado = ["admin", "mesero"].some((r) => usuario.roles.includes(r));
+  // Solo los meseros: es trabajo para ellos. El admin se entera por la campana.
+  const habilitado = usuario.roles.includes("mesero");
   const { listas, esperaDe, servir, error } = useAvisosListos(habilitado);
 
   if (!habilitado || (listas.length === 0 && !error)) return null;

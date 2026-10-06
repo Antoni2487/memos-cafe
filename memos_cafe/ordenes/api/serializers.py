@@ -339,6 +339,8 @@ class ComandaCocinaSerializer(serializers.ModelSerializer):
     )
     mesero = serializers.SerializerMethodField()
     mesero_id = serializers.IntegerField(source="orden.usuario_id", read_only=True)
+    # Delivery: con qué app pasan a recogerlo ("Rappi", o lo que se anotó).
+    plataforma = serializers.SerializerMethodField()
     detalles = DetalleCocinaSerializer(many=True, read_only=True)
 
     # Segundos transcurridos segun el reloj del servidor: la tablet de
@@ -348,6 +350,12 @@ class ComandaCocinaSerializer(serializers.ModelSerializer):
     def get_mesero(self, obj):
         usuario = obj.orden.usuario
         return (usuario.name or usuario.email) if usuario else ""
+
+    def get_plataforma(self, obj):
+        orden = obj.orden
+        if orden.tipo_orden != Orden.TipoOrden.DELIVERY:
+            return ""
+        return orden.plataforma_otra or orden.get_plataforma_delivery_display()
 
     def get_segundos(self, obj):
         ahora = timezone.now()
@@ -378,6 +386,7 @@ class ComandaCocinaSerializer(serializers.ModelSerializer):
             "cliente_nombre",
             "mesero",
             "mesero_id",
+            "plataforma",
             "segundos",
             "detalles",
         ]

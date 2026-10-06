@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Bell, BellOff, Check, ChefHat, Maximize2, Minimize2, QrCode, Volume2 } from "lucide-react";
+import { Bell, BellOff, BellRing, Check, ChefHat, Maximize2, Minimize2, Package, Volume2 } from "lucide-react";
 import { useCocina, type ComandaTablero } from "../../hooks/useCocina";
 import { useReloj } from "../../hooks/useReloj";
 import { LoadingSpinner } from "../../components/common";
@@ -160,6 +160,16 @@ export default function CocinaPage() {
   );
 }
 
+/** "Tatiana Montenegro" → "Tatiana"; "lucia@memos.pe" → "lucia". */
+const nombreDePila = (quien: string) => quien.split("@")[0].trim().split(/\s+/)[0] ?? "";
+
+/** Para quién va la comanda, en lo que el cocinero necesita saber. */
+function destino(c: ComandaTablero): string {
+  if (c.tipo_orden === "mesa" && c.mesa_numero !== null) return `Mesa ${c.mesa_numero}`;
+  if (c.tipo_orden === "delivery") return c.plataforma ? `Delivery · ${c.plataforma}` : "Delivery";
+  return "Para llevar";
+}
+
 function TarjetaComanda({
   comanda: c,
   ahora,
@@ -188,28 +198,35 @@ function TarjetaComanda({
     listo: "text-exito",
   }[tono];
 
-  const titulo =
-    c.tipo_orden === "mesa" && c.mesa_numero !== null
-      ? `Mesa ${c.mesa_numero}`
-      : [c.tipo_orden_display, c.cliente_nombre].filter(Boolean).join(" · ");
+  const empacar = c.tipo_orden !== "mesa";
+  const mesero = c.mesero ? nombreDePila(c.mesero) : "";
   const hechos = c.detalles.filter((d) => d.estado_preparacion === "listo" || d.estado_preparacion === "entregado").length;
-  const todoListo = hechos === c.detalles.length;
+  const total = c.detalles.length;
+  // Los productos se marcan con un toque mientras la comanda está en cocina
+  // (marcar uno de una comanda nueva la empieza).
+  const tocable = c.estado === "pendiente" || c.estado === "en_preparacion";
 
   return (
     <article className="overflow-hidden rounded-2xl border border-linea bg-marfil shadow-suave">
       <div className={`h-1.5 ${franja}`} aria-hidden />
       <header className="flex items-start justify-between gap-3 px-4 pt-3">
         <div className="min-w-0">
-          <h4 className="truncate font-display text-2xl font-semibold leading-tight text-espresso">{titulo}</h4>
-          <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-sm text-suave">
-            {c.numero > 1 && <span className="font-semibold text-espresso">Ronda {c.numero}</span>}
-            {c.origen === "qr" && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-champan-claro px-2 py-0.5 text-xs font-semibold text-champan">
-                <QrCode className="size-3" /> QR
-              </span>
-            )}
-            {c.mesero && <span className="truncate">{c.mesero}</span>}
-          </p>
+          <h4 className="font-display text-[26px] font-semibold leading-tight text-balance break-words text-espresso">{destino(c)}</h4>
+          {(c.numero > 1 || empacar) && (
+            <p className="mt-1.5 flex flex-wrap items-center gap-1.5">
+              {c.numero > 1 && (
+                <span className="rounded-full bg-champan-claro px-2.5 py-0.5 text-[13px] font-bold text-champan">
+                  {c.numero}.ª ronda
+                </span>
+              )}
+              {empacar && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-aviso-fondo px-2.5 py-0.5 text-[13px] font-bold text-aviso">
+                  <Package className="size-3.5" strokeWidth={2.4} />
+                  EMPACAR{c.cliente_nombre ? ` · para ${c.cliente_nombre}` : ""}
+                </span>
+              )}
+            </p>
+          )}
         </div>
         <div className="shrink-0 text-right">
           <p className={`font-display text-[28px] font-semibold leading-none tabular-nums ${cronometro}`}>
@@ -221,60 +238,76 @@ function TarjetaComanda({
         </div>
       </header>
 
-      <ul className="mt-2 px-2">
+      <ul className="mt-3 flex flex-col gap-2 px-3">
         {c.detalles.map((d) => {
           const listo = d.estado_preparacion === "listo" || d.estado_preparacion === "entregado";
-          const tocable = c.estado === "en_preparacion";
           const contenido = (
             <>
-              {tocable && (
-                <span
-                  className={`mt-0.5 grid size-7 shrink-0 place-items-center rounded-full border-2 transition-colors ${
-                    listo ? "border-salvia bg-salvia text-marfil" : "border-linea-fuerte"
-                  }`}
-                  aria-hidden
-                >
-                  {listo && <Check className="size-4" strokeWidth={3} />}
-                </span>
-              )}
-              <span className="min-w-0 flex-1">
-                <span className={`text-[17px] leading-snug ${listo ? "text-tenue line-through" : "text-espresso"}`}>
-                  <b className="tabular-nums">{d.cantidad}×</b> {d.nombre}
+              <span
+                className={`grid min-w-11 shrink-0 place-items-center self-stretch rounded-xl font-display text-[22px] font-semibold tabular-nums ${
+                  listo ? "bg-exito/15 text-exito" : "bg-arena text-espresso"
+                }`}
+              >
+                {d.cantidad}
+              </span>
+              <span className="min-w-0 flex-1 py-0.5">
+                <span className={`block text-[18px] font-semibold leading-snug ${listo ? "text-tenue line-through" : "text-espresso"}`}>
+                  {d.nombre}
                 </span>
                 {d.nota && (
-                  <span className="mt-1 block w-fit rounded-lg bg-aviso-fondo px-2 py-0.5 text-sm font-medium text-aviso">
+                  <span className={`mt-1 block w-fit rounded-lg px-2 py-0.5 text-[15px] font-semibold ${listo ? "text-tenue" : "bg-aviso-fondo text-aviso"}`}>
                     {d.nota}
                   </span>
                 )}
               </span>
+              {tocable && (
+                <span
+                  aria-hidden
+                  className={`grid size-11 shrink-0 place-items-center self-center rounded-xl border-2 transition-colors ${
+                    listo ? "border-exito bg-exito text-marfil" : "border-linea-fuerte bg-marfil text-transparent"
+                  }`}
+                >
+                  <Check className="size-6" strokeWidth={3} />
+                </span>
+              )}
             </>
           );
+          const base = "flex w-full items-stretch gap-3 rounded-2xl border-2 p-2 text-left";
           return (
             <li key={d.id}>
               {tocable ? (
+                // Toda la fila es el botón: se toca con el nudillo o la muñeca.
                 <button
                   type="button"
                   onClick={() => cocina.marcarItem(c.id, d.id, !listo)}
                   aria-pressed={listo}
-                  className="flex w-full items-start gap-3 rounded-xl px-2 py-2.5 text-left active:bg-arena"
+                  aria-label={`${d.cantidad} ${d.nombre}${d.nota ? `, ${d.nota}` : ""}: ${listo ? "listo, tocar para desmarcar" : "marcar como listo"}`}
+                  className={`${base} min-h-16 transition-colors active:scale-[0.99] ${
+                    listo ? "border-exito/30 bg-exito-fondo" : "border-linea bg-marfil active:bg-arena"
+                  }`}
                 >
                   {contenido}
                 </button>
               ) : (
-                <div className="flex items-start gap-3 px-2 py-2.5">{contenido}</div>
+                <div className={`${base} border-transparent`}>{contenido}</div>
               )}
             </li>
           );
         })}
       </ul>
 
-      <div className="px-4 pb-4 pt-2">
+      <div className="px-4 pb-4 pt-3">
+        {tocable && total > 1 && (
+          <p className="mb-2 text-center text-sm text-suave">
+            <b className="text-espresso tabular-nums">{hechos} de {total}</b> listos · toca cada producto o todo de una vez
+          </p>
+        )}
         {c.estado === "pendiente" && (
           <button
             type="button"
             disabled={ocupado}
             onClick={() => hacer(() => cocina.iniciar(c.id))}
-            className="h-13 w-full rounded-xl bg-salvia text-base font-semibold text-marfil active:bg-salvia-osc disabled:opacity-60"
+            className="h-14 w-full rounded-xl bg-salvia text-[17px] font-semibold text-marfil active:bg-salvia-osc disabled:opacity-60"
           >
             Empezar
           </button>
@@ -284,11 +317,10 @@ function TarjetaComanda({
             type="button"
             disabled={ocupado}
             onClick={() => hacer(() => cocina.marcarLista(c.id))}
-            className={`h-13 w-full rounded-xl text-base font-semibold disabled:opacity-60 ${
-              todoListo ? "bg-salvia text-marfil active:bg-salvia-osc" : "border border-linea-fuerte bg-marfil text-espresso active:bg-arena"
-            }`}
+            className="flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-salvia text-[17px] font-semibold text-marfil active:bg-salvia-osc disabled:opacity-60"
           >
-            {todoListo ? "Lista para servir" : `Lista para servir (${hechos}/${c.detalles.length})`}
+            <BellRing className="size-5" />
+            {hechos === total ? "Avisar al mesero" : "Todo listo · avisar al mesero"}
           </button>
         )}
         {c.estado === "lista" && (
@@ -296,11 +328,12 @@ function TarjetaComanda({
             type="button"
             disabled={ocupado}
             onClick={() => hacer(() => cocina.entregar(c.id))}
-            className="h-13 w-full rounded-xl border border-linea-fuerte bg-marfil text-base font-semibold text-espresso active:bg-arena disabled:opacity-60"
+            className="h-14 w-full rounded-xl border border-linea-fuerte bg-marfil text-[17px] font-semibold text-espresso active:bg-arena disabled:opacity-60"
           >
             Ya se entregó
           </button>
         )}
+        {mesero && <p className="mt-2 text-center text-[13px] text-tenue">Atiende {mesero}</p>}
       </div>
     </article>
   );

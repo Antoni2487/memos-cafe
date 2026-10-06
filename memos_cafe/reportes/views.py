@@ -1115,22 +1115,31 @@ class AlertasView(APIView):
                     },
                 )
 
-        # ── Órdenes creadas ───────────────────────────────────────────────
+        # ── Pedidos tomados ───────────────────────────────────────────────
+        # El admin no recibe los avisos de trabajo (confirmar QR, servir):
+        # esos son de los meseros. Acá solo se entera, en una línea, de qué
+        # mesa se atendió y quién la tomó.
         ordenes = Orden.objects.filter(
             fecha_creacion__gte=desde,
         ).select_related("usuario", "mesa")
 
         for orden in ordenes:
-            tipo_display = {
-                "mesa": f"Mesa {orden.mesa.numero}" if orden.mesa else "Mesa",
-                "llevar": "Para llevar",
-                "delivery": "Delivery",
-            }.get(orden.tipo_orden, orden.tipo_orden)
-
+            quien = (orden.usuario.name or orden.usuario.email) if orden.usuario else ""
+            por = f" por {quien}" if quien else ""
+            if orden.tipo_orden == Orden.TipoOrden.MESA and orden.mesa:
+                mensaje = f"Mesa {orden.mesa.numero} atendida{por}"
+            elif orden.tipo_orden == Orden.TipoOrden.DELIVERY:
+                plataforma = (
+                    orden.plataforma_otra or orden.get_plataforma_delivery_display()
+                )
+                mensaje = f"Delivery {plataforma}".strip() + f" tomado{por}"
+            else:
+                cliente = f" de {orden.cliente_nombre}" if orden.cliente_nombre else ""
+                mensaje = f"Pedido para llevar{cliente} tomado{por}"
             alertas.append(
                 {
                     "tipo": "orden_creada",
-                    "mensaje": f"Nueva orden #{orden.id} — {tipo_display}",
+                    "mensaje": mensaje,
                     "fecha": orden.fecha_creacion,
                     "icono": "orden",
                 },
@@ -1140,21 +1149,28 @@ class AlertasView(APIView):
         pagos = Pago.objects.filter(
             fecha__gte=desde,
             estado="completado",
-        ).select_related("orden")
+        ).select_related("orden", "orden__mesa")
 
-        alertas.extend(
-            {
-                "tipo": "venta_cobrada",
-                "mensaje": f"Venta cobrada — Orden #{pago.orden_id} · S/ {pago.monto}",
-                "fecha": pago.fecha,
-                "icono": "venta",
-            }
-            for pago in pagos
-        )
+        for pago in pagos:
+            orden = pago.orden
+            donde = (
+                f"Mesa {orden.mesa.numero}" if orden.mesa_id else f"Pedido #{orden.id}"
+            )
+            alertas.append(
+                {
+                    "tipo": "venta_cobrada",
+                    "mensaje": (
+                        f"{donde} pagó S/ {pago.monto} "
+                        f"({pago.get_metodo_pago_display()})"
+                    ),
+                    "fecha": pago.fecha,
+                    "icono": "venta",
+                },
+            )
 
         # ── Primeros pedidos por QR que nadie confirma ────────────────────
-        # Los meseros y cajeros los reciben al instante; si pasan unos
-        # minutos sin respuesta, el admin tambien se entera.
+        # Los meseros los reciben al instante; si pasan unos minutos sin
+        # respuesta, el admin tambien se entera (esto si es para actuar).
         limite_escala = timezone.now() - timedelta(
             minutes=SesionMesaService.MINUTOS_ESCALA_POR_CONFIRMAR,
         )

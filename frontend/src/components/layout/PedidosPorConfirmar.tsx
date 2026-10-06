@@ -20,7 +20,9 @@ const soles = (n: string | number) => `S/ ${Number(n).toFixed(2)}`;
  */
 export default function PedidosPorConfirmar() {
   const roles = authService.getUser().roles;
-  const habilitado = ["admin", "mesero", "cajero"].some((r) => roles.includes(r));
+  // Solo los meseros confirman (ven la mesa). Si nadie lo hace en unos
+  // minutos, al admin le llega a la campana (reportes/views.py, AlertasView).
+  const habilitado = roles.includes("mesero");
   const [pedidos, setPedidos] = useState<PedidoPorConfirmar[]>([]);
   const [ocupado, setOcupado] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);

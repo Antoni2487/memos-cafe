@@ -462,3 +462,17 @@ class TestListasParaServir:
         r = _cliente("cajero").get("/api/ordenes/comandas/listas/")
 
         assert r.status_code == HTTPStatus.FORBIDDEN
+
+    def test_la_cocina_sabe_con_que_app_pasan_a_recoger_el_delivery(self):
+        CajaFactory()
+        orden = OrdenService.crear_orden(
+            usuario=UserFactory(),
+            tipo_orden="delivery",
+            plataforma_delivery="rappi",
+            detalles=[{"producto": ProductoFactory(), "cantidad": 1}],
+        )
+        ComandaService.marcar_lista(orden.comandas.get())
+
+        (comanda,) = _cliente("mesero").get("/api/ordenes/comandas/listas/").data
+
+        assert comanda["plataforma"] == "Rappi"

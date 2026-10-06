@@ -81,7 +81,7 @@ export default function Navbar() {
   const manejarEventoEnVivo = (evento: Record<string, unknown>) => {
     // Una mesa ya atendida pidió algo más por QR: va directo a cocina, pero
     // el mesero se entera (por si quiere pasar a verla).
-    if (evento.type === "pedido.ronda_qr" && (esMesero || esAdmin)) {
+    if (evento.type === "pedido.ronda_qr" && esMesero) {
       sonarAviso();
       setAlertasEnVivo((prev) => [
         {
