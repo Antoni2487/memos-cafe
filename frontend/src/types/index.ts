@@ -353,6 +353,24 @@ export interface ReporteProductos {
   promociones?: ReporteProductoItem[];
 }
 
+/** Reporte de tiempos (GET /reportes/tiempos/). Todo en segundos. */
+export interface TiempoResumen {
+  mediana: number | null;
+  p90: number | null;
+  n: number;
+}
+
+export interface ReporteTiempos {
+  periodo: { inicio: string; fin: string };
+  objetivo_min: number;
+  total: TiempoResumen & { a_tiempo_pct: number | null };
+  etapas: (TiempoResumen & { clave: "espera" | "preparacion" | "servir" | "cobro"; nombre: string; descripcion: string })[];
+  por_hora: { hora: number; comandas: number; mediana: number }[];
+  por_producto: { nombre: string; rondas: number; mediana_preparacion: number }[];
+  por_mesero: { nombre: string; rondas: number; mediana_servir: number }[];
+  demoras: { comanda_id: number; fecha: string; destino: string; ronda: number; total: number; etapa_mas_larga: string | null }[];
+}
+
 export interface ReporteCajaTurno {
   caja_id: number;
   cajero: string;

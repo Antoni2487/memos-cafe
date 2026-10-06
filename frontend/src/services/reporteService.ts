@@ -1,5 +1,5 @@
 import api from "./api";
-import type { ReporteCaja, ReporteProductos, ReporteVentas } from "../types";
+import type { ReporteCaja, ReporteProductos, ReporteTiempos, ReporteVentas } from "../types";
 
 export interface RangoFechas {
   fecha_inicio: string;
@@ -18,6 +18,10 @@ const reporteService = {
   // Reporte de caja por turno o rango de fechas
   getCaja: (params: RangoFechas) =>
     api.get<ReporteCaja>("/reportes/caja/", { params }),
+
+  // Tiempos: cuánto tarda cada etapa de un pedido (cocina, servir, cobro)
+  getTiempos: (params: RangoFechas) =>
+    api.get<ReporteTiempos>("/reportes/tiempos/", { params }),
 
   // Exportar ventas a Excel — descarga directa
   exportarVentas: (params: RangoFechas) =>

@@ -1,8 +1,9 @@
 import { useState, type ReactNode, type ComponentType, type CSSProperties } from "react";
-import { Download, TrendingUp, Package, Receipt } from "lucide-react";
+import { Download, TrendingUp, Package, Receipt, Timer } from "lucide-react";
 import reporteService, { descargarBlob } from "../../services/reporteService";
 import { getErrorMessage } from "../../utils/errors";
-import type { ReporteCaja, ReporteProductos, ReporteVentas } from "../../types";
+import type { ReporteCaja, ReporteProductos, ReporteTiempos as DatosTiempos, ReporteVentas } from "../../types";
+import ReporteTiempos from "./ReporteTiempos";
 
 const COLOR = {
   verde:    "var(--salvia)",
@@ -125,12 +126,13 @@ function Tabla({ headers, rows }: TablaProps) {
 }
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
-type TabId = "ventas" | "productos" | "caja";
+type TabId = "ventas" | "productos" | "caja" | "tiempos";
 
 const TABS: { id: TabId; label: string; Icon: ComponentType<{ size?: number; strokeWidth?: number }> }[] = [
   { id: "ventas",    label: "Ventas",    Icon: TrendingUp },
   { id: "productos", label: "Productos", Icon: Package    },
   { id: "caja",      label: "Caja",      Icon: Receipt    },
+  { id: "tiempos",   label: "Tiempos",   Icon: Timer      },
 ];
 
 // ── Página principal ──────────────────────────────────────────────────────────
@@ -144,6 +146,7 @@ export default function ReportesPage() {
   const [dataVentas,   setDataVentas]   = useState<ReporteVentas | null>(null);
   const [dataProductos,setDataProductos]= useState<ReporteProductos | null>(null);
   const [dataCaja,     setDataCaja]     = useState<ReporteCaja | null>(null);
+  const [dataTiempos,  setDataTiempos]  = useState<DatosTiempos | null>(null);
 
   const handleConsultar = async () => {
     if (!fechaInicio || !fechaFin) return;
@@ -157,6 +160,9 @@ export default function ReportesPage() {
       } else if (tab === "productos") {
         const { data } = await reporteService.getProductos(params);
         setDataProductos(data);
+      } else if (tab === "tiempos") {
+        const { data } = await reporteService.getTiempos(params);
+        setDataTiempos(data);
       } else {
         const { data } = await reporteService.getCaja(params);
         setDataCaja(data);
@@ -208,10 +214,10 @@ export default function ReportesPage() {
             fontWeight: 600, color: COLOR.verde, margin: 0 }}>Reportes</h2>
           <p style={{ fontFamily: "var(--font-texto)", fontSize: 13,
             color: "var(--suave)", margin: "4px 0 0 0" }}>
-            Consulta y exporta reportes de ventas, productos y caja
+            Consulta y exporta reportes de ventas, productos, caja y tiempos
           </p>
         </div>
-        <button onClick={handleExportar} disabled={exportando} style={{
+        {tab !== "tiempos" && <button onClick={handleExportar} disabled={exportando} style={{
           display: "flex", alignItems: "center", gap: 6,
           padding: "9px 16px", borderRadius: 8,
           border: `1px solid var(--linea-fuerte)`,
@@ -222,11 +228,11 @@ export default function ReportesPage() {
         }}>
           <Download size={14} />
           {exportando ? "Generando..." : "Exportar Excel"}
-        </button>
+        </button>}
       </div>
 
       {/* Tabs */}
-      <div style={{ display: "flex", gap: 8 }}>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         {TABS.map(({ id, label, Icon }) => (
           <TabBtn key={id} activo={tab === id} onClick={() => cambiarTab(id)} Icon={Icon}>
             {label}
@@ -263,6 +269,9 @@ export default function ReportesPage() {
             color: COLOR.rojo, margin: "12px 0 0 0" }}>⚠ {error}</p>
         )}
       </div>
+
+      {/* ── Tab Tiempos ── */}
+      {tab === "tiempos" && dataTiempos && <ReporteTiempos datos={dataTiempos} />}
 
       {/* ── Tab Ventas ── */}
       {tab === "ventas" && dataVentas && (
@@ -363,7 +372,8 @@ export default function ReportesPage() {
       )}
 
       {/* Estado vacío inicial */}
-      {!cargando && !dataVentas && !dataProductos && !dataCaja && !error && (
+      {/* Por pestaña: antes se ocultaba solo si había datos de cualquiera. */}
+      {!cargando && !{ ventas: dataVentas, productos: dataProductos, caja: dataCaja, tiempos: dataTiempos }[tab] && !error && (
         <div style={{ textAlign: "center", padding: "60px 0",
           color: "var(--suave)", fontFamily: "var(--font-texto)", fontSize: 14 }}>
           Selecciona un período y presiona <strong>Consultar</strong> para ver el reporte.

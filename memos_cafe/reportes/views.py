@@ -32,9 +32,11 @@ from memos_cafe.caja.models import Pago
 from memos_cafe.caja.models import SolicitudCobro
 from memos_cafe.mesas.models import Mesa
 from memos_cafe.mesas.services import SesionMesaService
+from memos_cafe.ordenes.models import Comanda
 from memos_cafe.ordenes.models import DetalleOrden
 from memos_cafe.ordenes.models import Orden
 from memos_cafe.realtime.notificar import estado_tiempo_real
+from memos_cafe.reportes import tiempos
 from memos_cafe.utils.fechas import entre_fechas
 from memos_cafe.utils.fechas import inicio_del_dia
 from memos_cafe.utils.permissions import EsAdmin
@@ -1078,6 +1080,40 @@ class ReporteOrdenesExportView(APIView):
 
     def get(self, request):
         return ReporteOrdenesView().export_excel(request)
+
+
+class ReporteTiemposView(APIView):
+    """GET /api/reportes/tiempos/?fecha_inicio=&fecha_fin= — cuánto tarda
+    cada etapa de un pedido (ver memos_cafe/reportes/tiempos.py)."""
+
+    permission_classes = [EsAdmin]
+
+    def get(self, request):
+        fecha_inicio, fecha_fin = _parse_rango_fechas(request)
+        comandas = (
+            Comanda.objects.filter(
+                **entre_fechas("creada_en", fecha_inicio, fecha_fin),
+            )
+            .exclude(orden__estado=Orden.Estado.ANULADA)
+            .select_related("orden", "orden__mesa", "orden__usuario")
+            .prefetch_related(
+                Prefetch(
+                    "detalles",
+                    queryset=DetalleOrden.objects.select_related(
+                        "producto",
+                        "promocion",
+                    ),
+                ),
+            )
+        )
+        solicitudes = SolicitudCobro.objects.filter(
+            **entre_fechas("solicitado_en", fecha_inicio, fecha_fin),
+            atendido_en__isnull=False,
+        )
+        datos = tiempos.calcular(comandas, solicitudes)
+        return Response(
+            {"periodo": {"inicio": fecha_inicio, "fin": fecha_fin}, **datos},
+        )
 
 
 class AlertasView(APIView):
