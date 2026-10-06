@@ -16,6 +16,15 @@ const ROL_COLORES: Record<string, { bg: string; color: string }> = {
   [ROLES.ADMIN]: { bg: "rgba(76,107,101,0.12)", color: "var(--salvia)" },
   [ROLES.CAJERO]: { bg: "rgba(140,108,58,0.15)", color: "var(--champan)" },
   [ROLES.MESERO]: { bg: "rgba(33,150,243,0.12)", color: "var(--info)" },
+  [ROLES.COCINA]: { bg: "var(--peligro-fondo)", color: "var(--cafe)" },
+};
+
+// El grupo interno se llama "cocina"; en pantalla es la persona: Cocinero.
+const ETIQUETA_ROL: Record<string, string> = {
+  [ROLES.ADMIN]: "Admin",
+  [ROLES.CAJERO]: "Cajero",
+  [ROLES.MESERO]: "Mesero",
+  [ROLES.COCINA]: "Cocinero",
 };
 
 const BTN_BASE: CSSProperties = {
@@ -78,7 +87,7 @@ export default function UsuariosPage() {
             padding: "3px 10px", letterSpacing: "0.04em",
             textTransform: "capitalize",
           }}>
-            {rol}
+            {ETIQUETA_ROL[rol] ?? rol}
           </span>
         );
       },

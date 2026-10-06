@@ -2,18 +2,47 @@ from django.contrib.auth.models import Group
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
+from memos_cafe.roles.models import ROLES
 from memos_cafe.users.models import User
 
 
 class UserSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True, required=False, min_length=8, max_length=128)
-    group_name = serializers.CharField(write_only=True, required=False, allow_blank=True, max_length=150)
+    password = serializers.CharField(
+        write_only=True,
+        required=False,
+        min_length=8,
+        max_length=128,
+    )
+    group_name = serializers.CharField(
+        write_only=True,
+        required=False,
+        allow_blank=True,
+        max_length=150,
+    )
     groups = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ["id", "email", "name", "password", "group_name", "is_active", "date_joined", "groups"]
+        fields = [
+            "id",
+            "email",
+            "name",
+            "password",
+            "group_name",
+            "is_active",
+            "date_joined",
+            "groups",
+        ]
         read_only_fields = ["id", "date_joined"]
+
+    def validate_group_name(self, value):
+        """Solo los roles del sistema (admin, cajero, mesero, cocina). Antes un
+        nombre que no existía creaba el usuario sin rol, sin avisar."""
+        if value and value not in dict(ROLES):
+            roles = ", ".join(dict(ROLES))
+            msg = f"Rol inválido. Usa uno de: {roles}."
+            raise serializers.ValidationError(msg)
+        return value
 
     def get_groups(self, obj):
         return [{"id": g.id, "name": g.name} for g in obj.groups.all()]
@@ -26,10 +55,8 @@ class UserSerializer(serializers.ModelSerializer):
             user.set_password(password)
         user.save()
         if group_name:
-            try:
-                user.groups.add(Group.objects.get(name=group_name))
-            except Group.DoesNotExist:
-                pass
+            # get_or_create: el grupo puede no existir aún en una base nueva.
+            user.groups.add(Group.objects.get_or_create(name=group_name)[0])
         return user
 
     def update(self, instance, validated_data):

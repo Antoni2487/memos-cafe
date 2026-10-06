@@ -9,6 +9,7 @@ const ROLES_OPTIONS = [
   { value: ROLES.ADMIN,   label: "Admin" },
   { value: ROLES.CAJERO,  label: "Cajero" },
   { value: ROLES.MESERO,  label: "Mesero" },
+  { value: ROLES.COCINA,  label: "Cocinero" },
 ];
 
 interface UsuarioFormProps {
