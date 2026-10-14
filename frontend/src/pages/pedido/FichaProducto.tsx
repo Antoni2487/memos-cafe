@@ -30,6 +30,7 @@ export default function FichaProducto({
 
   return (
     <Hoja etiqueta={item.nombre} onCerrar={onCerrar} sinRelleno>
+      {(cerrar) => (<>
       {item.imagen ? (
         <img src={item.imagen} alt="" className="aspect-[4/3] w-full object-cover" />
       ) : (
@@ -75,14 +76,15 @@ export default function FichaProducto({
           type="button"
           onClick={() => {
             onAgregar({ tipo: item.tipo, id: item.id, nombre: item.nombre, precio, imagen: item.imagen, cantidad, nota });
-            onCerrar();
+            cerrar();
           }}
-          className="flex h-13 flex-1 items-center justify-between gap-3 rounded-2xl bg-salvia px-5 text-[15px] font-semibold text-marfil transition-colors active:bg-salvia-osc"
+          className="pulsable flex h-13 flex-1 items-center justify-between gap-3 rounded-2xl bg-salvia px-5 text-[15px] font-semibold text-marfil active:bg-salvia-osc"
         >
           <span>Agregar</span>
           <span className="tabular-nums">{soles(precio * cantidad)}</span>
         </button>
       </div>
+      </>)}
     </Hoja>
   );
 }
@@ -111,7 +113,7 @@ export function Contador({
         <Minus className="size-4" />
       </button>
       <span className="w-7 text-center text-base font-semibold text-espresso tabular-nums" aria-live="polite">
-        {valor}
+        <span key={valor} className="latido inline-block">{valor}</span>
       </span>
       <button
         type="button"

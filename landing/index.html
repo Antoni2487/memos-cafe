@@ -1,4 +1,5 @@
 <!DOCTYPE html><html class="scroll-smooth" lang="es"><head>
+<script>document.documentElement.classList.add("js")</script>
 <meta charset="utf-8">
 <meta content="width=device-width, initial-scale=1.0" name="viewport">
 <title>MEMO'S | Café, Postres y Champagne</title>
@@ -8,16 +9,115 @@
 <style>
         .font-cormorant { font-family: 'Cormorant Garamond', serif; }
         .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 200, 'GRAD' 0, 'opsz' 24; }
-        .parallax-bg { background-attachment: fixed; }
-        .fade-in-up { animation: fadeInUp 1.2s ease-out forwards; }
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(30px); }
-            to { opacity: 1; transform: translateY(0); }
+        .luxury-shadow { box-shadow: 0 4px 20px rgba(0,0,0,0.04); }
+
+        /* ─── Movimiento ─────────────────────────────────────────────────
+           Los mismos tiempos y curvas que la app (frontend/src/index.css).
+           Cada animación orienta (dónde estoy, qué cambió) o confirma un
+           toque; ninguna está solo de adorno. */
+        :root {
+            --dur-toque: 100ms;
+            --dur-rapida: 160ms;
+            --dur-media: 240ms;
+            --dur-revelar: 640ms;
+            --ease-salida: cubic-bezier(0.2, 0, 0, 1);
+            --ease-entrada: cubic-bezier(0.4, 0, 1, 1);
+            --ease-estandar: cubic-bezier(0.4, 0, 0.2, 1);
         }
-        .luxury-shadow { shadow: 0 4px 20px rgba(0,0,0,0.04); }
-        .stagger-1 { animation-delay: 0.1s; }
-        .stagger-2 { animation-delay: 0.2s; }
-        .stagger-3 { animation-delay: 0.3s; }
+
+        /* Los enlaces del menú caen debajo de la barra fija, no detrás. */
+        section[id] { scroll-margin-top: 72px; }
+
+        /* Botones y enlaces con forma de botón: se hunden al tocarlos. */
+        .pulsable {
+            transition: transform var(--dur-rapida) var(--ease-estandar),
+                        background-color var(--dur-rapida) var(--ease-estandar),
+                        color var(--dur-rapida) var(--ease-estandar),
+                        box-shadow var(--dur-rapida) var(--ease-estandar);
+        }
+        .pulsable:active { transform: scale(0.97); transition-duration: var(--dur-toque); }
+        @media (hover: hover) {
+            .pulsable.elevar:hover { transform: translateY(-2px); box-shadow: 0 10px 24px -10px rgba(27, 28, 26, 0.35); }
+            .pulsable.elevar:active { transform: translateY(0) scale(0.97); }
+        }
+        a:focus-visible, button:focus-visible {
+            outline: 2px solid #42625c; outline-offset: 3px; border-radius: 9999px;
+        }
+
+        /* Barra superior: se compacta y toma sombra al bajar, para que el
+           contenido gane espacio y se distinga de la barra. */
+        .barra { transition: box-shadow var(--dur-media) var(--ease-estandar), background-color var(--dur-media) var(--ease-estandar); }
+        .barra-fila { height: 80px; transition: height var(--dur-media) var(--ease-estandar); }
+        .barra.compacta { box-shadow: 0 6px 20px -12px rgba(27, 28, 26, 0.35); background-color: rgba(255,255,255,0.92); }
+        .barra.compacta .barra-fila { height: 64px; }
+
+        /* Sección en la que está el visitante: subrayado que crece desde
+           el centro. */
+        .enlace { position: relative; }
+        .enlace::after {
+            content: ""; position: absolute; left: 0; right: 0; bottom: -6px; height: 1.5px;
+            background: currentColor; transform: scaleX(0);
+            transition: transform var(--dur-media) var(--ease-salida);
+        }
+        .enlace:hover::after, .enlace[aria-current="true"]::after { transform: scaleX(1); }
+        .enlace[aria-current="true"] { color: #42625c; }
+
+        /* Menú del celular: se despliega hacia abajo desde la barra. */
+        .menu-movil {
+            display: grid; grid-template-rows: 0fr; visibility: hidden;
+            transition: grid-template-rows var(--dur-media) var(--ease-salida), visibility 0s linear var(--dur-media);
+        }
+        .menu-movil > div { overflow: hidden; }
+        .menu-movil.abierto {
+            grid-template-rows: 1fr; visibility: visible;
+            transition: grid-template-rows var(--dur-media) var(--ease-salida), visibility 0s;
+        }
+        .menu-movil a { opacity: 0; transform: translateY(-4px); transition: opacity var(--dur-rapida) var(--ease-entrada), transform var(--dur-rapida) var(--ease-entrada); }
+        .menu-movil.abierto a {
+            opacity: 1; transform: none;
+            transition: opacity var(--dur-media) var(--ease-salida), transform var(--dur-media) var(--ease-salida);
+            transition-delay: calc(var(--i, 0) * 40ms + 60ms);
+        }
+
+        /* Portada: el texto entra en orden (lo que hay, el nombre, qué
+           hacer) mientras la foto se asienta. */
+        @keyframes subir { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+        @keyframes asentar { from { transform: scale(1.06); } to { transform: scale(1); } }
+        .portada-foto { animation: asentar 1800ms var(--ease-salida) both; }
+        .portada-texto > * { animation: subir 700ms var(--ease-salida) both; }
+        .portada-texto > :nth-child(2) { animation-delay: 120ms; }
+        .portada-texto > :nth-child(3) { animation-delay: 240ms; }
+        /* La flecha invita a bajar y desaparece cuando ya se bajó. */
+        @keyframes flotar { 0%, 100% { transform: translate(-50%, 0); } 50% { transform: translate(-50%, 6px); } }
+        .indicador { transform: translateX(-50%); animation: flotar 2400ms var(--ease-estandar) infinite; transition: opacity var(--dur-media) var(--ease-estandar); }
+        .indicador.oculto { opacity: 0 !important; pointer-events: none; }
+
+        /* Al bajar, cada bloque aparece cuando entra en pantalla. Solo se
+           oculta si hay JavaScript (clase en <html>): sin JS se ve todo. */
+        .js [data-revelar] {
+            opacity: 0; transform: translateY(16px);
+            transition: opacity var(--dur-revelar) var(--ease-salida), transform var(--dur-revelar) var(--ease-salida);
+            transition-delay: calc(var(--i, 0) * 80ms);
+        }
+        .js [data-revelar].visible { opacity: 1; transform: none; }
+
+        /* Las fotos se acercan al pasar el mouse, solo con mouse (en el
+           celular el "hover" queda pegado después del toque). */
+        .zoom { transition: transform 700ms var(--ease-salida); }
+        @media (hover: hover) { .group-zoom:hover .zoom { transform: scale(1.06); } }
+
+        /* El mapa aparece cuando terminó de cargar, no a pedazos. */
+        .mapa { opacity: 0; transition: opacity var(--dur-revelar) var(--ease-salida); }
+        .mapa.cargado { opacity: 1; }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, ::before, ::after {
+                animation-duration: 1ms !important; animation-delay: 0ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 1ms !important; transition-delay: 0ms !important;
+            }
+            html { scroll-behavior: auto !important; }
+        }
     </style>
 <script id="tailwind-config">
         tailwind.config = {
@@ -101,58 +201,70 @@
 </head>
 <body class="bg-background text-on-background font-sans antialiased overflow-x-hidden">
 <!-- Navegacion superior -->
-<nav class="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md transition-all duration-300 border-b border-outline-variant/30">
-<div class="max-w-7xl mx-auto px-lg md:px-xl h-20 flex justify-between items-center">
+<nav class="barra fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-outline-variant/30">
+<div class="barra-fila max-w-7xl mx-auto px-lg md:px-xl flex justify-between items-center">
 <div class="flex items-center gap-xl">
 <a class="font-display text-2xl tracking-widest text-primary font-bold" href="#">MEMO'S</a>
 <div class="hidden md:flex gap-lg">
-<a class="text-label-md font-medium text-on-surface-variant hover:text-primary transition-colors" href="#about">NUESTRA HISTORIA</a>
-<a class="text-label-md font-medium text-on-surface-variant hover:text-primary transition-colors" href="#gallery">ESPECIALIDADES</a>
-<a class="text-label-md font-medium text-on-surface-variant hover:text-primary transition-colors" href="#gallery-fotos">GALERÍA</a>
-<a class="text-label-md font-medium text-on-surface-variant hover:text-primary transition-colors" href="#contact">UBICACIÓN</a>
+<a class="enlace text-label-md font-medium text-on-surface-variant hover:text-primary transition-colors" href="#about">NUESTRA HISTORIA</a>
+<a class="enlace text-label-md font-medium text-on-surface-variant hover:text-primary transition-colors" href="#gallery">ESPECIALIDADES</a>
+<a class="enlace text-label-md font-medium text-on-surface-variant hover:text-primary transition-colors" href="#gallery-fotos">GALERÍA</a>
+<a class="enlace text-label-md font-medium text-on-surface-variant hover:text-primary transition-colors" href="#contact">UBICACIÓN</a>
 </div>
 </div>
 <div class="flex items-center gap-md">
-<a class="bg-primary text-white px-lg py-sm rounded-full text-button font-semibold hover:bg-primary-container transition-all active:scale-95 shadow-sm flex items-center gap-xs" href="https://wa.me/51968429135?text=Hola%2C%20quiero%20reservar%20una%20mesa%20en%20Memo's%20Caf%C3%A9" target="_blank" rel="noopener noreferrer">
+<a class="pulsable bg-primary text-white px-lg py-sm rounded-full text-button font-semibold hover:bg-primary-container shadow-sm hidden sm:flex items-center gap-xs" href="https://wa.me/51968429135?text=Hola%2C%20quiero%20reservar%20una%20mesa%20en%20Memo's%20Caf%C3%A9" target="_blank" rel="noopener noreferrer">
 <span class="material-symbols-outlined text-lg">chat</span>
                     RESERVAR POR WHATSAPP
                 </a>
-<button class="md:hidden text-primary">
-<span class="material-symbols-outlined">menu</span>
+<button id="boton-menu" type="button" class="pulsable md:hidden grid place-items-center size-11 rounded-full text-primary hover:bg-surface-container-low" aria-expanded="false" aria-controls="menu-movil" aria-label="Abrir menú">
+<span class="material-symbols-outlined" aria-hidden="true">menu</span>
 </button>
+</div>
+</div>
+<div id="menu-movil" class="menu-movil md:hidden">
+<div>
+<div class="flex flex-col px-lg pb-lg pt-xs gap-xs border-t border-outline-variant/30">
+<a style="--i:0" class="py-sm text-lg font-medium text-on-surface" href="#about">Nuestra historia</a>
+<a style="--i:1" class="py-sm text-lg font-medium text-on-surface" href="#gallery">Especialidades</a>
+<a style="--i:2" class="py-sm text-lg font-medium text-on-surface" href="#gallery-fotos">Galería</a>
+<a style="--i:3" class="py-sm text-lg font-medium text-on-surface" href="#contact">Ubicación</a>
+<a style="--i:4" class="pulsable mt-sm bg-primary text-white px-lg py-md rounded-full font-semibold flex items-center justify-center gap-xs" href="https://wa.me/51968429135?text=Hola%2C%20quiero%20reservar%20una%20mesa%20en%20Memo's%20Caf%C3%A9" target="_blank" rel="noopener noreferrer">
+<span class="material-symbols-outlined text-lg" aria-hidden="true">chat</span> Reservar por WhatsApp</a>
+</div>
 </div>
 </div>
 </nav>
 <!-- Hero -->
 <section class="relative h-[921px] flex items-center justify-center overflow-hidden">
 <div class="absolute inset-0 z-0">
-<div class="w-full h-full bg-cover bg-center transition-transform duration-1000 scale-105" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBg330_C0_tFdNTQ4X02hq3cT6QUVeKZXDPyuAUwk428Wq3ZU_QLPL7ezlLAQ9dZtWrmRo4in7x9Q-k5Wt2bHx54hSrsEV1v78iSNpCwbdn1sAxmVHl-d-DnMCf7IwmzyaEDP60UqNC4lDw14NBAtKmYrnkSJGIyApm-YI8_7oJhs6ICFrmatQNDCB2SKgAf-MdVbBkoTsdNWWfxDqzfoOQDwjfHvooxIKKrwyHxA6Y0z9AbtGV10U0L9EHN-AFuinGG19Xh2ctRlU')">
+<div class="portada-foto w-full h-full bg-cover bg-center" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBg330_C0_tFdNTQ4X02hq3cT6QUVeKZXDPyuAUwk428Wq3ZU_QLPL7ezlLAQ9dZtWrmRo4in7x9Q-k5Wt2bHx54hSrsEV1v78iSNpCwbdn1sAxmVHl-d-DnMCf7IwmzyaEDP60UqNC4lDw14NBAtKmYrnkSJGIyApm-YI8_7oJhs6ICFrmatQNDCB2SKgAf-MdVbBkoTsdNWWfxDqzfoOQDwjfHvooxIKKrwyHxA6Y0z9AbtGV10U0L9EHN-AFuinGG19Xh2ctRlU')">
 </div>
 <div class="absolute inset-0 bg-black/20"></div>
 </div>
-<div class="relative z-10 text-center text-white px-md fade-in-up">
+<div class="portada-texto relative z-10 text-center text-white px-md">
 <span class="font-serif-alt italic text-2xl md:text-3xl mb-md block tracking-wide opacity-90">Vive el arte del</span>
 <h1 class="font-display text-5xl md:text-8xl mb-lg tracking-tight font-bold">Café y Champagne</h1>
 <div class="flex flex-col md:flex-row gap-md justify-center items-center mt-xl">
-<a class="bg-white text-primary px-xl py-md rounded-full text-button font-bold hover:bg-surface-container-low transition-all w-full md:w-auto" href="#gallery">VER ESPECIALIDADES</a>
-<a class="border border-white/50 backdrop-blur-sm text-white px-xl py-md rounded-full text-button font-bold hover:bg-white/10 transition-all w-full md:w-auto" href="#about">NUESTRA HISTORIA</a>
+<a class="pulsable elevar bg-white text-primary px-xl py-md rounded-full text-button font-bold hover:bg-surface-container-low w-full md:w-auto" href="#gallery">VER ESPECIALIDADES</a>
+<a class="pulsable border border-white/50 backdrop-blur-sm text-white px-xl py-md rounded-full text-button font-bold hover:bg-white/10 w-full md:w-auto" href="#about">NUESTRA HISTORIA</a>
 </div>
 </div>
-<div class="absolute bottom-huge left-1/2 -translate-x-1/2 animate-bounce opacity-60">
-<span class="material-symbols-outlined text-white text-4xl">keyboard_double_arrow_down</span>
-</div>
+<a id="indicador" class="indicador absolute bottom-huge left-1/2 opacity-60" href="#about" aria-label="Bajar a nuestra historia">
+<span class="material-symbols-outlined text-white text-4xl" aria-hidden="true">keyboard_double_arrow_down</span>
+</a>
 </section>
 <!-- Nuestra historia -->
 <section class="py-huge px-lg md:px-xxl bg-background" id="about">
 <div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-xxl items-center">
-<div class="space-y-lg order-2 md:order-1">
+<div class="space-y-lg order-2 md:order-1" data-revelar>
 <span class="text-primary font-semibold tracking-widest text-sm uppercase">La esencia de MEMO'S</span>
 <h2 class="font-serif-alt text-4xl md:text-6xl text-on-surface leading-tight">Un santuario tranquilo para el paladar refinado.</h2>
 <p class="font-sans text-body-lg text-on-surface-variant leading-relaxed">
                     Nacido de la pasión por la elegancia botánica y las cosas finas de la vida, MEMO'S combina la precisión artesanal del café de especialidad con el espíritu festivo del champagne. Cada rincón de nuestro espacio boutique está pensado para ser un lienzo para la conversación y los postres curados.
                 </p>
 </div>
-<div class="relative order-1 md:order-2">
+<div class="relative order-1 md:order-2" data-revelar style="--i:1">
 <div class="aspect-[4/5] rounded-2xl overflow-hidden shadow-2xl rotate-3 translate-x-4">
 <div class="w-full h-full bg-cover bg-center" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuB-_I3S_eHOdS9sd6hF37gIBMpUCtivdmfn4SGSvR5-RfKN29yPcHzkHm5d45euS9XE0zQMCVLxkeH2La0qs74Es-jOtgbfkme0pJu62S6fIsQseGPVAmaItFVki5CJMAv_0jAms_c_qYQZvP6LR0_f7CojL3lnaqkhTSUOIZmsiGHpHFoxInmxSgTgUWy4mEOn_t3LcfWiPBazMZ7IxoMFzEapkJpVZiaS7njXmnWf-3Uv3XJnszWQywqGMj9KfJnDF84u8ZVmKXs')"></div>
 </div>
@@ -164,28 +276,28 @@
 </section>
 <!-- Especialidades -->
 <section class="py-huge bg-surface-container-low overflow-hidden" id="gallery">
-<div class="max-w-7xl mx-auto px-lg mb-xxl text-center">
+<div class="max-w-7xl mx-auto px-lg mb-xxl text-center" data-revelar>
 <h2 class="font-display text-4xl md:text-6xl mb-md">Nuestras Especialidades</h2>
 <div class="w-24 h-1 bg-tertiary/30 mx-auto"></div>
 </div>
 <div class="flex flex-col md:flex-row gap-lg px-lg max-w-full overflow-x-auto pb-lg snap-x">
-<div class="min-w-[320px] md:min-w-[400px] flex-shrink-0 bg-white p-lg rounded-2xl luxury-shadow snap-center">
+<div class="group-zoom min-w-[320px] md:min-w-[400px] flex-shrink-0 bg-white p-lg rounded-2xl luxury-shadow snap-center" data-revelar style="--i:0">
 <div class="aspect-square rounded-xl overflow-hidden mb-lg">
-<div class="w-full h-full bg-cover bg-center hover:scale-110 transition-transform duration-700" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDhHtiYyiAbd-x-V75AIBUcMgMEmL_MEy8BRFBstL4BVgU8-Mc5I1dg-yeqVFyhbiYjHG6xKT7brXnyT9uJATepRY5LKoAFZDqpRothPBFXvz-MqgpCcT0Xm0ZOQ_ZAnDnUar5DStjil_7IQ1IPfRMSBQPpU9_yfJygszUI0JrJ6cowGcXra9toCW5EKudPBBP2EExizIaqaFs4e_qXzbZ5xH2T2iOcKKLnXfEHZskH49USQ3Lwx1WXUx5-vKhDpia0hT4kJur1Xs8')"></div>
+<div class="zoom w-full h-full bg-cover bg-center" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDhHtiYyiAbd-x-V75AIBUcMgMEmL_MEy8BRFBstL4BVgU8-Mc5I1dg-yeqVFyhbiYjHG6xKT7brXnyT9uJATepRY5LKoAFZDqpRothPBFXvz-MqgpCcT0Xm0ZOQ_ZAnDnUar5DStjil_7IQ1IPfRMSBQPpU9_yfJygszUI0JrJ6cowGcXra9toCW5EKudPBBP2EExizIaqaFs4e_qXzbZ5xH2T2iOcKKLnXfEHZskH49USQ3Lwx1WXUx5-vKhDpia0hT4kJur1Xs8')"></div>
 </div>
 <h3 class="font-serif-alt text-2xl mb-sm">Cafés Botánicos</h3>
 <p class="text-body-sm text-on-surface-variant mb-md">Granos de origen único, obtenidos de forma ética, con sutiles notas florales.</p>
 </div>
-<div class="min-w-[320px] md:min-w-[400px] flex-shrink-0 bg-white p-lg rounded-2xl luxury-shadow snap-center">
+<div class="group-zoom min-w-[320px] md:min-w-[400px] flex-shrink-0 bg-white p-lg rounded-2xl luxury-shadow snap-center" data-revelar style="--i:1">
 <div class="aspect-square rounded-xl overflow-hidden mb-lg">
-<div class="w-full h-full bg-cover bg-center hover:scale-110 transition-transform duration-700" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDFRUUK6zPKZeC7sOiGz-4WlDSvZWKFS5AuoR7ijFu9kum2oL0MggioleVcLIASsOOzQmMCKdtuhkB1vfLJ7z5RG4EcfzOZtmQgC1cangqI9zLdq4fOTpHwvNN117irguNHeduBKiQwE-qz2-54JclKzZA4zb6RSzFrpSg-uhLQhXA_m2V0Gr_d4Wuc8rT5wr83q8I6L5xORy7QJC1AAgmVQUld24sQl6goY3fhxgPujjg37DKYAS-fSwafKbJBvJmST8ml-nLoMtk')"></div>
+<div class="zoom w-full h-full bg-cover bg-center" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDFRUUK6zPKZeC7sOiGz-4WlDSvZWKFS5AuoR7ijFu9kum2oL0MggioleVcLIASsOOzQmMCKdtuhkB1vfLJ7z5RG4EcfzOZtmQgC1cangqI9zLdq4fOTpHwvNN117irguNHeduBKiQwE-qz2-54JclKzZA4zb6RSzFrpSg-uhLQhXA_m2V0Gr_d4Wuc8rT5wr83q8I6L5xORy7QJC1AAgmVQUld24sQl6goY3fhxgPujjg37DKYAS-fSwafKbJBvJmST8ml-nLoMtk')"></div>
 </div>
 <h3 class="font-serif-alt text-2xl mb-sm">Postres Artesanales</h3>
 <p class="text-body-sm text-on-surface-variant mb-md">Postres hechos a mano con técnica francesa e ingredientes locales.</p>
 </div>
-<div class="min-w-[320px] md:min-w-[400px] flex-shrink-0 bg-white p-lg rounded-2xl luxury-shadow snap-center">
+<div class="group-zoom min-w-[320px] md:min-w-[400px] flex-shrink-0 bg-white p-lg rounded-2xl luxury-shadow snap-center" data-revelar style="--i:2">
 <div class="aspect-square rounded-xl overflow-hidden mb-lg">
-<div class="w-full h-full bg-cover bg-center hover:scale-110 transition-transform duration-700" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBKIzXzKHDaHLXxSeehq6EkRGk7fLCqUAxARb0uSX9azhLFqmZkdLvV1J9W_TdTLCQnVMIsDnqFIpfqCYHUPYuGi0kwr1mFLAB914iWFRhx3utdgvGFEz4UyUTavd9nOHyUuaqB0_0u5p5aqxNs39UyT4Xx6dV1ykxoNisvpQu4j4oW93ordMJdrVkF-mbkj-DGbnq2YGDRef-EbF8kCUzbOhQhPxOHso7sSVt1Ecx6i4vlgB-1SdnVs5xCkULCPWPjSwllAOVWlww')"></div>
+<div class="zoom w-full h-full bg-cover bg-center" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBKIzXzKHDaHLXxSeehq6EkRGk7fLCqUAxARb0uSX9azhLFqmZkdLvV1J9W_TdTLCQnVMIsDnqFIpfqCYHUPYuGi0kwr1mFLAB914iWFRhx3utdgvGFEz4UyUTavd9nOHyUuaqB0_0u5p5aqxNs39UyT4Xx6dV1ykxoNisvpQu4j4oW93ordMJdrVkF-mbkj-DGbnq2YGDRef-EbF8kCUzbOhQhPxOHso7sSVt1Ecx6i4vlgB-1SdnVs5xCkULCPWPjSwllAOVWlww')"></div>
 </div>
 <h3 class="font-serif-alt text-2xl mb-sm">Reserva Vintage</h3>
 <p class="text-body-sm text-on-surface-variant mb-md">Una selección curada de champagnes de añada y cuvées de la casa.</p>
@@ -194,12 +306,12 @@
 </section>
 <!-- Promocion -->
 <section class="py-xxl bg-primary text-white">
-<div class="max-w-7xl mx-auto px-lg flex flex-col md:flex-row items-center justify-between gap-xl">
+<div class="max-w-7xl mx-auto px-lg flex flex-col md:flex-row items-center justify-between gap-xl" data-revelar>
 <div class="max-w-xl">
 <h2 class="font-display text-4xl mb-sm">Atardeceres de Champagne</h2>
 <p class="font-serif-alt italic text-xl opacity-80">Todos los viernes desde las 5pm: jazz en vivo y copas de champagne acompañadas de nuestros macarons de la casa.</p>
 </div>
-<a class="whitespace-nowrap bg-tertiary text-white px-xl py-md rounded-full font-bold hover:bg-tertiary-container transition-all flex items-center gap-sm" href="https://wa.me/51968429135?text=Hola%2C%20quiero%20reservar%20para%20el%20viernes%20de%20champagne%20en%20Memo's%20Caf%C3%A9" target="_blank" rel="noopener noreferrer">
+<a class="pulsable elevar whitespace-nowrap bg-tertiary text-white px-xl py-md rounded-full font-bold hover:bg-tertiary-container flex items-center gap-sm" href="https://wa.me/51968429135?text=Hola%2C%20quiero%20reservar%20para%20el%20viernes%20de%20champagne%20en%20Memo's%20Caf%C3%A9" target="_blank" rel="noopener noreferrer">
 <span class="material-symbols-outlined">chat</span>
                 RESERVAR POR WHATSAPP
             </a>
@@ -207,7 +319,7 @@
 </section>
 <!-- Testimonio -->
 <section class="py-huge bg-background">
-<div class="max-w-3xl mx-auto px-lg text-center">
+<div class="max-w-3xl mx-auto px-lg text-center" data-revelar>
 <span class="material-symbols-outlined text-primary text-5xl mb-lg">format_quote</span>
 <div class="relative">
 <p class="font-serif-alt italic text-2xl md:text-3xl text-on-surface leading-relaxed mb-xl">
@@ -226,32 +338,32 @@
 <!-- Galeria estilo Instagram -->
 <section class="py-huge bg-surface-container-highest" id="gallery-fotos">
 <div class="max-w-7xl mx-auto px-lg">
-<div class="flex justify-between items-end mb-xl">
+<div class="flex justify-between items-end mb-xl" data-revelar>
 <div>
 <h2 class="font-display text-3xl">Un Vistazo a Memo's</h2>
 </div>
 </div>
 <div class="grid grid-cols-2 md:grid-cols-4 gap-sm">
-<div class="aspect-square bg-white overflow-hidden rounded-lg">
-<div class="w-full h-full bg-cover bg-center hover:scale-105 transition-transform" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuA04M-GsLnSNnIT5I4DNzPmB-awJOOzA84KWzoNZ-_2SLxb9HyG8UtnRaWUBw8FuX0K0ltC22ahF_vkZRe3-7Gw1I1N3aGPOyEsZvo4uzOoyZrk7Aq-7lY7OelwrFQ4M7gLpAp1aoYpSUrkdbsrL2zA-y7yAdXFYaK97QQWUPM4sbdjne4yMxwJwaDI9XDhuqz5QcH2nUyBkl4p4mtJb9go_QFaBU2WL3Bs0_5VALNktE_opdxfBDcJqFlrTUBMZWiCoUAW4t6R26k')"></div>
+<div class="group-zoom aspect-square bg-white overflow-hidden rounded-lg" data-revelar style="--i:0">
+<div class="zoom w-full h-full bg-cover bg-center" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuA04M-GsLnSNnIT5I4DNzPmB-awJOOzA84KWzoNZ-_2SLxb9HyG8UtnRaWUBw8FuX0K0ltC22ahF_vkZRe3-7Gw1I1N3aGPOyEsZvo4uzOoyZrk7Aq-7lY7OelwrFQ4M7gLpAp1aoYpSUrkdbsrL2zA-y7yAdXFYaK97QQWUPM4sbdjne4yMxwJwaDI9XDhuqz5QcH2nUyBkl4p4mtJb9go_QFaBU2WL3Bs0_5VALNktE_opdxfBDcJqFlrTUBMZWiCoUAW4t6R26k')"></div>
 </div>
-<div class="aspect-square bg-white overflow-hidden rounded-lg">
-<div class="w-full h-full bg-cover bg-center hover:scale-105 transition-transform" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBDccBGODOIS2jbHT8vgLI8aH1A2dKp_b_B54apgSbalRfy9MtJMKLx2o9_F6JU6ljlV-gyFSbbOxnSlbkdVEkmoQpUo_L5EvQipztb0i-x8Ju1ONq6fT1IhGLBtQCsMM9uynJFCKap45DmSNVUpwO9wNAGCxETz4RxFhhENhwiv6YHhsw9fP_zvGTqcJRoJgq9Vdy1x933Ye_Rwx3GjIK59QGbbyF_2SZFlneOjSyeR0KhEnnEYWBpvat2lTrrkWDNuq7co1tciug')"></div>
+<div class="group-zoom aspect-square bg-white overflow-hidden rounded-lg" data-revelar style="--i:1">
+<div class="zoom w-full h-full bg-cover bg-center" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBDccBGODOIS2jbHT8vgLI8aH1A2dKp_b_B54apgSbalRfy9MtJMKLx2o9_F6JU6ljlV-gyFSbbOxnSlbkdVEkmoQpUo_L5EvQipztb0i-x8Ju1ONq6fT1IhGLBtQCsMM9uynJFCKap45DmSNVUpwO9wNAGCxETz4RxFhhENhwiv6YHhsw9fP_zvGTqcJRoJgq9Vdy1x933Ye_Rwx3GjIK59QGbbyF_2SZFlneOjSyeR0KhEnnEYWBpvat2lTrrkWDNuq7co1tciug')"></div>
 </div>
-<div class="aspect-square bg-white overflow-hidden rounded-lg md:row-span-2 md:aspect-auto">
-<div class="w-full h-full bg-cover bg-center hover:scale-105 transition-transform" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAIxWTzND6sny1bzJE6tdetdn6FXKzMxhTIdsefu5jnPAZtNBKtoTxmP30w36nNGM3jnXWtukl6soFbPGR-vGR8d4WXfq3LuWjbPugzruNaEUNbWqeU0Sw3KMxFIZzn5_Z1UzYJoHWCZTcQGAVzHtEKeHrrx8GR0esA_wqDssmSQYiLzXEbjdwRUdthJUenn68JxtygKh0iyT4P8oC-KzMMQusvMVbOrxGnWytQsZNnxbdINmklhWfEveE6jpdXCCoUydojOFBubWg')"></div>
+<div class="group-zoom aspect-square bg-white overflow-hidden rounded-lg md:row-span-2 md:aspect-auto" data-revelar style="--i:2">
+<div class="zoom w-full h-full bg-cover bg-center" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAIxWTzND6sny1bzJE6tdetdn6FXKzMxhTIdsefu5jnPAZtNBKtoTxmP30w36nNGM3jnXWtukl6soFbPGR-vGR8d4WXfq3LuWjbPugzruNaEUNbWqeU0Sw3KMxFIZzn5_Z1UzYJoHWCZTcQGAVzHtEKeHrrx8GR0esA_wqDssmSQYiLzXEbjdwRUdthJUenn68JxtygKh0iyT4P8oC-KzMMQusvMVbOrxGnWytQsZNnxbdINmklhWfEveE6jpdXCCoUydojOFBubWg')"></div>
 </div>
-<div class="aspect-square bg-white overflow-hidden rounded-lg">
-<div class="w-full h-full bg-cover bg-center hover:scale-105 transition-transform" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBy_Eof1COXy1yyxOTrTCmYPwtoq6-WCRr6am6hntm8CvXCHiRXHwMM9PZ_9qq0eJlsXsyffLCOzAjLTN-mnkArqXOrDmjeitxlyQNLyxL3EcHBdSDyBcQpkjQi80VhrMLnD7D5ShQNcTZQKDFDCbU3B-4be7m94RRL0iDCDdTnHz-cDedylyPWTQIUTgQtCRvX0LK1g-gjARjDOB2gghHaKmzBY-MosuBct8QzXr3n07Q3zxR0GjzeZRAG0PMSWgDuFR0LHxxBkUM')"></div>
+<div class="group-zoom aspect-square bg-white overflow-hidden rounded-lg" data-revelar style="--i:3">
+<div class="zoom w-full h-full bg-cover bg-center" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBy_Eof1COXy1yyxOTrTCmYPwtoq6-WCRr6am6hntm8CvXCHiRXHwMM9PZ_9qq0eJlsXsyffLCOzAjLTN-mnkArqXOrDmjeitxlyQNLyxL3EcHBdSDyBcQpkjQi80VhrMLnD7D5ShQNcTZQKDFDCbU3B-4be7m94RRL0iDCDdTnHz-cDedylyPWTQIUTgQtCRvX0LK1g-gjARjDOB2gghHaKmzBY-MosuBct8QzXr3n07Q3zxR0GjzeZRAG0PMSWgDuFR0LHxxBkUM')"></div>
 </div>
-<div class="aspect-square bg-white overflow-hidden rounded-lg">
-<div class="w-full h-full bg-cover bg-center hover:scale-105 transition-transform" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAdAFo-vKovymzCpOlpOjs-OpyWAIoQNjw-n-uOFbZcedZZHHCYN56FR2ncCqrCrJDQbOJ7qpQWnxQklmLyVfBsIp4DAlweMpHx2j9IHtht508YYFanlJSuXOfQehIzURyUnvpuukUJiMRzh8-HM2A1xSv8-XmrG7Ke38OfZEmK25YnoI_ZfPAePxmUG1rg9Rr60CZH8j3nG2zyDJiZbPwhGVt4YK-q8CMMCEldjqAPEnClBPaFeHZLuWgKv4gXSR7BF7Md88m5k5Y')"></div>
+<div class="group-zoom aspect-square bg-white overflow-hidden rounded-lg" data-revelar style="--i:0">
+<div class="zoom w-full h-full bg-cover bg-center" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAdAFo-vKovymzCpOlpOjs-OpyWAIoQNjw-n-uOFbZcedZZHHCYN56FR2ncCqrCrJDQbOJ7qpQWnxQklmLyVfBsIp4DAlweMpHx2j9IHtht508YYFanlJSuXOfQehIzURyUnvpuukUJiMRzh8-HM2A1xSv8-XmrG7Ke38OfZEmK25YnoI_ZfPAePxmUG1rg9Rr60CZH8j3nG2zyDJiZbPwhGVt4YK-q8CMMCEldjqAPEnClBPaFeHZLuWgKv4gXSR7BF7Md88m5k5Y')"></div>
 </div>
-<div class="aspect-square bg-white overflow-hidden rounded-lg">
-<div class="w-full h-full bg-cover bg-center hover:scale-105 transition-transform" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuA3md6w--m7nWFbzQ5aHzAutGuuFaWOmFeIA9VY1Qw2vFLnlDCqlThwGjo8gI3WX618s1RY3_gL9sDgJnuR8ciyTkqvsuWrtmJzaU1x_QfJxQl02X5rEyxX4ZR9IiHPWr0HXLj0071mRp3L-MGmh0p1v5rjqZ6ie-ugax8HWqkzm6jOOEbck98dmN65DdG0CVfbcju7CImUZU0S2GGoR3hMdHuYyPVwR363Q10rgJNbVFcH-L6CRkLUf3-JGF5eJiBL09SPIdJMlZA')"></div>
+<div class="group-zoom aspect-square bg-white overflow-hidden rounded-lg" data-revelar style="--i:1">
+<div class="zoom w-full h-full bg-cover bg-center" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuA3md6w--m7nWFbzQ5aHzAutGuuFaWOmFeIA9VY1Qw2vFLnlDCqlThwGjo8gI3WX618s1RY3_gL9sDgJnuR8ciyTkqvsuWrtmJzaU1x_QfJxQl02X5rEyxX4ZR9IiHPWr0HXLj0071mRp3L-MGmh0p1v5rjqZ6ie-ugax8HWqkzm6jOOEbck98dmN65DdG0CVfbcju7CImUZU0S2GGoR3hMdHuYyPVwR363Q10rgJNbVFcH-L6CRkLUf3-JGF5eJiBL09SPIdJMlZA')"></div>
 </div>
-<div class="aspect-square bg-white overflow-hidden rounded-lg">
-<div class="w-full h-full bg-cover bg-center hover:scale-105 transition-transform" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDzYEa5tFKK0OSpy7orASo66F_eF--VOUf7emkYLEBBsqmcl5FxtcXC1KbnNRSTXWBI8AXPp10_BVXKHlF0vyRbinYtyGpKTBOHv_LXr2XDzZZW6bfUU-uOEu75AmK7K8xkoAxx55su2CAaRFeYw2BnhBbLedmne7Z4m-rOoVO3cNeRizbpD4VrX7rL1wyTBnWKSw4LIgUKvnrtgEEwL9JbAyjJJJbTEAEkvWk1bgqqUSJ7iPUWfDdV_AkVWhoHAIdbGRIW-8SshVY')"></div>
+<div class="group-zoom aspect-square bg-white overflow-hidden rounded-lg" data-revelar style="--i:2">
+<div class="zoom w-full h-full bg-cover bg-center" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDzYEa5tFKK0OSpy7orASo66F_eF--VOUf7emkYLEBBsqmcl5FxtcXC1KbnNRSTXWBI8AXPp10_BVXKHlF0vyRbinYtyGpKTBOHv_LXr2XDzZZW6bfUU-uOEu75AmK7K8xkoAxx55su2CAaRFeYw2BnhBbLedmne7Z4m-rOoVO3cNeRizbpD4VrX7rL1wyTBnWKSw4LIgUKvnrtgEEwL9JbAyjJJJbTEAEkvWk1bgqqUSJ7iPUWfDdV_AkVWhoHAIdbGRIW-8SshVY')"></div>
 </div>
 </div>
 </div>
@@ -259,7 +371,7 @@
 <!-- Ubicacion / contacto -->
 <section class="py-huge bg-background" id="contact">
 <div class="max-w-7xl mx-auto px-lg grid grid-cols-1 md:grid-cols-2 gap-xxl">
-<div>
+<div data-revelar>
 <h2 class="font-display text-4xl mb-xl">Encuéntranos</h2>
 <div class="space-y-xl">
 <div class="flex gap-lg">
@@ -289,17 +401,17 @@
 </div>
 </div>
 </div>
-<div class="rounded-2xl overflow-hidden h-[400px] md:h-auto shadow-xl">
-<iframe class="w-full h-full border-0" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="https://www.google.com/maps?q=Ca.+Cruz+de+Chalpon+120+Urb.+Latina&amp;output=embed"></iframe>
+<div class="rounded-2xl overflow-hidden h-[400px] md:h-auto shadow-xl bg-surface-container" data-revelar style="--i:1">
+<iframe title="Mapa: Ca. Cruz de Chalpón 120, Urb. Latina" onload="this.classList.add('cargado')" class="mapa w-full h-full border-0" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="https://www.google.com/maps?q=Ca.+Cruz+de+Chalpon+120+Urb.+Latina&amp;output=embed"></iframe>
 </div>
 </div>
 </section>
 <!-- Reservas -->
 <section class="py-huge bg-surface-container flex justify-center" id="reserve">
-<div class="max-w-4xl w-full px-lg text-center bg-white p-huge rounded-[24px] shadow-sm border border-outline-variant/20">
+<div class="max-w-4xl w-full px-lg text-center bg-white p-huge rounded-[24px] shadow-sm border border-outline-variant/20" data-revelar>
 <h2 class="font-display text-4xl md:text-5xl mb-md">Reserva tu Momento</h2>
 <p class="text-body-lg text-on-surface-variant mb-xl px-md">Escríbenos por WhatsApp indicando fecha, hora y número de personas — te confirmamos la reserva directamente por chat.</p>
-<a class="inline-flex items-center gap-sm bg-primary text-white px-xl py-md rounded-xl font-bold hover:bg-primary-container transition-all text-lg" href="https://wa.me/51968429135?text=Hola%2C%20quiero%20reservar%20una%20mesa%20en%20Memo's%20Caf%C3%A9.%20Fecha%3A%20___%20Hora%3A%20___%20N%C3%BAmero%20de%20personas%3A%20___" target="_blank" rel="noopener noreferrer">
+<a class="pulsable elevar inline-flex items-center gap-sm bg-primary text-white px-xl py-md rounded-xl font-bold hover:bg-primary-container text-lg" href="https://wa.me/51968429135?text=Hola%2C%20quiero%20reservar%20una%20mesa%20en%20Memo's%20Caf%C3%A9.%20Fecha%3A%20___%20Hora%3A%20___%20N%C3%BAmero%20de%20personas%3A%20___" target="_blank" rel="noopener noreferrer">
 <span class="material-symbols-outlined">chat</span>
                 RESERVAR POR WHATSAPP
             </a>
@@ -330,32 +442,50 @@
 </div>
 </footer>
 <script>
-        window.addEventListener('scroll', () => {
-            const nav = document.querySelector('nav');
-            if (window.scrollY > 50) {
-                nav.classList.add('shadow-md', 'py-2');
-                nav.classList.remove('h-20');
-                nav.classList.add('h-16');
-            } else {
-                nav.classList.remove('shadow-md', 'py-2');
-                nav.classList.add('h-20');
-                nav.classList.remove('h-16');
-            }
+        const barra = document.querySelector('.barra');
+        const indicador = document.getElementById('indicador');
+        const alBajar = () => {
+            const bajo = window.scrollY > 50;
+            barra.classList.toggle('compacta', bajo);
+            indicador.classList.toggle('oculto', bajo);
+        };
+        window.addEventListener('scroll', alBajar, { passive: true });
+        alBajar();
+
+        // Menú del celular
+        const boton = document.getElementById('boton-menu');
+        const menu = document.getElementById('menu-movil');
+        const ponerMenu = (abierto) => {
+            menu.classList.toggle('abierto', abierto);
+            boton.setAttribute('aria-expanded', String(abierto));
+            boton.setAttribute('aria-label', abierto ? 'Cerrar menú' : 'Abrir menú');
+            boton.querySelector('span').textContent = abierto ? 'close' : 'menu';
+        };
+        boton.addEventListener('click', () => ponerMenu(!menu.classList.contains('abierto')));
+        menu.querySelectorAll('a').forEach((a) => a.addEventListener('click', () => ponerMenu(false)));
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && menu.classList.contains('abierto')) { ponerMenu(false); boton.focus(); }
         });
 
-        const observerOptions = { threshold: 0.1 };
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.classList.add('fade-in-up');
-                    observer.unobserve(entry.target);
-                }
+        // Cada bloque aparece al entrar en pantalla (una sola vez)
+        const revelar = new IntersectionObserver((entradas) => {
+            entradas.forEach((e) => {
+                if (e.isIntersecting) { e.target.classList.add('visible'); revelar.unobserve(e.target); }
             });
-        }, observerOptions);
+        }, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
+        document.querySelectorAll('[data-revelar]').forEach((el) => revelar.observe(el));
 
-        document.querySelectorAll('section > div').forEach(el => {
-            el.style.opacity = '0';
-            observer.observe(el);
+        // Sección actual subrayada en el menú
+        const enlaces = [...document.querySelectorAll('.enlace')];
+        const seccionActual = new IntersectionObserver((entradas) => {
+            entradas.forEach((e) => {
+                if (!e.isIntersecting) return;
+                enlaces.forEach((a) => a.setAttribute('aria-current', String(a.getAttribute('href') === '#' + e.target.id)));
+            });
+        }, { rootMargin: '-45% 0px -50% 0px' });
+        enlaces.forEach((a) => {
+            const sec = document.querySelector(a.getAttribute('href'));
+            if (sec) seccionActual.observe(sec);
         });
     </script>
 </body></html>

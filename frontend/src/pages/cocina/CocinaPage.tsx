@@ -44,6 +44,10 @@ export default function CocinaPage() {
   const [sonidoOk, setSonidoOk] = useState(sonidoHabilitado);
   const pantallaCompleta = usePantallaCompleta();
   useMantenerPantallaEncendida();
+  // Las comandas que ya estaban al abrir el tablero no se anuncian; las que
+  // llegan después sí (ver TarjetaComanda).
+  const [iniciales, setIniciales] = useState<Set<number> | null>(null);
+  if (iniciales === null && !cocina.cargando) setIniciales(new Set(cocina.comandas.map((c) => c.id)));
 
   const porEstado = (e: EstadoComanda) => cocina.comandas.filter((c) => c.estado === e);
   const conexion = CONEXION[cocina.status];
@@ -112,12 +116,12 @@ export default function CocinaPage() {
               role="tab"
               aria-selected={activa}
               onClick={() => setPestana(estado)}
-              className={`flex h-11 items-center justify-center gap-2 rounded-xl text-sm font-semibold transition-colors ${
+              className={`flex h-11 items-center justify-center gap-2 rounded-xl text-sm font-semibold transition-[background-color,color,box-shadow] duration-160 ease-estandar ${
                 activa ? "bg-marfil text-espresso shadow-suave" : "text-suave"
               }`}
             >
               {titulo}
-              <span className={`grid h-6 min-w-6 place-items-center rounded-full px-1.5 text-xs tabular-nums ${
+              <span key={n} className={`latido grid h-6 min-w-6 place-items-center rounded-full px-1.5 text-xs tabular-nums ${
                 n && estado === "pendiente" ? "bg-peligro text-marfil" : activa ? "bg-salvia-clara text-salvia-osc" : "bg-marfil/70"
               }`}>
                 {n}
@@ -141,15 +145,23 @@ export default function CocinaPage() {
               >
                 <h3 className="hidden lg:flex items-center justify-between px-1 text-sm font-semibold text-suave">
                   {titulo}
-                  <span className="tabular-nums">{lista.length}</span>
+                  <span key={lista.length} className="latido tabular-nums">{lista.length}</span>
                 </h3>
                 {lista.length === 0 ? (
-                  <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-linea-fuerte px-4 py-10 text-center text-sm text-tenue">
+                  <div className="aparecer flex flex-col items-center gap-2 rounded-2xl border border-dashed border-linea-fuerte px-4 py-10 text-center text-sm text-tenue">
                     <ChefHat className="size-6" strokeWidth={1.5} />
                     {vacio}
                   </div>
                 ) : (
-                  lista.map((c) => <TarjetaComanda key={c.id} comanda={c} ahora={ahora} cocina={cocina} />)
+                  lista.map((c) => (
+                    <TarjetaComanda
+                      key={c.id}
+                      comanda={c}
+                      ahora={ahora}
+                      cocina={cocina}
+                      nueva={iniciales !== null && !iniciales.has(c.id) && c.estado === "pendiente"}
+                    />
+                  ))
                 )}
               </section>
             );
@@ -174,10 +186,12 @@ function TarjetaComanda({
   comanda: c,
   ahora,
   cocina,
+  nueva,
 }: {
   comanda: ComandaTablero;
   ahora: number;
   cocina: ReturnType<typeof useCocina>;
+  nueva: boolean;
 }) {
   const [ocupado, setOcupado] = useState(false);
   const hacer = async (fn: () => Promise<void>) => {
@@ -207,8 +221,11 @@ function TarjetaComanda({
   const tocable = c.estado === "pendiente" || c.estado === "en_preparacion";
 
   return (
-    <article className="overflow-hidden rounded-2xl border border-linea bg-marfil shadow-suave">
-      <div className={`h-1.5 ${franja}`} aria-hidden />
+    // Cada tarjeta entra al aparecer en su columna (también al pasar de
+    // Nuevas a Preparando a Listas: se ve a dónde fue). La que acaba de
+    // llegar además pulsa dos veces para que el cocinero la note.
+    <article className={`${nueva ? "llegada" : "aparecer"} overflow-hidden rounded-2xl border border-linea bg-marfil shadow-suave`}>
+      <div className={`h-1.5 transition-colors duration-[var(--dur-lenta)] ease-estandar ${franja}`} aria-hidden />
       <header className="flex items-start justify-between gap-3 px-4 pt-3">
         <div className="min-w-0">
           <h4 className="font-display text-[26px] font-semibold leading-tight text-balance break-words text-espresso">{destino(c)}</h4>
@@ -263,11 +280,11 @@ function TarjetaComanda({
               {tocable && (
                 <span
                   aria-hidden
-                  className={`grid size-11 shrink-0 place-items-center self-center rounded-xl border-2 transition-colors ${
+                  className={`grid size-11 shrink-0 place-items-center self-center rounded-xl border-2 transition-colors duration-160 ease-estandar ${
                     listo ? "border-exito bg-exito text-marfil" : "border-linea-fuerte bg-marfil text-transparent"
                   }`}
                 >
-                  <Check className="size-6" strokeWidth={3} />
+                  <Check className={`size-6 ${listo ? "marcar" : ""}`} strokeWidth={3} />
                 </span>
               )}
             </>
@@ -282,7 +299,7 @@ function TarjetaComanda({
                   onClick={() => cocina.marcarItem(c.id, d.id, !listo)}
                   aria-pressed={listo}
                   aria-label={`${d.cantidad} ${d.nombre}${d.nota ? `, ${d.nota}` : ""}: ${listo ? "listo, tocar para desmarcar" : "marcar como listo"}`}
-                  className={`${base} min-h-16 transition-colors active:scale-[0.99] ${
+                  className={`${base} pulsable min-h-16 ${
                     listo ? "border-exito/30 bg-exito-fondo" : "border-linea bg-marfil active:bg-arena"
                   }`}
                 >
@@ -307,7 +324,7 @@ function TarjetaComanda({
             type="button"
             disabled={ocupado}
             onClick={() => hacer(() => cocina.iniciar(c.id))}
-            className="h-14 w-full rounded-xl bg-salvia text-[17px] font-semibold text-marfil active:bg-salvia-osc disabled:opacity-60"
+            className="pulsable h-14 w-full rounded-xl bg-salvia text-[17px] font-semibold text-marfil active:bg-salvia-osc disabled:opacity-60"
           >
             Empezar
           </button>
@@ -317,7 +334,7 @@ function TarjetaComanda({
             type="button"
             disabled={ocupado}
             onClick={() => hacer(() => cocina.marcarLista(c.id))}
-            className="flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-salvia text-[17px] font-semibold text-marfil active:bg-salvia-osc disabled:opacity-60"
+            className="pulsable flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-salvia text-[17px] font-semibold text-marfil active:bg-salvia-osc disabled:opacity-60"
           >
             <BellRing className="size-5" />
             {hechos === total ? "Avisar al mesero" : "Todo listo · avisar al mesero"}
@@ -328,7 +345,7 @@ function TarjetaComanda({
             type="button"
             disabled={ocupado}
             onClick={() => hacer(() => cocina.entregar(c.id))}
-            className="h-14 w-full rounded-xl border border-linea-fuerte bg-marfil text-[17px] font-semibold text-espresso active:bg-arena disabled:opacity-60"
+            className="pulsable h-14 w-full rounded-xl border border-linea-fuerte bg-marfil text-[17px] font-semibold text-espresso active:bg-arena disabled:opacity-60"
           >
             Ya se entregó
           </button>

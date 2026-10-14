@@ -230,7 +230,13 @@ export default function TomarPedidoPage() {
                 aria-current={actual ? "step" : undefined}
                 className="flex w-full flex-col gap-1.5 text-left"
               >
-                <span className={`h-1.5 rounded-full ${hecho || actual ? "bg-salvia" : "bg-linea"}`} />
+                {/* La barra se llena al avanzar: se ve en qué paso está y que avanzó. */}
+                <span className="relative h-1.5 overflow-hidden rounded-full bg-linea">
+                  <span
+                    className="absolute inset-0 origin-left rounded-full bg-salvia transition-transform duration-[var(--dur-lenta)] ease-salida"
+                    style={{ transform: `scaleX(${hecho || actual ? 1 : 0})` }}
+                  />
+                </span>
                 <span className={`flex items-center gap-1.5 text-sm ${actual ? "font-semibold text-espresso" : hecho ? "text-salvia-osc" : "text-tenue"}`}>
                   {hecho ? <Check className="size-3.5" /> : <span className="tabular-nums">{num}.</span>} {p}
                 </span>
@@ -240,8 +246,10 @@ export default function TomarPedidoPage() {
         })}
       </ol>
 
-      {errorEnvio && <p role="alert" className="rounded-xl bg-peligro-fondo px-4 py-3 text-sm text-peligro">{errorEnvio}</p>}
+      {errorEnvio && <p key={errorEnvio} role="alert" className="sacudir rounded-xl bg-peligro-fondo px-4 py-3 text-sm text-peligro">{errorEnvio}</p>}
 
+      {/* Cada paso aparece al llegar a él (key) para que se note el cambio. */}
+      <div key={paso} className="aparecer">
       {paso === 1 && (
         <PasoDestino
           tipo={tipo} setTipo={(t) => { setTipo(t); setErrores({}); }}
@@ -324,13 +332,15 @@ export default function TomarPedidoPage() {
               type="button"
               onClick={enviar}
               disabled={enviando || items.length === 0}
-              className="flex h-12 items-center justify-center gap-2 rounded-xl bg-salvia text-[15px] font-semibold text-marfil hover:bg-salvia-osc disabled:opacity-50"
+              className="pulsable flex h-12 items-center justify-center gap-2 rounded-xl bg-salvia text-[15px] font-semibold text-marfil hover:bg-salvia-osc disabled:opacity-50"
             >
+              {enviando && <span className="size-4 animate-spin rounded-full border-2 border-marfil/30 border-t-marfil" aria-hidden />}
               {enviando ? "Enviando…" : ordenAbierta ? "Agregar y enviar a cocina" : "Enviar a cocina"}
             </button>
           </aside>
         </section>
       )}
+      </div>
     </div>
   );
 }
@@ -368,7 +378,7 @@ function PasoDestino({
         aria-invalid={!!errores[k] || undefined}
         className={`h-11 rounded-xl border bg-marfil px-3.5 text-base font-normal outline-none focus:border-salvia sm:text-sm ${errores[k] ? "border-peligro" : "border-linea-fuerte"}`}
       />
-      {errores[k] && <span className="text-xs font-normal text-peligro">{errores[k]}</span>}
+      {errores[k] && <span className="aparecer text-xs font-normal text-peligro">{errores[k]}</span>}
     </label>
   );
 
@@ -382,7 +392,7 @@ function PasoDestino({
             role="radio"
             aria-checked={tipo === value}
             onClick={() => setTipo(value)}
-            className={`flex flex-col items-center gap-2 rounded-2xl border px-2 py-4 text-sm font-semibold transition-colors ${
+            className={`pulsable flex flex-col items-center gap-2 rounded-2xl border px-2 py-4 text-sm font-semibold ${
               tipo === value ? "border-salvia bg-salvia-clara text-salvia-osc" : "border-linea bg-marfil text-espresso hover:bg-arena"
             }`}
           >
@@ -404,7 +414,7 @@ function PasoDestino({
                   type="button"
                   onClick={() => setMesaId(m.id)}
                   aria-pressed={elegida}
-                  className={`flex aspect-square flex-col items-center justify-center rounded-2xl border-2 transition-colors ${
+                  className={`pulsable flex aspect-square flex-col items-center justify-center rounded-2xl border-2 ${
                     elegida ? "border-salvia bg-salvia text-marfil" : conPedido ? "border-transparent bg-salvia-clara text-salvia-osc" : m.estado === "reservada" ? "border-dashed border-aviso/60 bg-aviso-fondo text-aviso" : "border-linea bg-marfil text-espresso"
                   }`}
                 >
@@ -414,7 +424,7 @@ function PasoDestino({
               );
             })}
           </div>
-          {errores.mesa && <p className="text-sm text-peligro">{errores.mesa}</p>}
+          {errores.mesa && <p className="aparecer text-sm text-peligro">{errores.mesa}</p>}
         </div>
       )}
 
@@ -433,7 +443,7 @@ function PasoDestino({
                   type="button"
                   onClick={() => setCliente({ ...cliente, plataforma: p.value })}
                   aria-pressed={cliente.plataforma === p.value}
-                  className={`h-10 rounded-full border px-4 text-sm font-medium ${cliente.plataforma === p.value ? "border-salvia bg-salvia-clara text-salvia-osc" : "border-linea bg-marfil text-espresso"}`}
+                  className={`pulsable h-10 rounded-full border px-4 text-sm font-medium ${cliente.plataforma === p.value ? "border-salvia bg-salvia-clara text-salvia-osc" : "border-linea bg-marfil text-espresso"}`}
                 >
                   {p.label}
                 </button>
@@ -448,7 +458,7 @@ function PasoDestino({
         </div>
       )}
 
-      <button type="button" onClick={onSiguiente} className="flex h-12 items-center justify-center gap-2 rounded-xl bg-salvia px-6 text-[15px] font-semibold text-marfil hover:bg-salvia-osc sm:w-fit">
+      <button type="button" onClick={onSiguiente} className="pulsable flex h-12 items-center justify-center gap-2 rounded-xl bg-salvia px-6 text-[15px] font-semibold text-marfil hover:bg-salvia-osc sm:w-fit">
         Elegir productos <ChevronRight className="size-4.5" />
       </button>
     </section>
@@ -483,7 +493,9 @@ function PasoProductos({
   const tarjeta = (tipo: Item["tipo"], p: Producto | Promocion) => {
     const n = cantidadDe(`${tipo}-${p.id}`);
     return (
-      <div key={`${tipo}-${p.id}`} className={`relative flex min-h-24 flex-col justify-between rounded-2xl border p-3 transition-colors ${n ? "border-salvia bg-salvia-clara/50" : "border-linea bg-marfil"}`}>
+      // has-[>button:active]: la tarjeta entera se hunde al tocarla, aunque
+      // lo que recibe el toque es el botón invisible que la cubre.
+      <div key={`${tipo}-${p.id}`} className={`relative flex min-h-24 flex-col justify-between rounded-2xl border p-3 transition-[transform,background-color,border-color] duration-160 ease-estandar has-[>button:first-child:active]:scale-[0.97] has-[>button:first-child:active]:duration-100 ${n ? "border-salvia bg-salvia-clara/50" : "border-linea bg-marfil"}`}>
         <button type="button" onClick={() => sumar(tipo, p)} className="absolute inset-0 rounded-2xl" aria-label={`Agregar ${p.nombre}`} />
         <span className="pointer-events-none pr-6 text-sm font-medium leading-snug text-espresso">
           {tipo === "promocion" && <span className="mr-1 rounded bg-champan-claro px-1 text-[10px] font-bold uppercase text-champan">Promo</span>}
@@ -491,12 +503,12 @@ function PasoProductos({
         </span>
         <span className="pointer-events-none mt-2 text-sm text-suave tabular-nums">{soles(p.precio)}</span>
         {n > 0 && (
-          <div className="relative mt-2 flex items-center justify-between">
-            <button type="button" onClick={() => sumar(tipo, p, -1)} aria-label={`Quitar un ${p.nombre}`} className="grid size-8 place-items-center rounded-full bg-marfil text-espresso shadow-suave">
+          <div className="aparecer relative mt-2 flex items-center justify-between">
+            <button type="button" onClick={() => sumar(tipo, p, -1)} aria-label={`Quitar un ${p.nombre}`} className="pulsable grid size-8 place-items-center rounded-full bg-marfil text-espresso shadow-suave">
               <Minus className="size-4" />
             </button>
-            <span className="font-semibold text-salvia-osc tabular-nums">{n}</span>
-            <button type="button" onClick={() => sumar(tipo, p)} aria-label={`Agregar otro ${p.nombre}`} className="grid size-8 place-items-center rounded-full bg-salvia text-marfil">
+            <span key={n} className="latido font-semibold text-salvia-osc tabular-nums">{n}</span>
+            <button type="button" onClick={() => sumar(tipo, p)} aria-label={`Agregar otro ${p.nombre}`} className="pulsable grid size-8 place-items-center rounded-full bg-salvia text-marfil">
               <Plus className="size-4" />
             </button>
           </div>
@@ -527,7 +539,7 @@ function PasoProductos({
               key={c}
               type="button"
               onClick={() => setCategoria(c)}
-              className={`h-9 shrink-0 rounded-full px-4 text-sm font-medium ${categoria === c ? "bg-espresso text-marfil" : "border border-linea bg-marfil text-espresso"}`}
+              className={`pulsable h-9 shrink-0 rounded-full px-4 text-sm font-medium ${categoria === c ? "bg-espresso text-marfil" : "border border-linea bg-marfil text-espresso"}`}
             >
               {c === "todas" ? "Todo" : c === "promos" ? "Promociones" : c}
             </button>
@@ -550,7 +562,7 @@ function PasoProductos({
         ) : (
           <ul className="flex max-h-72 flex-col gap-1.5 overflow-y-auto text-sm">
             {items.map((i) => (
-              <li key={i.key} className="flex justify-between gap-2">
+              <li key={i.key} className="aparecer flex justify-between gap-2">
                 <span className="text-espresso">{i.cantidad} × {i.nombre}</span>
                 <span className="shrink-0 text-suave tabular-nums">{soles(i.precio * i.cantidad)}</span>
               </li>
@@ -561,15 +573,15 @@ function PasoProductos({
           <span className="text-sm text-suave">Total</span>
           <span className="font-display text-xl font-semibold text-espresso tabular-nums">{soles(total)}</span>
         </div>
-        <button type="button" onClick={onSiguiente} disabled={!items.length} className="flex h-11 items-center justify-center gap-2 rounded-xl bg-salvia font-semibold text-marfil disabled:opacity-50">
+        <button type="button" onClick={onSiguiente} disabled={!items.length} className="pulsable flex h-11 items-center justify-center gap-2 rounded-xl bg-salvia font-semibold text-marfil disabled:opacity-50">
           Revisar <ChevronRight className="size-4" />
         </button>
       </aside>
 
       {items.length > 0 && (
-        <div className="fixed inset-x-0 z-30 px-4 lg:hidden" style={{ bottom: "calc(var(--barra-inferior) + 12px)" }}>
-          <button type="button" onClick={onSiguiente} className="mx-auto flex h-14 w-full max-w-lg items-center gap-3 rounded-2xl bg-salvia pl-3 pr-5 text-marfil shadow-alta">
-            <span className="grid size-9 place-items-center rounded-xl bg-marfil/15 text-sm font-bold tabular-nums">{cantidad}</span>
+        <div className="fixed inset-x-0 z-30 px-4 lg:hidden animate-in slide-in-from-bottom-4 fade-in-0 duration-240 ease-salida" style={{ bottom: "calc(var(--barra-inferior) + 12px)" }}>
+          <button type="button" onClick={onSiguiente} className="pulsable mx-auto flex h-14 w-full max-w-lg items-center gap-3 rounded-2xl bg-salvia pl-3 pr-5 text-marfil shadow-alta">
+            <span key={cantidad} className="latido grid size-9 place-items-center rounded-xl bg-marfil/15 text-sm font-bold tabular-nums">{cantidad}</span>
             <span className="flex-1 text-left font-semibold">Revisar pedido</span>
             <span className="font-semibold tabular-nums">{soles(total)}</span>
           </button>
@@ -582,11 +594,11 @@ function PasoProductos({
 function Stepper({ valor, onMenos, onMas }: { valor: number; onMenos: () => void; onMas: () => void }) {
   return (
     <div className="flex items-center rounded-full border border-linea-fuerte bg-beige p-0.5">
-      <button type="button" onClick={onMenos} disabled={valor === 0} aria-label="Uno menos" className="grid size-8 place-items-center rounded-full text-espresso disabled:opacity-30">
+      <button type="button" onClick={onMenos} disabled={valor === 0} aria-label="Uno menos" className="pulsable grid size-8 place-items-center rounded-full text-espresso disabled:opacity-30">
         <Minus className="size-4" />
       </button>
-      <span className="w-7 text-center text-sm font-semibold tabular-nums">{valor}</span>
-      <button type="button" onClick={onMas} aria-label="Uno más" className="grid size-8 place-items-center rounded-full text-espresso">
+      <span className="w-7 text-center text-sm font-semibold tabular-nums"><span key={valor} className="latido inline-block">{valor}</span></span>
+      <button type="button" onClick={onMas} aria-label="Uno más" className="pulsable grid size-8 place-items-center rounded-full text-espresso">
         <Plus className="size-4" />
       </button>
     </div>

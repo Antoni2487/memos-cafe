@@ -8,9 +8,10 @@ interface LoadingSpinnerProps {
 
 export function LoadingSpinner({ texto = "Cargando…", full = false }: LoadingSpinnerProps) {
   return (
+    // Aparece recién a los 300 ms: si los datos llegan antes, no parpadea.
     <div
       role="status"
-      className={`flex flex-col items-center justify-center gap-3 ${full ? "min-h-[60vh]" : "min-h-40"}`}
+      className={`aparecer-tarde flex flex-col items-center justify-center gap-3 ${full ? "min-h-[60vh]" : "min-h-40"}`}
     >
       <span className="size-8 animate-spin rounded-full border-3 border-salvia/20 border-t-salvia" aria-hidden />
       <p className="text-sm text-suave">{texto}</p>
@@ -27,7 +28,7 @@ interface EmptyStateProps {
 
 export function EmptyState({ titulo, subtitulo, accion, icono }: EmptyStateProps) {
   return (
-    <div className="flex flex-col items-center justify-center gap-4 px-6 py-14 text-center">
+    <div className="aparecer flex flex-col items-center justify-center gap-4 px-6 py-14 text-center">
       <span className="grid size-14 place-items-center rounded-full bg-arena text-suave [&_svg]:size-6">
         {icono ?? <Inbox strokeWidth={1.6} />}
       </span>

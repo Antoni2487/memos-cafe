@@ -81,7 +81,7 @@ export default function Sidebar() {
                 </span>
                 <span className="hidden lg:inline truncate">{label}</span>
                 {path === "/mesas" && porServir > 0 && (
-                  <span className="ml-auto hidden h-5 min-w-5 place-items-center rounded-full bg-peligro px-1.5 text-[11px] font-bold text-marfil lg:grid">
+                  <span key={porServir} className="latido ml-auto hidden h-5 min-w-5 place-items-center rounded-full bg-peligro px-1.5 text-[11px] font-bold text-marfil lg:grid">
                     {porServir}
                   </span>
                 )}

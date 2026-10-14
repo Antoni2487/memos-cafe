@@ -106,7 +106,9 @@ export default function LoginPage() {
             </div>
 
             {error && (
-              <p role="alert" className="flex items-center gap-2 rounded-xl bg-peligro-fondo px-3.5 py-2.5 text-sm text-peligro">
+              // Tiembla al aparecer: se nota que el intento falló aunque se esté
+              // mirando el teclado. Cada intento lo vuelve a montar.
+              <p role="alert" className="sacudir flex items-center gap-2 rounded-xl bg-peligro-fondo px-3.5 py-2.5 text-sm text-peligro">
                 <AlertCircle className="size-4 shrink-0" />
                 {error}
               </p>
@@ -115,7 +117,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading || !email || !password}
-              className="mt-1 flex h-12 items-center justify-center gap-2 rounded-xl bg-salvia text-[15px] font-semibold text-marfil transition-colors hover:bg-salvia-osc disabled:cursor-not-allowed disabled:opacity-60"
+              className="pulsable mt-1 flex h-12 items-center justify-center gap-2 rounded-xl bg-salvia text-[15px] font-semibold text-marfil hover:bg-salvia-osc disabled:cursor-not-allowed disabled:opacity-60"
             >
               {loading && <span className="size-4 animate-spin rounded-full border-2 border-marfil/30 border-t-marfil" aria-hidden />}
               {loading ? "Ingresando…" : "Ingresar"}

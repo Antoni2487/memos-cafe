@@ -34,14 +34,14 @@ export default function MiPedido({
       <h1 className="font-display text-[28px] font-semibold text-espresso">Mi pedido</h1>
 
       {pedido.error && (
-        <p role="alert" className="flex items-start gap-2 rounded-2xl bg-peligro-fondo px-4 py-3 text-sm text-peligro">
+        <p key={pedido.error} role="alert" className="sacudir flex items-start gap-2 rounded-2xl bg-peligro-fondo px-4 py-3 text-sm text-peligro">
           <AlertCircle className="mt-0.5 size-4 shrink-0" />
           <span className="flex-1">{pedido.error}</span>
         </p>
       )}
 
       {visitaTerminada && !orden && carrito.length === 0 && (
-        <div className="flex flex-col items-center gap-2 rounded-3xl bg-salvia-clara px-6 py-8 text-center">
+        <div className="aparecer flex flex-col items-center gap-2 rounded-3xl bg-salvia-clara px-6 py-8 text-center">
           <Flower2 className="size-8 text-salvia-osc" strokeWidth={1.5} />
           <p className="font-display text-xl font-semibold text-espresso">¡Gracias por tu visita!</p>
           <p className="text-sm text-suave">Esperamos que lo hayas disfrutado. Vuelve pronto.</p>
@@ -61,7 +61,7 @@ export default function MiPedido({
           </span>
           <p className="font-display text-xl font-semibold text-espresso">Todavía no pediste nada</p>
           <p className="max-w-xs text-sm text-suave">Elige en la carta lo que se te antoje y envíalo desde aquí.</p>
-          <button type="button" onClick={onVerCarta} className="mt-2 h-12 rounded-2xl bg-salvia px-6 font-semibold text-marfil">
+          <button type="button" onClick={onVerCarta} className="pulsable mt-2 h-12 rounded-2xl bg-salvia px-6 font-semibold text-marfil">
             Ver la carta
           </button>
         </div>
@@ -112,7 +112,7 @@ function PorEnviar({ pedido, onEnviar }: { pedido: PedidoMesa; onEnviar: () => v
         type="button"
         onClick={onEnviar}
         disabled={enviando}
-        className="mt-4 flex h-13 w-full items-center justify-between rounded-2xl bg-salvia px-5 text-[15px] font-semibold text-marfil transition-colors active:bg-salvia-osc disabled:opacity-60"
+        className="mt-4 flex h-13 w-full items-center justify-between rounded-2xl bg-salvia px-5 text-[15px] font-semibold text-marfil pulsable active:bg-salvia-osc disabled:opacity-60"
       >
         <span>{enviando ? "Enviando…" : "Enviar pedido"}</span>
         <span className="tabular-nums">{soles(totalCarrito)}</span>
@@ -142,7 +142,7 @@ function EstadoPrimerPedido({ pedido }: { pedido: PedidoPorConfirmarQR }) {
   }[pedido.estado];
 
   return (
-    <section className="overflow-hidden rounded-3xl border border-linea bg-marfil shadow-suave">
+    <section className="aparecer overflow-hidden rounded-3xl border border-linea bg-marfil shadow-suave">
       <div className={`flex items-start gap-3 px-4 py-4 ${textos.tono}`}>
         {pedido.estado === "pendiente" ? (
           <span className="relative mt-1 flex size-3 shrink-0">
@@ -189,7 +189,7 @@ function Rondas({ pedido }: { pedido: PedidoMesa }) {
   return (
     <>
       {[...comandas].reverse().map((c) => (
-        <section key={c.numero} className="rounded-3xl border border-linea bg-marfil p-4 shadow-suave">
+        <section key={c.numero} className="aparecer rounded-3xl border border-linea bg-marfil p-4 shadow-suave">
           <div className="mb-3 flex items-baseline justify-between">
             <h2 className="text-[15px] font-semibold text-espresso">
               {comandas.length > 1 ? `Ronda ${c.numero}` : "Tu pedido"}
@@ -225,7 +225,7 @@ function Rondas({ pedido }: { pedido: PedidoMesa }) {
           <button
             type="button"
             onClick={() => setCobro(true)}
-            className="mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-linea-fuerte bg-marfil text-[15px] font-semibold text-espresso active:bg-beige"
+            className="pulsable mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-linea-fuerte bg-marfil text-[15px] font-semibold text-espresso active:bg-beige"
           >
             <Receipt className="size-4.5" />
             Pedir la cuenta
@@ -247,9 +247,16 @@ function Progreso({ estado }: { estado: EstadoComanda }) {
         const Icono = p.icono;
         return (
           <li key={p.estado} className="flex flex-col items-center gap-1.5">
-            <span className={`h-1.5 w-full rounded-full ${hecho ? "bg-salvia" : "bg-linea"}`} />
+            {/* Cuando cocina avanza, el tramo se llena delante del cliente:
+                ve que su pedido se movió sin tener que leer nada. */}
+            <span className="relative h-1.5 w-full overflow-hidden rounded-full bg-linea">
+              <span
+                className="absolute inset-0 origin-left rounded-full bg-salvia transition-transform duration-[var(--dur-lenta)] ease-salida"
+                style={{ transform: `scaleX(${hecho ? 1 : 0})` }}
+              />
+            </span>
             <span className={`flex items-center gap-1 text-xs ${n === actual ? "font-semibold text-salvia-osc" : hecho ? "text-suave" : "text-tenue"}`}>
-              {n === actual && <Icono className="size-3.5" />}
+              {n === actual && <Icono key={p.estado} className="marcar size-3.5" />}
               {p.label}
             </span>
           </li>
@@ -265,6 +272,7 @@ function PedirCuenta({ pedido, onCerrar }: { pedido: PedidoMesa; onCerrar: () =>
 
   return (
     <Hoja etiqueta="Pedir la cuenta" onCerrar={onCerrar}>
+      {(cerrar) => (<>
       <h2 className="pr-10 font-display text-2xl font-semibold text-espresso">¿Cómo vas a pagar?</h2>
       <p className="mt-1 text-sm text-suave">Le avisamos a tu mesero para que venga con la cuenta.</p>
       <div className="mt-5 grid grid-cols-2 gap-2.5" role="radiogroup" aria-label="Método de pago">
@@ -275,7 +283,7 @@ function PedirCuenta({ pedido, onCerrar }: { pedido: PedidoMesa; onCerrar: () =>
             role="radio"
             aria-checked={metodo === value}
             onClick={() => setMetodo(value)}
-            className={`flex h-16 items-center gap-3 rounded-2xl border px-4 text-[15px] font-medium transition-colors ${
+            className={`pulsable flex h-16 items-center gap-3 rounded-2xl border px-4 text-[15px] font-medium ${
               metodo === value ? "border-salvia bg-salvia-clara text-salvia-osc" : "border-linea bg-beige text-espresso"
             }`}
           >
@@ -291,13 +299,14 @@ function PedirCuenta({ pedido, onCerrar }: { pedido: PedidoMesa; onCerrar: () =>
           setEnviando(true);
           const ok = await pedido.pedirCuenta(metodo);
           setEnviando(false);
-          if (ok) onCerrar();
+          if (ok) cerrar();
         }}
-        className="mt-6 h-13 w-full rounded-2xl bg-salvia text-[15px] font-semibold text-marfil disabled:opacity-60"
+        className="pulsable mt-6 h-13 w-full rounded-2xl bg-salvia text-[15px] font-semibold text-marfil disabled:opacity-60"
         style={{ marginBottom: "env(safe-area-inset-bottom)" }}
       >
         {enviando ? "Avisando…" : `Pedir la cuenta · ${soles(pedido.orden?.total ?? 0)}`}
       </button>
+      </>)}
     </Hoja>
   );
 }

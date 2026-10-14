@@ -52,7 +52,7 @@ function Btn({ onClick, color, outline, children, disabled, full, size = "md" }:
     const pad = size === "sm" ? "7px 14px" : "9px 18px";
     const fz = size === "sm" ? 12 : 13;
     return (
-        <button onClick={onClick} disabled={disabled} style={{
+        <button onClick={onClick} disabled={disabled} className="pulsable" style={{
             background: outline ? "white" : (color ?? C.verde),
             color: outline ? (color ?? C.verde) : "white",
             border: `1.5px solid ${color ?? C.verde}`,
@@ -145,7 +145,7 @@ function Modal({ titulo, onCerrar, children, ancho = 520 }: ModalProps) {
 
 function ErrMsg({ msg }: { msg?: string }) {
     if (!msg) return null;
-    return <p style={{ color: C.rojo, fontSize: 12, margin: "0 0 12px", fontWeight: 500 }}>{msg}</p>;
+    return <p key={msg} role="alert" className="sacudir" style={{ color: C.rojo, fontSize: 12, margin: "0 0 12px", fontWeight: 500 }}>{msg}</p>;
 }
 
 interface MetricaProps {
@@ -442,9 +442,12 @@ function ModalCobrar({ orden, onCerrar, onPagado }: { orden: Orden; onCerrar: ()
 
             {/* Vuelto — solo efectivo */}
             {esEfectivo && montoRecibido && (
+                // El fondo pasa de verde a rojo con suavidad mientras se tipea
+                // el monto: avisa que no alcanza sin un parpadeo brusco.
                 <div style={{
                     background: vuelto >= 0 ? C.bg : C.rojoPal,
                     borderRadius: 8, padding: "8px 12px", marginBottom: 14,
+                    transition: "background-color var(--dur-rapida) var(--ease-estandar)",
                 }}>
                     <p style={{
                         margin: 0, fontSize: 13, fontWeight: 600,

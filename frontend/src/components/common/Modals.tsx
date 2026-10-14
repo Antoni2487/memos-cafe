@@ -1,23 +1,41 @@
-import { useEffect, useRef, type ReactNode, type FormEvent, type MouseEvent } from "react";
+import { useEffect, useRef, useState, type ReactNode, type FormEvent, type MouseEvent } from "react";
 import { AlertTriangle, X } from "lucide-react";
+import { usePresencia } from "../../hooks/usePresencia";
 
 // ─── Base del modal ───────────────────────────────────────────────────────────
 // En el celular sube desde abajo como una hoja (al alcance del pulgar, como
-// en una app). En tablet y computadora es un cuadro centrado.
+// en una app). En tablet y computadora es un cuadro centrado. Al cerrarse
+// baja y se desvanece, más rápido de lo que entró.
 interface ModalBaseProps {
+  abierto: boolean;
   children: ReactNode;
   onClose?: () => void;
   maxWidth?: string;
   etiqueta?: string;
 }
 
-function ModalBase({ children, onClose, maxWidth = "420px", etiqueta }: ModalBaseProps) {
+function ModalBase({ abierto, ...props }: ModalBaseProps) {
+  const { montado, saliendo } = usePresencia(abierto);
+  // Mientras sale se sigue viendo lo último que mostró: quien lo cierra
+  // suele borrar el dato que se mostraba (titulo={producto?.nombre}) y el
+  // texto cambiaría a mitad de la animación.
+  const [ultimo, setUltimo] = useState(props);
+  if (abierto && (ultimo.children !== props.children || ultimo.etiqueta !== props.etiqueta)) {
+    setUltimo(props);
+  }
+  if (!montado) return null;
+  return <PanelModal {...(saliendo ? ultimo : props)} saliendo={saliendo} />;
+}
+
+function PanelModal({
+  children, onClose, maxWidth = "420px", etiqueta, saliendo,
+}: Omit<ModalBaseProps, "abierto"> & { saliendo: boolean }) {
   const panelRef = useRef<HTMLDivElement>(null);
   // Los que usan el modal suelen pasar onClose como flecha nueva en cada
   // render: se guarda en un ref para que el efecto corra una sola vez (si no,
   // el foco saltaria al panel cada vez que el usuario escribe en un campo).
   const onCloseRef = useRef(onClose);
-  useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
+  useEffect(() => { onCloseRef.current = saliendo ? undefined : onClose; }, [onClose, saliendo]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onCloseRef.current?.(); };
@@ -35,8 +53,12 @@ function ModalBase({ children, onClose, maxWidth = "420px", etiqueta }: ModalBas
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-espresso/40 backdrop-blur-[2px] sm:p-6 animate-in fade-in-0 duration-150"
-      onClick={(e: MouseEvent<HTMLDivElement>) => { if (e.target === e.currentTarget) onClose?.(); }}
+      className={`fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-espresso/40 backdrop-blur-[2px] sm:p-6 ${
+        saliendo
+          ? "pointer-events-none animate-out fade-out-0 duration-160 ease-entrada fill-mode-forwards"
+          : "animate-in fade-in-0 duration-160 ease-salida"
+      }`}
+      onClick={(e: MouseEvent<HTMLDivElement>) => { if (e.target === e.currentTarget) onCloseRef.current?.(); }}
     >
       <div
         ref={panelRef}
@@ -44,7 +66,12 @@ function ModalBase({ children, onClose, maxWidth = "420px", etiqueta }: ModalBas
         aria-modal="true"
         aria-label={etiqueta}
         tabIndex={-1}
-        className="flex w-full flex-col overflow-hidden bg-marfil shadow-alta outline-none rounded-t-3xl sm:rounded-2xl max-h-[92dvh] sm:max-h-[calc(100dvh-48px)] animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-2 sm:zoom-in-95 duration-200"
+        inert={saliendo}
+        className={`flex w-full flex-col overflow-hidden bg-marfil shadow-alta outline-none rounded-t-3xl sm:rounded-2xl max-h-[92dvh] sm:max-h-[calc(100dvh-48px)] ${
+          saliendo
+            ? "animate-out slide-out-to-bottom-8 sm:slide-out-to-bottom-2 sm:zoom-out-97 duration-160 ease-entrada fill-mode-forwards"
+            : "animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-2 sm:zoom-in-97 duration-240 ease-salida"
+        }`}
         style={{ maxWidth }}
       >
         <div className="sm:hidden mx-auto mt-2.5 h-1.5 w-10 shrink-0 rounded-full bg-linea-fuerte" aria-hidden />
@@ -71,9 +98,9 @@ function Cabecera({ titulo, onCerrar }: { titulo?: string; onCerrar?: () => void
 }
 
 const btnSecundario =
-  "flex-1 h-12 sm:h-11 rounded-xl border border-linea-fuerte bg-marfil text-[15px] sm:text-sm font-semibold text-espresso hover:bg-arena transition-colors disabled:opacity-60 disabled:cursor-not-allowed";
+  "flex-1 h-12 sm:h-11 rounded-xl border border-linea-fuerte bg-marfil text-[15px] sm:text-sm font-semibold text-espresso hover:bg-arena pulsable disabled:opacity-60 disabled:cursor-not-allowed";
 const btnPrimario =
-  "flex-1 h-12 sm:h-11 rounded-xl text-[15px] sm:text-sm font-semibold text-marfil transition-colors disabled:opacity-60 disabled:cursor-not-allowed";
+  "flex-1 h-12 sm:h-11 rounded-xl text-[15px] sm:text-sm font-semibold text-marfil pulsable disabled:opacity-60 disabled:cursor-not-allowed";
 
 function Pie({ children }: { children: ReactNode }) {
   return (
@@ -117,11 +144,10 @@ export function ConfirmDialog({
   onConfirmar,
   onCancelar,
 }: ConfirmDialogProps) {
-  if (!abierto) return null;
   const v = VARIANTES[variante] ?? VARIANTES.danger;
 
   return (
-    <ModalBase onClose={onCancelar} maxWidth="400px" etiqueta={titulo}>
+    <ModalBase abierto={abierto} onClose={onCancelar} maxWidth="400px" etiqueta={titulo}>
       <div className="px-6 pt-6 pb-2 text-center">
         <div className={`mx-auto mb-4 grid size-13 place-items-center rounded-full ${v.icono}`}>
           <AlertTriangle className="size-6" strokeWidth={1.8} />
@@ -164,15 +190,13 @@ export function FormModal({
   maxWidth = "480px",
   children,
 }: FormModalProps) {
-  if (!abierto) return null;
-
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     onGuardar?.();
   };
 
   return (
-    <ModalBase onClose={onCerrar} maxWidth={maxWidth} etiqueta={titulo}>
+    <ModalBase abierto={abierto} onClose={onCerrar} maxWidth={maxWidth} etiqueta={titulo}>
       <Cabecera titulo={titulo} onCerrar={onCerrar} />
       <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
         <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-5 sm:px-6 py-5">
@@ -200,10 +224,8 @@ interface DetailModalProps {
 }
 
 export function DetailModal({ abierto, titulo, onCerrar, maxWidth = "480px", children }: DetailModalProps) {
-  if (!abierto) return null;
-
   return (
-    <ModalBase onClose={onCerrar} maxWidth={maxWidth} etiqueta={titulo}>
+    <ModalBase abierto={abierto} onClose={onCerrar} maxWidth={maxWidth} etiqueta={titulo}>
       <Cabecera titulo={titulo} onCerrar={onCerrar} />
       <div
         className="flex min-h-0 flex-col gap-3 overflow-y-auto px-5 sm:px-6 pt-5"

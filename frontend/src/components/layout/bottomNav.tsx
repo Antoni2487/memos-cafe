@@ -4,6 +4,7 @@ import { LogOut, Menu, X } from "lucide-react";
 import authService from "../../services/authService";
 import { iniciales, itemsVisibles, nombreRol, pestanasMovil, type ItemNav } from "./navegacion";
 import { useListosParaServir } from "../../hooks/listosParaServir";
+import { useSalida } from "../../hooks/usePresencia";
 
 /**
  * Barra de pestañas del celular, como en una app: los 4 accesos que el rol
@@ -73,7 +74,8 @@ function Contenido({ icon: Icon, label, activo, contador = 0 }: { icon: ItemNav[
       >
         <Icon className="size-5.5" strokeWidth={activo ? 2.1 : 1.8} aria-hidden />
         {contador > 0 && (
-          <span className="absolute -top-1 right-1.5 grid h-5 min-w-5 place-items-center rounded-full bg-peligro px-1 text-[11px] font-bold text-marfil ring-2 ring-marfil">
+          // Late cada vez que cambia: llegó otro pedido para llevar a la mesa.
+          <span key={contador} className="latido absolute -top-1 right-1.5 grid h-5 min-w-5 place-items-center rounded-full bg-peligro px-1 text-[11px] font-bold text-marfil ring-2 ring-marfil">
             {contador}
           </span>
         )}
@@ -89,10 +91,13 @@ function Contenido({ icon: Icon, label, activo, contador = 0 }: { icon: ItemNav[
 function HojaMas({ items, onCerrar }: { items: ItemNav[]; onCerrar: () => void }) {
   const user = authService.getUser();
   const cerrarRef = useRef<HTMLButtonElement>(null);
+  // Baja antes de desmontarse: también al elegir una sección, así se ve que
+  // la hoja se fue y quedó la pantalla nueva debajo.
+  const { saliendo, cerrar } = useSalida(onCerrar);
 
   useEffect(() => {
     cerrarRef.current?.focus();
-    const alPresionar = (e: KeyboardEvent) => e.key === "Escape" && onCerrar();
+    const alPresionar = (e: KeyboardEvent) => e.key === "Escape" && cerrar();
     document.addEventListener("keydown", alPresionar);
     const overflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -100,13 +105,22 @@ function HojaMas({ items, onCerrar }: { items: ItemNav[]; onCerrar: () => void }
       document.removeEventListener("keydown", alPresionar);
       document.body.style.overflow = overflow;
     };
-  }, [onCerrar]);
+  }, [cerrar]);
 
   return (
-    <div className="md:hidden fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label="Más opciones">
-      <div className="absolute inset-0 bg-espresso/40 animate-in fade-in-0" onClick={onCerrar} />
+    <div className="md:hidden fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label="Más opciones" inert={saliendo}>
       <div
-        className="absolute inset-x-0 bottom-0 rounded-t-3xl bg-marfil shadow-alta animate-in slide-in-from-bottom duration-200"
+        className={`absolute inset-0 bg-espresso/40 ${
+          saliendo ? "animate-out fade-out-0 duration-160 ease-entrada fill-mode-forwards" : "animate-in fade-in-0 duration-160 ease-salida"
+        }`}
+        onClick={cerrar}
+      />
+      <div
+        className={`absolute inset-x-0 bottom-0 rounded-t-3xl bg-marfil shadow-alta ${
+          saliendo
+            ? "animate-out slide-out-to-bottom-full duration-160 ease-entrada fill-mode-forwards"
+            : "animate-in slide-in-from-bottom-full duration-240 ease-salida"
+        }`}
         style={{ paddingBottom: "calc(16px + env(safe-area-inset-bottom))" }}
       >
         <div className="mx-auto mt-2.5 h-1.5 w-10 rounded-full bg-linea-fuerte" aria-hidden />
@@ -121,7 +135,7 @@ function HojaMas({ items, onCerrar }: { items: ItemNav[]; onCerrar: () => void }
           <button
             ref={cerrarRef}
             type="button"
-            onClick={onCerrar}
+            onClick={cerrar}
             aria-label="Cerrar"
             className="size-10 grid place-items-center rounded-full bg-arena text-suave"
           >
@@ -135,7 +149,7 @@ function HojaMas({ items, onCerrar }: { items: ItemNav[]; onCerrar: () => void }
               <li key={path}>
                 <NavLink
                   to={path}
-                  onClick={onCerrar}
+                  onClick={cerrar}
                   className={({ isActive }) =>
                     `flex flex-col items-center justify-center gap-2 rounded-2xl border px-2 py-4 text-center text-[13px] font-medium transition-colors ${
                       isActive

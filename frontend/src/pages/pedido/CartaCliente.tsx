@@ -123,7 +123,7 @@ export default function CartaCliente({ pedido }: { pedido: PedidoMesa }) {
                   type="button"
                   data-seccion={s.id}
                   onClick={() => irA(s.id)}
-                  className={`shrink-0 rounded-full px-4 h-9 text-sm font-medium transition-colors ${
+                  className={`pulsable shrink-0 rounded-full px-4 h-9 text-sm font-medium ${
                     activa === s.id ? "bg-espresso text-marfil" : "border border-linea bg-marfil text-espresso"
                   }`}
                 >
@@ -206,11 +206,11 @@ function FilaProducto({
           type="button"
           onClick={onAgregarRapido}
           aria-label={cantidad ? `Agregar otro ${item.nombre} (llevas ${cantidad})` : `Agregar ${item.nombre}`}
-          className={`absolute -bottom-2 -right-2 grid h-10 min-w-10 place-items-center rounded-full px-2 text-sm font-semibold shadow-suave ring-3 ring-beige transition-transform active:scale-90 ${
+          className={`absolute -bottom-2 -right-2 grid h-10 min-w-10 place-items-center rounded-full px-2 text-sm font-semibold shadow-suave ring-3 ring-beige transition-[transform,background-color,color] duration-160 ease-estandar active:scale-90 active:duration-100 ${
             cantidad ? "bg-salvia text-marfil" : "bg-marfil text-salvia-osc"
           }`}
         >
-          {cantidad ? cantidad : <Plus className="size-5" strokeWidth={2.2} />}
+          {cantidad ? <span key={cantidad} className="latido inline-block">{cantidad}</span> : <Plus className="size-5" strokeWidth={2.2} />}
         </button>
       </div>
     </div>

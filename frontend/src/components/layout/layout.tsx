@@ -1,4 +1,4 @@
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 import { AlertCircle, X } from "lucide-react";
 import Sidebar from "./sidebar";
 import Navbar from "./navbar";
@@ -15,6 +15,7 @@ import useApiErrors from "../../hooks/useApiErrors";
  */
 export default function Layout() {
   const { error, clearError } = useApiErrors();
+  const { pathname } = useLocation();
 
   return (
     <div className="flex h-dvh overflow-hidden bg-beige">
@@ -46,7 +47,9 @@ export default function Layout() {
           className="relative flex-1 overflow-y-auto overscroll-contain"
           style={{ paddingBottom: "var(--barra-inferior)" }}
         >
-          <div className="mx-auto w-full max-w-[1400px] p-4 md:p-6 lg:p-8">
+          {/* Al cambiar de sección, la pantalla nueva aparece en vez de saltar:
+              el ojo ve que cambió aunque se parezca a la anterior. */}
+          <div key={pathname} className="aparecer mx-auto w-full max-w-[1400px] p-4 md:p-6 lg:p-8">
             <Outlet />
           </div>
         </main>

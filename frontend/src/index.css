@@ -181,6 +181,108 @@
   }
 }
 
+/* ─── Movimiento ──────────────────────────────────────────────────────────────
+   Cada animación responde a algo que hizo la persona o a algo que tiene que
+   notar. Nada se mueve por adorno. Tres reglas:
+   - Lo que entra frena al llegar (curva de salida) y dura más que lo que se
+     va (curva de entrada): la atención va a lo nuevo, no a lo que se fue.
+   - Lo que responde a un toque es casi inmediato (100 ms). Más lento se
+     siente pesado en una hora punta con el salón lleno.
+   - Con "reducir movimiento" activado en el teléfono no se anima nada (ver
+     el final del archivo). */
+@theme {
+    --ease-salida: cubic-bezier(0.2, 0, 0, 1);       /* entra: arranca rápido y frena suave */
+    --ease-entrada: cubic-bezier(0.4, 0, 1, 1);      /* sale: arranca suave y se va rápido */
+    --ease-estandar: cubic-bezier(0.4, 0, 0.2, 1);   /* algo que cambia sin entrar ni salir */
+    --ease-resorte: cubic-bezier(0.34, 1.45, 0.64, 1); /* confirmación: un rebote corto */
+}
+
+:root {
+    --dur-toque: 100ms;  /* respuesta al presionar */
+    --dur-rapida: 160ms; /* color, hover, salidas */
+    --dur-media: 240ms;  /* entradas: paneles, pasos, pantallas */
+    --dur-lenta: 480ms;  /* progreso: una barra que se llena */
+}
+
+@layer components {
+    /* Botón que se hunde un poco al presionarlo: confirma el toque antes de
+       que responda el servidor. Lleva sus propias transiciones de color, así
+       que no se combina con transition-colors. */
+    .pulsable {
+        transition-property: transform, background-color, border-color, color, box-shadow, opacity;
+        transition-duration: var(--dur-rapida);
+        transition-timing-function: var(--ease-estandar);
+    }
+    .pulsable:active:not(:disabled) {
+        transform: scale(0.97);
+        transition-duration: var(--dur-toque);
+    }
+}
+
+/* Contenido que acaba de aparecer (otra pantalla, otro paso, otra pestaña):
+   sube 6 px mientras aparece, lo justo para que se note que cambió. */
+@keyframes aparecer {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: none; }
+}
+.aparecer {
+    animation: aparecer var(--dur-media) var(--ease-salida) both;
+}
+
+/* Cargando: si la respuesta llega rápido, no se llega a ver el spinner y la
+   pantalla no parpadea. */
+@keyframes asomar {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+.aparecer-tarde {
+    animation: asomar var(--dur-media) var(--ease-salida) 300ms both;
+}
+
+/* Un número que cambió (productos en el pedido, comandas nuevas). Se usa con
+   key={valor} para que la animación vuelva a correr en cada cambio. Necesita
+   un elemento de bloque (block, inline-block, grid): en uno inline no escala. */
+@keyframes latido {
+    0%   { transform: scale(1); }
+    40%  { transform: scale(1.22); }
+    100% { transform: scale(1); }
+}
+.latido {
+    animation: latido 320ms var(--ease-resorte);
+}
+
+/* Algo quedó marcado (producto listo en cocina): el check entra con un
+   rebote corto. */
+@keyframes marcar {
+    from { transform: scale(0.5); opacity: 0; }
+    to   { transform: scale(1); opacity: 1; }
+}
+.marcar {
+    animation: marcar var(--dur-media) var(--ease-resorte) both;
+}
+
+/* Error al enviar un formulario: un temblor corto, como "no" con la cabeza. */
+@keyframes sacudir {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-6px); }
+    40%, 80% { transform: translateX(6px); }
+}
+.sacudir {
+    animation: sacudir 360ms var(--ease-estandar);
+}
+
+/* Comanda nueva en el tablero de cocina: dos pulsos de un anillo para que
+   se vea aunque nadie esté mirando la pantalla cuando llega. */
+@keyframes llegada {
+    0%   { box-shadow: 0 0 0 0 rgba(76, 107, 101, 0.55); }
+    100% { box-shadow: 0 0 0 14px rgba(76, 107, 101, 0); }
+}
+.llegada {
+    animation:
+        aparecer var(--dur-media) var(--ease-salida) both,
+        llegada 900ms var(--ease-salida) 2;
+}
+
 /* Notificaciones tipo celular (ver components/notificaciones): entran desde
    arriba con un pequeño rebote, como los avisos del teléfono. */
 @keyframes notif-entrar {
@@ -190,6 +292,16 @@
 .notif-entrar {
     animation: notif-entrar 420ms cubic-bezier(0.2, 0.9, 0.3, 1.15) both;
 }
+
+/* "Reducir movimiento" del sistema: nada se desplaza ni rebota. Los cambios
+   de estado siguen viéndose porque cambian el color y el texto, no solo la
+   posición. */
 @media (prefers-reduced-motion: reduce) {
-    .notif-entrar { animation: none; }
+    *, ::before, ::after {
+        animation-duration: 1ms !important;
+        animation-delay: 0ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 1ms !important;
+        scroll-behavior: auto !important;
+    }
 }

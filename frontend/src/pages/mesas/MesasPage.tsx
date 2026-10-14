@@ -48,7 +48,7 @@ export default function MesasPage() {
       />
 
       {aviso && (
-        <p role="status" className="mb-4 flex items-center gap-2 rounded-xl bg-exito-fondo px-4 py-3 text-sm font-medium text-exito">
+        <p role="status" className="notif-entrar mb-4 flex items-center gap-2 rounded-xl bg-exito-fondo px-4 py-3 text-sm font-medium text-exito">
           <CheckCircle2 className="size-4" /> {aviso}
         </p>
       )}

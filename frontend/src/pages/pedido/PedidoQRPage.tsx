@@ -5,6 +5,7 @@ import CartaCliente from "./CartaCliente";
 import MiPedido from "./MiPedido";
 import ConoceMemos from "./ConoceMemos";
 import { soles, usePedidoMesa } from "./usePedidoMesa";
+import { usePresencia } from "../../hooks/usePresencia";
 
 type Pestana = "carta" | "pedido" | "conoce";
 
@@ -18,6 +19,11 @@ export default function PedidoQRPage() {
   const pedido = usePedidoMesa(codigo);
   const [pestana, setPestana] = useState<Pestana>("carta");
   const [aviso, setAviso] = useState<string | null>(null);
+  // El aviso se queda en pantalla mientras sale (sube y se desvanece) en vez
+  // de desaparecer de golpe.
+  const [ultimoAviso, setUltimoAviso] = useState<string | null>(null);
+  if (aviso && aviso !== ultimoAviso) setUltimoAviso(aviso);
+  const avisoVisible = usePresencia(!!aviso);
 
   useEffect(() => { window.scrollTo({ top: 0 }); }, [pestana]);
   useEffect(() => {
@@ -70,7 +76,8 @@ export default function PedidoQRPage() {
         </p>
       )}
 
-      <div className="mx-auto w-full max-w-lg">
+      {/* key: la pestaña nueva aparece; sin esto parece que la página no respondió. */}
+      <div key={pestana} className="aparecer mx-auto w-full max-w-lg">
         {pestana === "carta" && <CartaCliente pedido={pedido} />}
         {pestana === "pedido" && <MiPedido pedido={pedido} onEnviar={enviar} onVerCarta={() => setPestana("carta")} />}
         {pestana === "conoce" && <ConoceMemos onVerCarta={() => setPestana("carta")} />}
@@ -82,9 +89,10 @@ export default function PedidoQRPage() {
           <button
             type="button"
             onClick={() => setPestana("pedido")}
-            className="flex h-14 w-full items-center gap-3 rounded-2xl bg-salvia pl-3 pr-5 text-marfil shadow-alta animate-in slide-in-from-bottom-4 duration-200 active:bg-salvia-osc"
+            className="pulsable flex h-14 w-full items-center gap-3 rounded-2xl bg-salvia pl-3 pr-5 text-marfil shadow-alta animate-in slide-in-from-bottom-4 fade-in-0 duration-240 ease-salida active:bg-salvia-osc"
           >
-            <span className="grid size-9 place-items-center rounded-xl bg-marfil/15 text-sm font-bold tabular-nums">
+            {/* Late con cada producto que se agrega: confirma que entró al pedido. */}
+            <span key={pedido.cantidadCarrito} className="latido grid size-9 place-items-center rounded-xl bg-marfil/15 text-sm font-bold tabular-nums">
               {pedido.cantidadCarrito}
             </span>
             <span className="flex-1 text-left text-[15px] font-semibold">Ver mi pedido</span>
@@ -93,9 +101,16 @@ export default function PedidoQRPage() {
         </div>
       )}
 
-      {aviso && (
-        <div role="status" className="fixed inset-x-0 top-4 z-50 mx-auto w-fit max-w-[90vw] rounded-full bg-espresso px-5 py-3 text-sm font-medium text-marfil shadow-alta animate-in fade-in-0 slide-in-from-top-2">
-          {aviso}
+      {avisoVisible.montado && (
+        <div
+          role="status"
+          className={`fixed inset-x-0 top-4 z-50 mx-auto w-fit max-w-[90vw] rounded-full bg-espresso px-5 py-3 text-sm font-medium text-marfil shadow-alta ${
+            avisoVisible.saliendo
+              ? "animate-out fade-out-0 slide-out-to-top-2 duration-160 ease-entrada fill-mode-forwards"
+              : "notif-entrar"
+          }`}
+        >
+          {aviso ?? ultimoAviso}
         </div>
       )}
 
@@ -134,14 +149,14 @@ function Tab({
         aria-current={activa ? "page" : undefined}
         className="flex h-full w-full flex-col items-center justify-center gap-1"
       >
-        <span className={`relative grid h-8 w-16 place-items-center rounded-full transition-colors ${activa ? "bg-salvia-clara text-salvia-osc" : "text-suave"}`}>
+        <span className={`relative grid h-8 w-16 place-items-center rounded-full transition-colors duration-160 ease-estandar ${activa ? "bg-salvia-clara text-salvia-osc" : "text-suave"}`}>
           <Icono className="size-5.5" strokeWidth={activa ? 2.1 : 1.8} />
           {contador > 0 && (
-            <span className="absolute -top-1 right-2 grid h-5 min-w-5 place-items-center rounded-full bg-salvia px-1 text-[11px] font-bold text-marfil ring-2 ring-marfil tabular-nums">
+            <span key={contador} className="latido absolute -top-1 right-2 grid h-5 min-w-5 place-items-center rounded-full bg-salvia px-1 text-[11px] font-bold text-marfil ring-2 ring-marfil tabular-nums">
               {contador}
             </span>
           )}
-          {punto && <span className="absolute top-0.5 right-4 size-2.5 rounded-full bg-champan ring-2 ring-marfil" aria-label="Pedido en curso" />}
+          {punto && <span className="marcar absolute top-0.5 right-4 size-2.5 rounded-full bg-champan ring-2 ring-marfil" aria-label="Pedido en curso" />}
         </span>
         <span className={`text-xs ${activa ? "font-semibold text-salvia-osc" : "text-suave"}`}>{label}</span>
       </button>
