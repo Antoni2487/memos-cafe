@@ -1,7 +1,8 @@
 import { LIMITES } from "../../utils/validators";
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import { AlertCircle, Eye, EyeOff, Lock, Mail } from "lucide-react";
+import { AlertCircle, Eye, EyeOff, Globe, Lock, Mail } from "lucide-react";
+import { WEB_URL } from "../../utils/constants";
 import { isAxiosError } from "axios";
 import authService from "../../services/authService";
 
@@ -124,6 +125,13 @@ export default function LoginPage() {
         </div>
 
         <p className="mt-6 text-center text-xs text-tenue">¿Olvidaste tu contraseña? Pídele a la administración que la restablezca.</p>
+        <a
+          href={WEB_URL}
+          className="mx-auto mt-4 flex w-fit items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-salvia-osc hover:bg-arena"
+        >
+          <Globe className="size-4" aria-hidden />
+          Ver la página web
+        </a>
       </div>
     </main>
   );

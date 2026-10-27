@@ -1,5 +1,6 @@
 import { NavLink } from "react-router-dom";
-import { LogOut } from "lucide-react";
+import { Globe, LogOut } from "lucide-react";
+import { WEB_URL } from "../../utils/constants";
 import authService from "../../services/authService";
 import { GRUPOS, iniciales, itemsVisibles, nombreRol } from "./navegacion";
 import { useListosParaServir } from "../../hooks/listosParaServir";
@@ -92,6 +93,16 @@ export default function Sidebar() {
       </nav>
 
       <div className="p-2.5 lg:p-3 border-t border-linea">
+        <a
+          href={WEB_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          title="Ver la página web"
+          className="mb-2 flex h-11 lg:h-9.5 items-center justify-center lg:justify-start gap-2.5 rounded-lg px-0 lg:px-2.5 text-[13.5px] font-medium text-suave hover:bg-marfil/70 hover:text-espresso focus-visible:outline-2 focus-visible:outline-salvia"
+        >
+          <Globe className="size-4.5 shrink-0" strokeWidth={1.8} aria-hidden />
+          <span className="hidden lg:inline">Ver la página web</span>
+        </a>
         <div className="flex items-center gap-2.5 rounded-xl lg:bg-marfil lg:border lg:border-linea p-1.5 lg:p-2 justify-center lg:justify-start">
           <span
             className="size-8 shrink-0 rounded-full bg-champan-claro text-champan grid place-items-center text-xs font-semibold"

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
-import { LogOut, Menu, X } from "lucide-react";
+import { Globe, LogOut, Menu, X } from "lucide-react";
+import { WEB_URL } from "../../utils/constants";
 import authService from "../../services/authService";
 import { iniciales, itemsVisibles, nombreRol, pestanasMovil, type ItemNav } from "./navegacion";
 import { useListosParaServir } from "../../hooks/listosParaServir";
@@ -152,7 +153,16 @@ function HojaMas({ items, onCerrar }: { items: ItemNav[]; onCerrar: () => void }
           </ul>
         )}
 
-        <div className="px-4 pt-4">
+        <div className="flex flex-col gap-2 px-4 pt-4">
+          <a
+            href={WEB_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-linea h-12 text-[15px] font-medium text-espresso active:bg-arena"
+          >
+            <Globe className="size-4.5" strokeWidth={1.8} />
+            Ver la página web
+          </a>
           <button
             type="button"
             onClick={() => authService.logout()}

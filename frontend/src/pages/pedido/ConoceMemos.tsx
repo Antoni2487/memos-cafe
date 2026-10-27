@@ -1,8 +1,7 @@
 import { AtSign, ExternalLink, Globe } from "lucide-react";
+import { WEB_URL as WEB } from "../../utils/constants";
 
-// Enlaces configurables en Vercel (Settings → Environment Variables). La web
-// no aparece hasta que se defina VITE_WEB_URL.
-const WEB = import.meta.env.VITE_WEB_URL as string | undefined;
+// Enlaces configurables en Vercel (Settings → Environment Variables).
 const INSTAGRAM =
   (import.meta.env.VITE_INSTAGRAM_URL as string | undefined) || "https://www.instagram.com/memos.coffeecix/";
 

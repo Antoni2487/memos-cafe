@@ -54,3 +54,8 @@ export const ESTADO_CAJA = {
   ABIERTA: "abierta",
   CERRADA: "cerrada",
 } as const;
+
+// Página web pública (la landing). Se puede cambiar en Vercel con
+// VITE_WEB_URL sin tocar el código.
+export const WEB_URL =
+  (import.meta.env.VITE_WEB_URL as string | undefined) || "https://memos-cafe-landing.vercel.app";
