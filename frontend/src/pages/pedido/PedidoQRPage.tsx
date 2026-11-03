@@ -89,7 +89,7 @@ export default function PedidoQRPage() {
           <button
             type="button"
             onClick={() => setPestana("pedido")}
-            className="pulsable flex h-14 w-full items-center gap-3 rounded-2xl bg-salvia pl-3 pr-5 text-marfil shadow-alta animate-in slide-in-from-bottom-4 fade-in-0 duration-240 ease-salida active:bg-salvia-osc"
+            className="pulsable flex h-14 w-full items-center gap-3 rounded-2xl bg-salvia pl-3 pr-5 text-marfil shadow-alta animate-in slide-in-from-bottom-4 fade-in-0 duration-300 ease-salida active:bg-salvia-presionado"
           >
             {/* Late con cada producto que se agrega: confirma que entró al pedido. */}
             <span key={pedido.cantidadCarrito} className="latido grid size-9 place-items-center rounded-xl bg-marfil/15 text-sm font-bold tabular-nums">
@@ -106,7 +106,7 @@ export default function PedidoQRPage() {
           role="status"
           className={`fixed inset-x-0 top-4 z-50 mx-auto w-fit max-w-[90vw] rounded-full bg-espresso px-5 py-3 text-sm font-medium text-marfil shadow-alta ${
             avisoVisible.saliendo
-              ? "animate-out fade-out-0 slide-out-to-top-2 duration-160 ease-entrada fill-mode-forwards"
+              ? "animate-out fade-out-0 slide-out-to-top-2 duration-200 ease-entrada fill-mode-forwards"
               : "notif-entrar"
           }`}
         >
@@ -149,7 +149,7 @@ function Tab({
         aria-current={activa ? "page" : undefined}
         className="flex h-full w-full flex-col items-center justify-center gap-1"
       >
-        <span className={`relative grid h-8 w-16 place-items-center rounded-full transition-colors duration-160 ease-estandar ${activa ? "bg-salvia-clara text-salvia-osc" : "text-suave"}`}>
+        <span className={`relative grid h-8 w-16 place-items-center rounded-full transition-colors duration-200 ease-entrada-salida ${activa ? "bg-salvia-clara text-salvia-osc" : "text-suave"}`}>
           <Icono className="size-5.5" strokeWidth={activa ? 2.1 : 1.8} />
           {contador > 0 && (
             <span key={contador} className="latido absolute -top-1 right-2 grid h-5 min-w-5 place-items-center rounded-full bg-salvia px-1 text-[11px] font-bold text-marfil ring-2 ring-marfil tabular-nums">

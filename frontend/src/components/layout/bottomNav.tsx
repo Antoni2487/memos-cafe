@@ -111,15 +111,15 @@ function HojaMas({ items, onCerrar }: { items: ItemNav[]; onCerrar: () => void }
     <div className="md:hidden fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label="Más opciones" inert={saliendo}>
       <div
         className={`absolute inset-0 bg-espresso/40 ${
-          saliendo ? "animate-out fade-out-0 duration-160 ease-entrada fill-mode-forwards" : "animate-in fade-in-0 duration-160 ease-salida"
+          saliendo ? "animate-out fade-out-0 duration-200 ease-entrada fill-mode-forwards" : "animate-in fade-in-0 duration-200 ease-salida"
         }`}
         onClick={cerrar}
       />
       <div
         className={`absolute inset-x-0 bottom-0 rounded-t-3xl bg-marfil shadow-alta ${
           saliendo
-            ? "animate-out slide-out-to-bottom-full duration-160 ease-entrada fill-mode-forwards"
-            : "animate-in slide-in-from-bottom-full duration-240 ease-salida"
+            ? "animate-out slide-out-to-bottom-full duration-200 ease-entrada fill-mode-forwards"
+            : "animate-in slide-in-from-bottom-full duration-300 ease-salida"
         }`}
         style={{ paddingBottom: "calc(16px + env(safe-area-inset-bottom))" }}
       >

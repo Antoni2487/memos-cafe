@@ -59,6 +59,7 @@
     --color-tenue: var(--tenue);
     --color-salvia: var(--salvia);
     --color-salvia-osc: var(--salvia-osc);
+    --color-salvia-presionado: var(--salvia-presionado);
     --color-salvia-clara: var(--salvia-clara);
     --color-champan: var(--champan);
     --color-champan-claro: var(--champan-claro);
@@ -103,6 +104,7 @@
     --tenue: #857565;          /* ayudas, placeholders */
     --salvia: #4C6B65;         /* acciones: el verde del logo */
     --salvia-osc: #3D5852;     /* hover / activo */
+    --salvia-presionado: #2F443F; /* botón presionado */
     --salvia-clara: #E1EAE4;   /* item activo, fondos suaves */
     --champan: #8C6C3A;        /* detalles */
     --champan-claro: #F4EAD8;
@@ -147,7 +149,7 @@
     --chart-4: #9DB3AC;
     --chart-5: #C9B48E;
     --radius: 0.75rem;
-    --sidebar: var(--arena);
+    --sidebar: var(--marfil);
     --sidebar-foreground: var(--suave);
     --sidebar-primary: var(--salvia);
     --sidebar-primary-foreground: var(--marfil);
@@ -182,26 +184,39 @@
 }
 
 /* ─── Movimiento ──────────────────────────────────────────────────────────────
-   Cada animación responde a algo que hizo la persona o a algo que tiene que
-   notar. Nada se mueve por adorno. Tres reglas:
-   - Lo que entra frena al llegar (curva de salida) y dura más que lo que se
-     va (curva de entrada): la atención va a lo nuevo, no a lo que se fue.
-   - Lo que responde a un toque es casi inmediato (100 ms). Más lento se
-     siente pesado en una hora punta con el salón lleno.
-   - Con "reducir movimiento" activado en el teléfono no se anima nada (ver
-     el final del archivo). */
-@theme {
-    --ease-salida: cubic-bezier(0.2, 0, 0, 1);       /* entra: arranca rápido y frena suave */
-    --ease-entrada: cubic-bezier(0.4, 0, 1, 1);      /* sale: arranca suave y se va rápido */
-    --ease-estandar: cubic-bezier(0.4, 0, 0.2, 1);   /* algo que cambia sin entrar ni salir */
-    --ease-resorte: cubic-bezier(0.34, 1.45, 0.64, 1); /* confirmación: un rebote corto */
+   Tokens del Design System (Figma, colección "Movimiento"; informe APF3,
+   tabla 7). Cada animación responde a algo que hizo la persona o a algo que
+   tiene que notar; nada se mueve por adorno.
+   - Lo que aparece o responde usa la curva de salida (ease-out), lo que se
+     cierra la de entrada (ease-in) y los cambios de pantalla y pulsos la de
+     entrada-salida (ease-in-out). Ninguna es lineal.
+   - 200 ms para retroalimentación inmediata, 250 ms para elementos medianos
+     y 300 ms para paneles, modales y cambios de pantalla.
+   - Con "reducir movimiento" activado no se anima nada (final del archivo). */
+:root {
+    --duracion-rapida: 200ms;   /* hover, chips, enlaces, tooltips, salidas */
+    --duracion-base: 250ms;     /* contenido que aparece, tarjetas, avisos */
+    --duracion-lenta: 300ms;    /* cambio de pantalla, menú, modales, progreso */
+    --duracion-carga: 800ms;    /* esqueleto antes del contenido (prototipo) */
+    --curva-salida: cubic-bezier(0, 0, 0.2, 1);           /* ease-out */
+    --curva-entrada: cubic-bezier(0.4, 0, 1, 1);          /* ease-in */
+    --curva-entrada-salida: cubic-bezier(0.4, 0, 0.2, 1); /* ease-in-out */
+
+    /* Extras del código (no están en Figma): */
+    --duracion-toque: 100ms;    /* el botón se hunde al presionarlo: más lento se siente pesado */
+    --curva-resorte: cubic-bezier(0.34, 1.45, 0.64, 1); /* confirmación: rebote corto */
 }
 
-:root {
-    --dur-toque: 100ms;  /* respuesta al presionar */
-    --dur-rapida: 160ms; /* color, hover, salidas */
-    --dur-media: 240ms;  /* entradas: paneles, pasos, pantallas */
-    --dur-lenta: 480ms;  /* progreso: una barra que se llena */
+/* Las mismas curvas como utilidades de Tailwind (ease-salida, ease-entrada,
+   ease-entrada-salida, ease-resorte), y 200 ms con ease-out como transición
+   por defecto: todo hover con transition-colors sigue el token. */
+@theme inline {
+    --ease-salida: var(--curva-salida);
+    --ease-entrada: var(--curva-entrada);
+    --ease-entrada-salida: var(--curva-entrada-salida);
+    --ease-resorte: var(--curva-resorte);
+    --default-transition-duration: var(--duracion-rapida);
+    --default-transition-timing-function: var(--curva-salida);
 }
 
 @layer components {
@@ -210,12 +225,12 @@
        que no se combina con transition-colors. */
     .pulsable {
         transition-property: transform, background-color, border-color, color, box-shadow, opacity;
-        transition-duration: var(--dur-rapida);
-        transition-timing-function: var(--ease-estandar);
+        transition-duration: var(--duracion-rapida);
+        transition-timing-function: var(--curva-salida);
     }
     .pulsable:active:not(:disabled) {
         transform: scale(0.97);
-        transition-duration: var(--dur-toque);
+        transition-duration: var(--duracion-toque);
     }
 }
 
@@ -226,7 +241,7 @@
     to   { opacity: 1; transform: none; }
 }
 .aparecer {
-    animation: aparecer var(--dur-media) var(--ease-salida) both;
+    animation: aparecer var(--duracion-base) var(--curva-salida) both;
 }
 
 /* Cargando: si la respuesta llega rápido, no se llega a ver el spinner y la
@@ -236,7 +251,24 @@
     to   { opacity: 1; }
 }
 .aparecer-tarde {
-    animation: asomar var(--dur-media) var(--ease-salida) 300ms both;
+    animation: asomar var(--duracion-base) var(--curva-salida) 300ms both;
+}
+
+/* Esqueleto (componente Esqueleto del Design System): mientras llegan los
+   datos se ve la forma de la pantalla, no un spinner. Alterna entre dos
+   tonos cada 300 ms. */
+@keyframes esqueleto {
+    from { background-color: var(--arena); }
+    to   { background-color: var(--linea); }
+}
+.esqueleto {
+    background-color: var(--arena);
+    animation: esqueleto var(--duracion-lenta) var(--curva-entrada-salida) infinite alternate;
+}
+
+/* El contenido real reemplaza al esqueleto con un fundido de 300 ms. */
+.disolver {
+    animation: asomar var(--duracion-lenta) var(--curva-entrada-salida) both;
 }
 
 /* Un número que cambió (productos en el pedido, comandas nuevas). Se usa con
@@ -248,7 +280,7 @@
     100% { transform: scale(1); }
 }
 .latido {
-    animation: latido 320ms var(--ease-resorte);
+    animation: latido 300ms var(--curva-resorte);
 }
 
 /* Algo quedó marcado (producto listo en cocina): el check entra con un
@@ -258,7 +290,7 @@
     to   { transform: scale(1); opacity: 1; }
 }
 .marcar {
-    animation: marcar var(--dur-media) var(--ease-resorte) both;
+    animation: marcar var(--duracion-base) var(--curva-resorte) both;
 }
 
 /* Error al enviar un formulario: un temblor corto, como "no" con la cabeza. */
@@ -268,7 +300,7 @@
     40%, 80% { transform: translateX(6px); }
 }
 .sacudir {
-    animation: sacudir 360ms var(--ease-estandar);
+    animation: sacudir var(--duracion-lenta) var(--curva-entrada-salida);
 }
 
 /* Comanda nueva en el tablero de cocina: dos pulsos de un anillo para que
@@ -279,8 +311,8 @@
 }
 .llegada {
     animation:
-        aparecer var(--dur-media) var(--ease-salida) both,
-        llegada 900ms var(--ease-salida) 2;
+        aparecer var(--duracion-base) var(--curva-salida) both,
+        llegada 900ms var(--curva-salida) 2;
 }
 
 /* Notificaciones tipo celular (ver components/notificaciones): entran desde
@@ -290,7 +322,7 @@
     to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 .notif-entrar {
-    animation: notif-entrar 420ms cubic-bezier(0.2, 0.9, 0.3, 1.15) both;
+    animation: notif-entrar var(--duracion-lenta) var(--curva-resorte) both;
 }
 
 /* "Reducir movimiento" del sistema: nada se desplaza ni rebota. Los cambios

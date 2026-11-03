@@ -447,7 +447,7 @@ function ModalCobrar({ orden, onCerrar, onPagado }: { orden: Orden; onCerrar: ()
                 <div style={{
                     background: vuelto >= 0 ? C.bg : C.rojoPal,
                     borderRadius: 8, padding: "8px 12px", marginBottom: 14,
-                    transition: "background-color var(--dur-rapida) var(--ease-estandar)",
+                    transition: "background-color var(--duracion-rapida) var(--ease-entrada-salida)",
                 }}>
                     <p style={{
                         margin: 0, fontSize: 13, fontWeight: 600,

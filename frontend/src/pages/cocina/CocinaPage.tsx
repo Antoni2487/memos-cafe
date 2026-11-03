@@ -116,7 +116,7 @@ export default function CocinaPage() {
               role="tab"
               aria-selected={activa}
               onClick={() => setPestana(estado)}
-              className={`flex h-11 items-center justify-center gap-2 rounded-xl text-sm font-semibold transition-[background-color,color,box-shadow] duration-160 ease-estandar ${
+              className={`flex h-11 items-center justify-center gap-2 rounded-xl text-sm font-semibold transition-[background-color,color,box-shadow] duration-200 ease-entrada-salida ${
                 activa ? "bg-marfil text-espresso shadow-suave" : "text-suave"
               }`}
             >
@@ -225,7 +225,7 @@ function TarjetaComanda({
     // Nuevas a Preparando a Listas: se ve a dónde fue). La que acaba de
     // llegar además pulsa dos veces para que el cocinero la note.
     <article className={`${nueva ? "llegada" : "aparecer"} overflow-hidden rounded-2xl border border-linea bg-marfil shadow-suave`}>
-      <div className={`h-1.5 transition-colors duration-[var(--dur-lenta)] ease-estandar ${franja}`} aria-hidden />
+      <div className={`h-1.5 transition-colors duration-[var(--duracion-lenta)] ease-entrada-salida ${franja}`} aria-hidden />
       <header className="flex items-start justify-between gap-3 px-4 pt-3">
         <div className="min-w-0">
           <h4 className="font-display text-[26px] font-semibold leading-tight text-balance break-words text-espresso">{destino(c)}</h4>
@@ -280,7 +280,7 @@ function TarjetaComanda({
               {tocable && (
                 <span
                   aria-hidden
-                  className={`grid size-11 shrink-0 place-items-center self-center rounded-xl border-2 transition-colors duration-160 ease-estandar ${
+                  className={`grid size-11 shrink-0 place-items-center self-center rounded-xl border-2 transition-colors duration-200 ease-entrada-salida ${
                     listo ? "border-exito bg-exito text-marfil" : "border-linea-fuerte bg-marfil text-transparent"
                   }`}
                 >
@@ -324,7 +324,7 @@ function TarjetaComanda({
             type="button"
             disabled={ocupado}
             onClick={() => hacer(() => cocina.iniciar(c.id))}
-            className="pulsable h-14 w-full rounded-xl bg-salvia text-[17px] font-semibold text-marfil active:bg-salvia-osc disabled:opacity-60"
+            className="pulsable h-14 w-full rounded-xl bg-salvia text-[17px] font-semibold text-marfil active:bg-salvia-presionado disabled:opacity-60"
           >
             Empezar
           </button>
@@ -334,7 +334,7 @@ function TarjetaComanda({
             type="button"
             disabled={ocupado}
             onClick={() => hacer(() => cocina.marcarLista(c.id))}
-            className="pulsable flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-salvia text-[17px] font-semibold text-marfil active:bg-salvia-osc disabled:opacity-60"
+            className="pulsable flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-salvia text-[17px] font-semibold text-marfil active:bg-salvia-presionado disabled:opacity-60"
           >
             <BellRing className="size-5" />
             {hechos === total ? "Avisar al mesero" : "Todo listo · avisar al mesero"}

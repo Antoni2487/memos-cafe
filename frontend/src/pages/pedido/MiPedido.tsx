@@ -112,7 +112,7 @@ function PorEnviar({ pedido, onEnviar }: { pedido: PedidoMesa; onEnviar: () => v
         type="button"
         onClick={onEnviar}
         disabled={enviando}
-        className="mt-4 flex h-13 w-full items-center justify-between rounded-2xl bg-salvia px-5 text-[15px] font-semibold text-marfil pulsable active:bg-salvia-osc disabled:opacity-60"
+        className="mt-4 flex h-13 w-full items-center justify-between rounded-2xl bg-salvia px-5 text-[15px] font-semibold text-marfil pulsable active:bg-salvia-presionado disabled:opacity-60"
       >
         <span>{enviando ? "Enviando…" : "Enviar pedido"}</span>
         <span className="tabular-nums">{soles(totalCarrito)}</span>
@@ -251,7 +251,7 @@ function Progreso({ estado }: { estado: EstadoComanda }) {
                 ve que su pedido se movió sin tener que leer nada. */}
             <span className="relative h-1.5 w-full overflow-hidden rounded-full bg-linea">
               <span
-                className="absolute inset-0 origin-left rounded-full bg-salvia transition-transform duration-[var(--dur-lenta)] ease-salida"
+                className="absolute inset-0 origin-left rounded-full bg-salvia transition-transform duration-[var(--duracion-lenta)] ease-salida"
                 style={{ transform: `scaleX(${hecho ? 1 : 0})` }}
               />
             </span>

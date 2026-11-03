@@ -17,10 +17,12 @@ import {
   Table2,
   TrendingUp,
   AlertCircle,
+  ArrowUpRight,
   RefreshCw,
 } from "lucide-react";
+import { Link } from "react-router-dom";
 import dashboardService from "../../services/dashboardService";
-import { LoadingSpinner, EmptyState } from "../../components/common";
+import { EmptyState } from "../../components/common";
 import { useIsMobile } from "../../hooks/useMediaQuery";
 import type { DashboardCajaActiva, DashboardData, DashboardMesas } from "../../types";
 
@@ -96,22 +98,27 @@ interface KPICardProps {
   icono: ComponentType<{ size?: number; strokeWidth?: number }>;
   acento?: boolean;
   delay?: number;
+  /** Pantalla con el detalle del indicador. */
+  a: string;
 }
 
 // --- Tarjeta KPI ---
-function KPICard({ titulo, valor, subtitulo, icono: Icono, acento = false, delay = 0 }: KPICardProps) {
+// Clicable (Design System: Tarjeta KPI): el detalle está a un clic en vez de
+// buscarlo en el menú. En hover el borde pasa a salvia, sube la sombra y
+// aparece una flecha que avisa que lleva a otra pantalla.
+function KPICard({ titulo, valor, subtitulo, icono: Icono, acento = false, delay = 0, a }: KPICardProps) {
   return (
-    <div
-      className="flex flex-col justify-between"
+    <Link
+      to={a}
+      aria-label={`${titulo}: ver detalle`}
+      className={`aparecer group flex flex-col justify-between rounded-[14px] border outline-none transition-[border-color,box-shadow,transform] duration-200 ease-salida hover:shadow-alta active:scale-[0.98] active:duration-100 focus-visible:ring-3 focus-visible:ring-salvia/40 ${
+        acento
+          ? "border-transparent shadow-[0_8px_32px_var(--linea-fuerte)] hover:border-salvia-osc"
+          : "border-[rgba(140,108,58,0.2)] shadow-[0_2px_12px_rgba(76,107,101,0.06)] hover:border-salvia"
+      }`}
       style={{
         backgroundColor: acento ? VERDE : "white",
-        borderRadius: 14,
         padding: "20px 22px",
-        border: acento ? "none" : `1px solid rgba(140,108,58,0.2)`,
-        boxShadow: acento
-          ? `0 8px 32px var(--linea-fuerte)`
-          : `0 2px 12px rgba(76,107,101,0.06)`,
-        animation: `fadeUp 0.4s ease both`,
         animationDelay: `${delay}ms`,
       }}
     >
@@ -128,6 +135,12 @@ function KPICard({ titulo, valor, subtitulo, icono: Icono, acento = false, delay
           }}
         >
           {titulo}
+          <ArrowUpRight
+            aria-hidden
+            size={13}
+            strokeWidth={2.2}
+            className="ml-1 inline-block -translate-x-1 align-[-2px] opacity-0 transition-[opacity,transform] duration-200 ease-salida group-hover:translate-x-0 group-hover:opacity-100 group-focus-visible:translate-x-0 group-focus-visible:opacity-100"
+          />
         </p>
         <div
           style={{
@@ -166,7 +179,7 @@ function KPICard({ titulo, valor, subtitulo, icono: Icono, acento = false, delay
           </p>
         )}
       </div>
-    </div>
+    </Link>
   );
 }
 
@@ -379,7 +392,7 @@ export default function DashboardPage() {
 
   useEffect(() => { obtener(); }, []);
 
-  if (cargando) return <LoadingSpinner texto="Cargando dashboard..." full />;
+  if (cargando) return <EsqueletoDashboard />;
 
   if (error) return (
     <EmptyState
@@ -414,13 +427,8 @@ export default function DashboardPage() {
 
   return (
     <>
-  <style>{`
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(12px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-  `}</style>
-  <div className="flex flex-col gap-5">
+  {/* Reemplaza al esqueleto con un fundido de 300 ms. */}
+  <div className="disolver flex flex-col gap-5">
 
     <h2 style={{
     fontFamily: "var(--font-titulos)",
@@ -459,6 +467,7 @@ export default function DashboardPage() {
         <div className="grid grid-cols-2 gap-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" }}>
           <KPICard
             titulo="Ventas hoy"
+            a="/reportes"
             valor={formatSoles(data?.ventas?.total ?? 0)}
             subtitulo={`Ticket prom. ${formatSoles(data?.ventas?.ticket_promedio ?? 0)}`}
             icono={TrendingUp}
@@ -467,18 +476,21 @@ export default function DashboardPage() {
           />
           <KPICard
             titulo="Ganancias del mes"
+            a="/reportes"
             valor={formatSoles(data?.ventas?.mes ?? 0)}
             icono={TrendingUp}
             delay={20}
           />
           <KPICard
             titulo="Ganancias del año"
+            a="/reportes"
             valor={formatSoles(data?.ventas?.anio ?? 0)}
             icono={TrendingUp}
             delay={40}
           />
           <KPICard
             titulo="Órdenes abiertas"
+            a="/ordenes"
             valor={data?.ordenes?.abiertas ?? 0}
             subtitulo={`${data?.ordenes?.cerradas_hoy ?? 0} cerradas hoy`}
             icono={ClipboardList}
@@ -486,6 +498,7 @@ export default function DashboardPage() {
           />
           <KPICard
             titulo="Mesas ocupadas"
+            a="/mesas"
             valor={data?.mesas?.ocupadas ?? 0}
             subtitulo={`${data?.mesas?.libres ?? 0} libres de ${data?.mesas?.total ?? 0}`}
             icono={Table2}
@@ -493,6 +506,7 @@ export default function DashboardPage() {
           />
           <KPICard
             titulo="Órdenes cobradas"
+            a="/caja"
             valor={data?.ordenes?.cerradas_hoy ?? 0}
             subtitulo={`${data?.ordenes?.anuladas_hoy ?? 0} anuladas hoy`}
             icono={Receipt}
@@ -669,5 +683,23 @@ export default function DashboardPage() {
 
       </div>
     </>
+  );
+}
+
+/** Mientras carga se ve la forma del panel (Design System: Carga con esqueleto). */
+function EsqueletoDashboard() {
+  return (
+    <div className="aparecer-tarde flex flex-col gap-5" role="status" aria-label="Cargando el panel">
+      <div className="esqueleto h-8 w-40 rounded-lg" />
+      <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" }}>
+        {Array.from({ length: 6 }, (_, i) => (
+          <div key={i} className="esqueleto h-[124px] rounded-[14px]" />
+        ))}
+      </div>
+      <div className="grid gap-4 lg:grid-cols-[1fr_340px]">
+        <div className="esqueleto h-[260px] rounded-[14px]" />
+        <div className="esqueleto h-[260px] rounded-[14px]" />
+      </div>
+    </div>
   );
 }

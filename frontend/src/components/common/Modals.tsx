@@ -55,8 +55,8 @@ function PanelModal({
     <div
       className={`fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-espresso/40 backdrop-blur-[2px] sm:p-6 ${
         saliendo
-          ? "pointer-events-none animate-out fade-out-0 duration-160 ease-entrada fill-mode-forwards"
-          : "animate-in fade-in-0 duration-160 ease-salida"
+          ? "pointer-events-none animate-out fade-out-0 duration-200 ease-entrada fill-mode-forwards"
+          : "animate-in fade-in-0 duration-200 ease-salida"
       }`}
       onClick={(e: MouseEvent<HTMLDivElement>) => { if (e.target === e.currentTarget) onCloseRef.current?.(); }}
     >
@@ -69,8 +69,8 @@ function PanelModal({
         inert={saliendo}
         className={`flex w-full flex-col overflow-hidden bg-marfil shadow-alta outline-none rounded-t-3xl sm:rounded-2xl max-h-[92dvh] sm:max-h-[calc(100dvh-48px)] ${
           saliendo
-            ? "animate-out slide-out-to-bottom-8 sm:slide-out-to-bottom-2 sm:zoom-out-97 duration-160 ease-entrada fill-mode-forwards"
-            : "animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-2 sm:zoom-in-97 duration-240 ease-salida"
+            ? "animate-out slide-out-to-bottom-8 sm:slide-out-to-bottom-2 sm:zoom-out-97 duration-200 ease-entrada fill-mode-forwards"
+            : "animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-2 sm:zoom-in-97 duration-300 ease-salida"
         }`}
         style={{ maxWidth }}
       >

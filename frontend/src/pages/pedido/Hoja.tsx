@@ -43,7 +43,7 @@ export default function Hoja({
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-6">
       <div
         className={`absolute inset-0 bg-espresso/45 ${
-          saliendo ? "animate-out fade-out-0 duration-160 ease-entrada fill-mode-forwards" : "animate-in fade-in-0 duration-160 ease-salida"
+          saliendo ? "animate-out fade-out-0 duration-200 ease-entrada fill-mode-forwards" : "animate-in fade-in-0 duration-200 ease-salida"
         }`}
         onClick={cerrar}
       />
@@ -56,8 +56,8 @@ export default function Hoja({
         inert={saliendo}
         className={`relative flex max-h-[92dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-[28px] bg-marfil shadow-alta outline-none sm:rounded-3xl ${
           saliendo
-            ? "animate-out slide-out-to-bottom-full sm:slide-out-to-bottom-4 sm:fade-out-0 duration-160 ease-entrada fill-mode-forwards"
-            : "animate-in slide-in-from-bottom-full sm:slide-in-from-bottom-4 sm:fade-in-0 duration-240 ease-salida"
+            ? "animate-out slide-out-to-bottom-full sm:slide-out-to-bottom-4 sm:fade-out-0 duration-200 ease-entrada fill-mode-forwards"
+            : "animate-in slide-in-from-bottom-full sm:slide-in-from-bottom-4 sm:fade-in-0 duration-300 ease-salida"
         }`}
       >
         <button

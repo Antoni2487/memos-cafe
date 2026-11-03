@@ -25,7 +25,8 @@ export function Marca({ compacta = false }: { compacta?: boolean }) {
 }
 
 /**
- * Menú lateral claro. En computadora se ve completo; en tablet (md) se
+ * Menú lateral claro (Design System: fondo marfil, borde fino, hover arena
+ * en 200 ms y la sección actual en salvia claro). En computadora se ve completo; en tablet (md) se
  * reduce a una columna de íconos para dejarle espacio al contenido. En el
  * celular no se muestra: ahí manda la barra inferior (ver bottomNav).
  */
@@ -42,7 +43,7 @@ export default function Sidebar() {
   return (
     <aside
       aria-label="Menú principal"
-      className="hidden md:flex flex-col shrink-0 h-full bg-arena border-r border-linea md:w-19 lg:w-58 transition-[width]"
+      className="hidden md:flex flex-col shrink-0 h-full bg-marfil border-r border-linea md:w-19 lg:w-58 transition-[width]"
     >
       <div className="flex items-center justify-center lg:justify-start px-3 lg:px-4 h-16 shrink-0">
         <span className="lg:hidden"><Marca compacta /></span>
@@ -69,14 +70,14 @@ export default function Sidebar() {
                     "focus-visible:outline-2 focus-visible:outline-salvia",
                     isActive
                       ? "bg-salvia-clara text-salvia-osc font-semibold"
-                      : "text-suave hover:bg-marfil/70 hover:text-espresso",
+                      : "text-suave hover:bg-arena hover:text-espresso",
                   ].join(" ")
                 }
               >
                 <span className="relative">
                   <Icon className="size-4.5 shrink-0" strokeWidth={1.8} aria-hidden />
                   {path === "/mesas" && porServir > 0 && (
-                    <span className="absolute -right-1.5 -top-1.5 size-2.5 rounded-full bg-peligro ring-2 ring-arena lg:hidden" aria-hidden />
+                    <span className="absolute -right-1.5 -top-1.5 size-2.5 rounded-full bg-peligro ring-2 ring-marfil lg:hidden" aria-hidden />
                   )}
                 </span>
                 <span className="hidden lg:inline truncate">{label}</span>
@@ -92,7 +93,7 @@ export default function Sidebar() {
       </nav>
 
       <div className="p-2.5 lg:p-3 border-t border-linea">
-        <div className="flex items-center gap-2.5 rounded-xl lg:bg-marfil lg:border lg:border-linea p-1.5 lg:p-2 justify-center lg:justify-start">
+        <div className="flex items-center gap-2.5 rounded-xl lg:bg-beige lg:border lg:border-linea p-1.5 lg:p-2 justify-center lg:justify-start">
           <span
             className="size-8 shrink-0 rounded-full bg-champan-claro text-champan grid place-items-center text-xs font-semibold"
             title={user.nombre || user.email}
@@ -118,7 +119,7 @@ export default function Sidebar() {
           onClick={() => authService.logout()}
           title="Cerrar sesión"
           aria-label="Cerrar sesión"
-          className="lg:hidden mt-1 w-full h-10 grid place-items-center rounded-lg text-suave hover:bg-marfil hover:text-peligro transition-colors"
+          className="lg:hidden mt-1 w-full h-10 grid place-items-center rounded-lg text-suave hover:bg-arena hover:text-peligro transition-colors"
         >
           <LogOut className="size-4" strokeWidth={1.8} />
         </button>

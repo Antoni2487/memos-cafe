@@ -65,7 +65,7 @@ export default function FichaMesa({ mesa, onCerrar, onCambio }: { mesa: MesaPlan
   };
 
   const btn = "flex h-12 min-h-12 items-center justify-center gap-2 rounded-xl px-4 text-[15px] font-semibold disabled:opacity-60";
-  const primario = `${btn} bg-salvia text-marfil active:bg-salvia-osc`;
+  const primario = `${btn} bg-salvia text-marfil active:bg-salvia-presionado`;
   const secundario = `${btn} border border-linea-fuerte bg-marfil text-espresso active:bg-arena`;
 
   return (

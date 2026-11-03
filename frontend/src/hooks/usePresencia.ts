@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 /** Lo que tarda en irse una ventana o una hoja (más corto que su entrada). */
-export const SALIDA_MS = 160;
+export const SALIDA_MS = 200; // token --duracion-rapida
 
 export const movimientoReducido = () =>
   typeof window !== "undefined" && !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;

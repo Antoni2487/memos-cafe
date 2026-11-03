@@ -1,5 +1,5 @@
-import { useState, type ReactNode, type ComponentType, type CSSProperties } from "react";
-import { Download, TrendingUp, Package, Receipt, Timer } from "lucide-react";
+import { useEffect, useState, type ReactNode, type ComponentType, type CSSProperties } from "react";
+import { Check, Download, TrendingUp, Package, Receipt, Timer } from "lucide-react";
 import reporteService, { descargarBlob } from "../../services/reporteService";
 import { getErrorMessage } from "../../utils/errors";
 import type { ReporteCaja, ReporteProductos, ReporteTiempos as DatosTiempos, ReporteVentas } from "../../types";
@@ -142,6 +142,14 @@ export default function ReportesPage() {
   const [fechaFin,     setFechaFin]     = useState(hoy());
   const [cargando,     setCargando]     = useState(false);
   const [exportando,   setExportando]   = useState(false);
+  // "Descargado" confirma durante 2 s; sin esto se volvía a hacer clic y
+  // salían archivos repetidos (Design System: Botón con carga).
+  const [descargado,   setDescargado]   = useState(false);
+  useEffect(() => {
+    if (!descargado) return;
+    const t = setTimeout(() => setDescargado(false), 2000);
+    return () => clearTimeout(t);
+  }, [descargado]);
   const [error,        setError]        = useState("");
   const [dataVentas,   setDataVentas]   = useState<ReporteVentas | null>(null);
   const [dataProductos,setDataProductos]= useState<ReporteProductos | null>(null);
@@ -175,6 +183,8 @@ export default function ReportesPage() {
   };
 
   const handleExportar = async () => {
+    if (exportando) return;
+    setDescargado(false);
     setExportando(true);
     setError("");
     try {
@@ -191,6 +201,7 @@ export default function ReportesPage() {
         nombre = `reporte_caja_${fechaInicio}_${fechaFin}.xlsx`;
       }
       descargarBlob(res.data, nombre);
+      setDescargado(true);
     } catch {
       setError("Error al exportar. Intenta nuevamente.");
     } finally {
@@ -217,17 +228,26 @@ export default function ReportesPage() {
             Consulta y exporta reportes de ventas, productos, caja y tiempos
           </p>
         </div>
-        {tab !== "tiempos" && <button onClick={handleExportar} disabled={exportando} style={{
-          display: "flex", alignItems: "center", gap: 6,
+        {tab !== "tiempos" && <button onClick={handleExportar} disabled={exportando} aria-live="polite" className="pulsable" style={{
+          display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+          // Ancho fijo: el texto cambia y el encabezado no salta.
+          width: 156,
           padding: "9px 16px", borderRadius: 8,
           border: `1px solid var(--linea-fuerte)`,
-          background: "var(--marfil)", color: COLOR.verde,
+          background: descargado ? "var(--exito-fondo)" : "var(--marfil)",
+          color: descargado ? "var(--exito)" : COLOR.verde,
           fontFamily: "var(--font-texto)", fontSize: 13, fontWeight: 600,
           cursor: exportando ? "not-allowed" : "pointer",
           opacity: exportando ? 0.7 : 1,
         }}>
-          <Download size={14} />
-          {exportando ? "Generando..." : "Exportar Excel"}
+          {exportando ? (
+            <span className="size-3.5 animate-spin rounded-full border-2 border-current/30 border-t-current" aria-hidden />
+          ) : descargado ? (
+            <Check size={14} className="marcar" />
+          ) : (
+            <Download size={14} />
+          )}
+          {exportando ? "Generando…" : descargado ? "Descargado" : "Exportar Excel"}
         </button>}
       </div>
 

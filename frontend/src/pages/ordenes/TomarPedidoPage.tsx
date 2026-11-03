@@ -233,7 +233,7 @@ export default function TomarPedidoPage() {
                 {/* La barra se llena al avanzar: se ve en qué paso está y que avanzó. */}
                 <span className="relative h-1.5 overflow-hidden rounded-full bg-linea">
                   <span
-                    className="absolute inset-0 origin-left rounded-full bg-salvia transition-transform duration-[var(--dur-lenta)] ease-salida"
+                    className="absolute inset-0 origin-left rounded-full bg-salvia transition-transform duration-[var(--duracion-lenta)] ease-salida"
                     style={{ transform: `scaleX(${hecho || actual ? 1 : 0})` }}
                   />
                 </span>
@@ -495,7 +495,7 @@ function PasoProductos({
     return (
       // has-[>button:active]: la tarjeta entera se hunde al tocarla, aunque
       // lo que recibe el toque es el botón invisible que la cubre.
-      <div key={`${tipo}-${p.id}`} className={`relative flex min-h-24 flex-col justify-between rounded-2xl border p-3 transition-[transform,background-color,border-color] duration-160 ease-estandar has-[>button:first-child:active]:scale-[0.97] has-[>button:first-child:active]:duration-100 ${n ? "border-salvia bg-salvia-clara/50" : "border-linea bg-marfil"}`}>
+      <div key={`${tipo}-${p.id}`} className={`relative flex min-h-24 flex-col justify-between rounded-2xl border p-3 transition-[transform,background-color,border-color] duration-200 ease-entrada-salida has-[>button:first-child:active]:scale-[0.97] has-[>button:first-child:active]:duration-100 ${n ? "border-salvia bg-salvia-clara/50" : "border-linea bg-marfil"}`}>
         <button type="button" onClick={() => sumar(tipo, p)} className="absolute inset-0 rounded-2xl" aria-label={`Agregar ${p.nombre}`} />
         <span className="pointer-events-none pr-6 text-sm font-medium leading-snug text-espresso">
           {tipo === "promocion" && <span className="mr-1 rounded bg-champan-claro px-1 text-[10px] font-bold uppercase text-champan">Promo</span>}
@@ -533,13 +533,15 @@ function PasoProductos({
           />
           {busqueda && <button type="button" onClick={() => setBusqueda("")} aria-label="Borrar"><X className="size-4 text-tenue" /></button>}
         </label>
+        {/* Chips de categoría (Design System): hover arena con borde fuerte, el
+            activo en espresso; los dos con borde para que midan lo mismo. */}
         <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:flex-wrap md:px-0 [scrollbar-width:none]">
           {["todas", ...(promociones.length ? ["promos"] : []), ...categorias].map((c) => (
             <button
               key={c}
               type="button"
               onClick={() => setCategoria(c)}
-              className={`pulsable h-9 shrink-0 rounded-full px-4 text-sm font-medium ${categoria === c ? "bg-espresso text-marfil" : "border border-linea bg-marfil text-espresso"}`}
+              className={`pulsable h-9 shrink-0 rounded-full px-4 text-sm font-medium ${categoria === c ? "border border-espresso bg-espresso text-marfil" : "border border-linea bg-marfil text-espresso hover:border-linea-fuerte hover:bg-arena"}`}
             >
               {c === "todas" ? "Todo" : c === "promos" ? "Promociones" : c}
             </button>
@@ -579,7 +581,7 @@ function PasoProductos({
       </aside>
 
       {items.length > 0 && (
-        <div className="fixed inset-x-0 z-30 px-4 lg:hidden animate-in slide-in-from-bottom-4 fade-in-0 duration-240 ease-salida" style={{ bottom: "calc(var(--barra-inferior) + 12px)" }}>
+        <div className="fixed inset-x-0 z-30 px-4 lg:hidden animate-in slide-in-from-bottom-4 fade-in-0 duration-300 ease-salida" style={{ bottom: "calc(var(--barra-inferior) + 12px)" }}>
           <button type="button" onClick={onSiguiente} className="pulsable mx-auto flex h-14 w-full max-w-lg items-center gap-3 rounded-2xl bg-salvia pl-3 pr-5 text-marfil shadow-alta">
             <span key={cantidad} className="latido grid size-9 place-items-center rounded-xl bg-marfil/15 text-sm font-bold tabular-nums">{cantidad}</span>
             <span className="flex-1 text-left font-semibold">Revisar pedido</span>

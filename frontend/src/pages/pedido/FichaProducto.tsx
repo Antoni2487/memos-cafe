@@ -78,7 +78,7 @@ export default function FichaProducto({
             onAgregar({ tipo: item.tipo, id: item.id, nombre: item.nombre, precio, imagen: item.imagen, cantidad, nota });
             cerrar();
           }}
-          className="pulsable flex h-13 flex-1 items-center justify-between gap-3 rounded-2xl bg-salvia px-5 text-[15px] font-semibold text-marfil active:bg-salvia-osc"
+          className="pulsable flex h-13 flex-1 items-center justify-between gap-3 rounded-2xl bg-salvia px-5 text-[15px] font-semibold text-marfil active:bg-salvia-presionado"
         >
           <span>Agregar</span>
           <span className="tabular-nums">{soles(precio * cantidad)}</span>

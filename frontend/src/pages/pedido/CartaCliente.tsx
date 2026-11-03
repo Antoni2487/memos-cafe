@@ -124,7 +124,7 @@ export default function CartaCliente({ pedido }: { pedido: PedidoMesa }) {
                   data-seccion={s.id}
                   onClick={() => irA(s.id)}
                   className={`pulsable shrink-0 rounded-full px-4 h-9 text-sm font-medium ${
-                    activa === s.id ? "bg-espresso text-marfil" : "border border-linea bg-marfil text-espresso"
+                    activa === s.id ? "border border-espresso bg-espresso text-marfil" : "border border-linea bg-marfil text-espresso hover:border-linea-fuerte hover:bg-arena"
                   }`}
                 >
                   {s.titulo}
@@ -206,7 +206,7 @@ function FilaProducto({
           type="button"
           onClick={onAgregarRapido}
           aria-label={cantidad ? `Agregar otro ${item.nombre} (llevas ${cantidad})` : `Agregar ${item.nombre}`}
-          className={`absolute -bottom-2 -right-2 grid h-10 min-w-10 place-items-center rounded-full px-2 text-sm font-semibold shadow-suave ring-3 ring-beige transition-[transform,background-color,color] duration-160 ease-estandar active:scale-90 active:duration-100 ${
+          className={`absolute -bottom-2 -right-2 grid h-10 min-w-10 place-items-center rounded-full px-2 text-sm font-semibold shadow-suave ring-3 ring-beige transition-[transform,background-color,color] duration-200 ease-entrada-salida active:scale-90 active:duration-100 ${
             cantidad ? "bg-salvia text-marfil" : "bg-marfil text-salvia-osc"
           }`}
         >
