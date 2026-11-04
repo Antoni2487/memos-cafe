@@ -18,6 +18,39 @@
         .stagger-1 { animation-delay: 0.1s; }
         .stagger-2 { animation-delay: 0.2s; }
         .stagger-3 { animation-delay: 0.3s; }
+
+        /* ── APF3 v3: movimiento con intención ─────────────────────────────
+           Tokens del Design System: lo que entra usa ease-out, los cambios de
+           estado ease-in-out. Todo se apaga con "reducir movimiento". */
+        :root {
+            --curva-salida: cubic-bezier(0, 0, 0.2, 1);
+            --curva-entrada-salida: cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        /* Carrusel del hero: fundido con un leve zoom out (Ken Burns) */
+        .hero-slide {
+            position: absolute; inset: 0;
+            background-size: cover; background-position: center;
+            opacity: 0; transform: scale(1.08);
+            transition: opacity 1.2s var(--curva-entrada-salida), transform 7s linear;
+        }
+        .hero-slide.is-active { opacity: 1; transform: scale(1); }
+        .hero-punto { width: 8px; height: 8px; border-radius: 9999px; background: rgba(255,255,255,0.55); transition: width 0.3s var(--curva-salida), background-color 0.3s; }
+        .hero-punto[aria-current="true"] { width: 28px; background: #fff; }
+        /* Revelado al hacer scroll */
+        .revelar { opacity: 0; transform: translateY(28px); transition: opacity 0.7s var(--curva-salida), transform 0.7s var(--curva-salida); }
+        .revelar.visible { opacity: 1; transform: none; }
+        /* Botón flotante de WhatsApp con pulso */
+        .wa-flotante { opacity: 0; transform: translateY(16px) scale(0.95); pointer-events: none; transition: opacity 0.3s var(--curva-salida), transform 0.3s var(--curva-salida); }
+        .wa-flotante.visible { opacity: 1; transform: none; pointer-events: auto; }
+        .wa-pulso { position: absolute; inset: 0; border-radius: 9999px; background: #42625c; animation: wa-pulso 1.8s var(--curva-salida) infinite; z-index: -1; }
+        @keyframes wa-pulso { from { transform: scale(1); opacity: 0.45; } to { transform: scale(1.35); opacity: 0; } }
+        @media (prefers-reduced-motion: reduce) {
+            .hero-slide, .hero-punto, .revelar, .wa-flotante { transition: none; }
+            .hero-slide { transform: none; }
+            .revelar { opacity: 1; transform: none; }
+            .wa-pulso, .fade-in-up, .animate-bounce { animation: none; }
+            .fade-in-up { opacity: 1; }
+        }
     </style>
 <script id="tailwind-config">
         tailwind.config = {
@@ -125,10 +158,16 @@
 </nav>
 <!-- Hero -->
 <section class="relative h-[921px] flex items-center justify-center overflow-hidden">
-<div class="absolute inset-0 z-0">
-<div class="w-full h-full bg-cover bg-center transition-transform duration-1000 scale-105" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBg330_C0_tFdNTQ4X02hq3cT6QUVeKZXDPyuAUwk428Wq3ZU_QLPL7ezlLAQ9dZtWrmRo4in7x9Q-k5Wt2bHx54hSrsEV1v78iSNpCwbdn1sAxmVHl-d-DnMCf7IwmzyaEDP60UqNC4lDw14NBAtKmYrnkSJGIyApm-YI8_7oJhs6ICFrmatQNDCB2SKgAf-MdVbBkoTsdNWWfxDqzfoOQDwjfHvooxIKKrwyHxA6Y0z9AbtGV10U0L9EHN-AFuinGG19Xh2ctRlU')">
+<div class="absolute inset-0 z-0" data-carrusel>
+<div class="hero-slide is-active" role="img" aria-label="Café de especialidad en Memo's" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBg330_C0_tFdNTQ4X02hq3cT6QUVeKZXDPyuAUwk428Wq3ZU_QLPL7ezlLAQ9dZtWrmRo4in7x9Q-k5Wt2bHx54hSrsEV1v78iSNpCwbdn1sAxmVHl-d-DnMCf7IwmzyaEDP60UqNC4lDw14NBAtKmYrnkSJGIyApm-YI8_7oJhs6ICFrmatQNDCB2SKgAf-MdVbBkoTsdNWWfxDqzfoOQDwjfHvooxIKKrwyHxA6Y0z9AbtGV10U0L9EHN-AFuinGG19Xh2ctRlU')"></div>
+<div class="hero-slide" role="img" aria-label="Copas de champagne al atardecer" style="background-image: url('img/hero-champagne.jpg')"></div>
+<div class="hero-slide" role="img" aria-label="Postres artesanales de la casa" style="background-image: url('img/hero-postres.jpg')"></div>
+<div class="absolute inset-0 bg-black/30"></div>
 </div>
-<div class="absolute inset-0 bg-black/20"></div>
+<div class="absolute bottom-[120px] left-1/2 -translate-x-1/2 z-10 flex items-center gap-2" aria-label="Fotos de portada" data-carrusel-puntos>
+<button type="button" class="hero-punto" aria-label="Ver foto 1" aria-current="true"></button>
+<button type="button" class="hero-punto" aria-label="Ver foto 2" aria-current="false"></button>
+<button type="button" class="hero-punto" aria-label="Ver foto 3" aria-current="false"></button>
 </div>
 <div class="relative z-10 text-center text-white px-md fade-in-up">
 <span class="font-serif-alt italic text-2xl md:text-3xl mb-md block tracking-wide opacity-90">Vive el arte del</span>
@@ -169,27 +208,103 @@
 <div class="w-24 h-1 bg-tertiary/30 mx-auto"></div>
 </div>
 <div class="flex flex-col md:flex-row gap-lg px-lg max-w-full overflow-x-auto pb-lg snap-x">
-<div class="min-w-[320px] md:min-w-[400px] flex-shrink-0 bg-white p-lg rounded-2xl luxury-shadow snap-center">
-<div class="aspect-square rounded-xl overflow-hidden mb-lg">
-<div class="w-full h-full bg-cover bg-center hover:scale-110 transition-transform duration-700" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDhHtiYyiAbd-x-V75AIBUcMgMEmL_MEy8BRFBstL4BVgU8-Mc5I1dg-yeqVFyhbiYjHG6xKT7brXnyT9uJATepRY5LKoAFZDqpRothPBFXvz-MqgpCcT0Xm0ZOQ_ZAnDnUar5DStjil_7IQ1IPfRMSBQPpU9_yfJygszUI0JrJ6cowGcXra9toCW5EKudPBBP2EExizIaqaFs4e_qXzbZ5xH2T2iOcKKLnXfEHZskH49USQ3Lwx1WXUx5-vKhDpia0hT4kJur1Xs8')"></div>
+<div class="group min-w-[320px] md:min-w-[400px] flex-shrink-0 bg-white p-lg rounded-2xl luxury-shadow snap-center transition-shadow duration-300 hover:shadow-xl">
+<div class="relative aspect-square rounded-xl overflow-hidden mb-lg">
+<div class="w-full h-full bg-cover bg-center group-hover:scale-110 transition-transform duration-700" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDhHtiYyiAbd-x-V75AIBUcMgMEmL_MEy8BRFBstL4BVgU8-Mc5I1dg-yeqVFyhbiYjHG6xKT7brXnyT9uJATepRY5LKoAFZDqpRothPBFXvz-MqgpCcT0Xm0ZOQ_ZAnDnUar5DStjil_7IQ1IPfRMSBQPpU9_yfJygszUI0JrJ6cowGcXra9toCW5EKudPBBP2EExizIaqaFs4e_qXzbZ5xH2T2iOcKKLnXfEHZskH49USQ3Lwx1WXUx5-vKhDpia0hT4kJur1Xs8')"></div>
+<div class="pointer-events-none absolute inset-0 flex items-end bg-gradient-to-t from-black/60 via-black/10 to-transparent p-lg opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+<span class="flex translate-y-2 items-center gap-xs text-sm font-semibold text-white transition-transform duration-300 group-hover:translate-y-0"><span class="material-symbols-outlined text-lg">qr_code_2</span>Pídelo desde tu mesa con el QR</span>
+</div>
 </div>
 <h3 class="font-serif-alt text-2xl mb-sm">Cafés Botánicos</h3>
 <p class="text-body-sm text-on-surface-variant mb-md">Granos de origen único, obtenidos de forma ética, con sutiles notas florales.</p>
 </div>
-<div class="min-w-[320px] md:min-w-[400px] flex-shrink-0 bg-white p-lg rounded-2xl luxury-shadow snap-center">
-<div class="aspect-square rounded-xl overflow-hidden mb-lg">
-<div class="w-full h-full bg-cover bg-center hover:scale-110 transition-transform duration-700" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDFRUUK6zPKZeC7sOiGz-4WlDSvZWKFS5AuoR7ijFu9kum2oL0MggioleVcLIASsOOzQmMCKdtuhkB1vfLJ7z5RG4EcfzOZtmQgC1cangqI9zLdq4fOTpHwvNN117irguNHeduBKiQwE-qz2-54JclKzZA4zb6RSzFrpSg-uhLQhXA_m2V0Gr_d4Wuc8rT5wr83q8I6L5xORy7QJC1AAgmVQUld24sQl6goY3fhxgPujjg37DKYAS-fSwafKbJBvJmST8ml-nLoMtk')"></div>
+<div class="group min-w-[320px] md:min-w-[400px] flex-shrink-0 bg-white p-lg rounded-2xl luxury-shadow snap-center transition-shadow duration-300 hover:shadow-xl">
+<div class="relative aspect-square rounded-xl overflow-hidden mb-lg">
+<div class="w-full h-full bg-cover bg-center group-hover:scale-110 transition-transform duration-700" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDFRUUK6zPKZeC7sOiGz-4WlDSvZWKFS5AuoR7ijFu9kum2oL0MggioleVcLIASsOOzQmMCKdtuhkB1vfLJ7z5RG4EcfzOZtmQgC1cangqI9zLdq4fOTpHwvNN117irguNHeduBKiQwE-qz2-54JclKzZA4zb6RSzFrpSg-uhLQhXA_m2V0Gr_d4Wuc8rT5wr83q8I6L5xORy7QJC1AAgmVQUld24sQl6goY3fhxgPujjg37DKYAS-fSwafKbJBvJmST8ml-nLoMtk')"></div>
+<div class="pointer-events-none absolute inset-0 flex items-end bg-gradient-to-t from-black/60 via-black/10 to-transparent p-lg opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+<span class="flex translate-y-2 items-center gap-xs text-sm font-semibold text-white transition-transform duration-300 group-hover:translate-y-0"><span class="material-symbols-outlined text-lg">qr_code_2</span>Pídelo desde tu mesa con el QR</span>
+</div>
 </div>
 <h3 class="font-serif-alt text-2xl mb-sm">Postres Artesanales</h3>
 <p class="text-body-sm text-on-surface-variant mb-md">Postres hechos a mano con técnica francesa e ingredientes locales.</p>
 </div>
-<div class="min-w-[320px] md:min-w-[400px] flex-shrink-0 bg-white p-lg rounded-2xl luxury-shadow snap-center">
-<div class="aspect-square rounded-xl overflow-hidden mb-lg">
-<div class="w-full h-full bg-cover bg-center hover:scale-110 transition-transform duration-700" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBKIzXzKHDaHLXxSeehq6EkRGk7fLCqUAxARb0uSX9azhLFqmZkdLvV1J9W_TdTLCQnVMIsDnqFIpfqCYHUPYuGi0kwr1mFLAB914iWFRhx3utdgvGFEz4UyUTavd9nOHyUuaqB0_0u5p5aqxNs39UyT4Xx6dV1ykxoNisvpQu4j4oW93ordMJdrVkF-mbkj-DGbnq2YGDRef-EbF8kCUzbOhQhPxOHso7sSVt1Ecx6i4vlgB-1SdnVs5xCkULCPWPjSwllAOVWlww')"></div>
+<div class="group min-w-[320px] md:min-w-[400px] flex-shrink-0 bg-white p-lg rounded-2xl luxury-shadow snap-center transition-shadow duration-300 hover:shadow-xl">
+<div class="relative aspect-square rounded-xl overflow-hidden mb-lg">
+<div class="w-full h-full bg-cover bg-center group-hover:scale-110 transition-transform duration-700" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBKIzXzKHDaHLXxSeehq6EkRGk7fLCqUAxARb0uSX9azhLFqmZkdLvV1J9W_TdTLCQnVMIsDnqFIpfqCYHUPYuGi0kwr1mFLAB914iWFRhx3utdgvGFEz4UyUTavd9nOHyUuaqB0_0u5p5aqxNs39UyT4Xx6dV1ykxoNisvpQu4j4oW93ordMJdrVkF-mbkj-DGbnq2YGDRef-EbF8kCUzbOhQhPxOHso7sSVt1Ecx6i4vlgB-1SdnVs5xCkULCPWPjSwllAOVWlww')"></div>
+<div class="pointer-events-none absolute inset-0 flex items-end bg-gradient-to-t from-black/60 via-black/10 to-transparent p-lg opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+<span class="flex translate-y-2 items-center gap-xs text-sm font-semibold text-white transition-transform duration-300 group-hover:translate-y-0"><span class="material-symbols-outlined text-lg">qr_code_2</span>Pídelo desde tu mesa con el QR</span>
+</div>
 </div>
 <h3 class="font-serif-alt text-2xl mb-sm">Reserva Vintage</h3>
 <p class="text-body-sm text-on-surface-variant mb-md">Una selección curada de champagnes de añada y cuvées de la casa.</p>
 </div>
+</div>
+</section>
+<!-- Favoritos de la casa (APF3 v3): carrusel deslizable -->
+<section class="py-huge bg-background overflow-hidden" id="favoritos">
+<div class="max-w-7xl mx-auto px-lg">
+<div class="flex items-end justify-between gap-md mb-xl">
+<div>
+<span class="text-primary font-semibold tracking-widest text-sm uppercase">La carta</span>
+<h2 class="font-display text-4xl md:text-5xl mt-xs">Favoritos de la casa</h2>
+</div>
+<div class="hidden md:flex gap-sm">
+<button type="button" class="grid h-11 w-11 place-items-center rounded-full border border-outline-variant text-primary transition-colors hover:bg-surface-container-low" aria-label="Ver anteriores" data-favoritos="-1"><span class="material-symbols-outlined">arrow_back</span></button>
+<button type="button" class="grid h-11 w-11 place-items-center rounded-full border border-outline-variant text-primary transition-colors hover:bg-surface-container-low" aria-label="Ver siguientes" data-favoritos="1"><span class="material-symbols-outlined">arrow_forward</span></button>
+</div>
+</div>
+<ul class="flex gap-lg overflow-x-auto snap-x snap-mandatory pb-md [scrollbar-width:none]" id="favoritos-lista" aria-label="Favoritos de la casa">
+<li class="group w-[260px] md:w-[300px] flex-shrink-0 snap-start rounded-2xl bg-white p-sm luxury-shadow border border-outline-variant/40 transition-[box-shadow,border-color] duration-300 hover:shadow-xl hover:border-primary/40">
+<div class="relative aspect-[4/3] overflow-hidden rounded-xl">
+<img class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" src="img/fav-capuchino.jpg" alt="Capuchino con arte latte" loading="lazy" width="1200" height="800">
+<span class="absolute bottom-sm left-sm flex translate-y-2 items-center gap-xs rounded-full bg-white/95 px-md py-xs text-xs font-semibold text-primary opacity-0 transition duration-300 group-hover:translate-y-0 group-hover:opacity-100"><span class="material-symbols-outlined text-base">qr_code_2</span>Pídelo en tu mesa</span>
+</div>
+<div class="px-xs pb-xs pt-md">
+<h3 class="font-serif-alt text-2xl leading-tight">Capuchino</h3>
+<p class="text-sm text-on-surface-variant">Cafés</p>
+</div>
+</li>
+<li class="group w-[260px] md:w-[300px] flex-shrink-0 snap-start rounded-2xl bg-white p-sm luxury-shadow border border-outline-variant/40 transition-[box-shadow,border-color] duration-300 hover:shadow-xl hover:border-primary/40">
+<div class="relative aspect-[4/3] overflow-hidden rounded-xl">
+<img class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" src="img/fav-frappe.jpg" alt="Frappé de caramelo con crema" loading="lazy" width="1200" height="800">
+<span class="absolute bottom-sm left-sm flex translate-y-2 items-center gap-xs rounded-full bg-white/95 px-md py-xs text-xs font-semibold text-primary opacity-0 transition duration-300 group-hover:translate-y-0 group-hover:opacity-100"><span class="material-symbols-outlined text-base">qr_code_2</span>Pídelo en tu mesa</span>
+</div>
+<div class="px-xs pb-xs pt-md">
+<h3 class="font-serif-alt text-2xl leading-tight">Frappé de caramelo</h3>
+<p class="text-sm text-on-surface-variant">Bebidas frías</p>
+</div>
+</li>
+<li class="group w-[260px] md:w-[300px] flex-shrink-0 snap-start rounded-2xl bg-white p-sm luxury-shadow border border-outline-variant/40 transition-[box-shadow,border-color] duration-300 hover:shadow-xl hover:border-primary/40">
+<div class="relative aspect-[4/3] overflow-hidden rounded-xl">
+<img class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" src="img/fav-cheesecake.jpg" alt="Porción de cheesecake de maracuyá" loading="lazy" width="1200" height="800">
+<span class="absolute bottom-sm left-sm flex translate-y-2 items-center gap-xs rounded-full bg-white/95 px-md py-xs text-xs font-semibold text-primary opacity-0 transition duration-300 group-hover:translate-y-0 group-hover:opacity-100"><span class="material-symbols-outlined text-base">qr_code_2</span>Pídelo en tu mesa</span>
+</div>
+<div class="px-xs pb-xs pt-md">
+<h3 class="font-serif-alt text-2xl leading-tight">Cheesecake de maracuyá</h3>
+<p class="text-sm text-on-surface-variant">Postres</p>
+</div>
+</li>
+<li class="group w-[260px] md:w-[300px] flex-shrink-0 snap-start rounded-2xl bg-white p-sm luxury-shadow border border-outline-variant/40 transition-[box-shadow,border-color] duration-300 hover:shadow-xl hover:border-primary/40">
+<div class="relative aspect-[4/3] overflow-hidden rounded-xl">
+<img class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" src="img/fav-sandwich.jpg" alt="Sándwich de pollo en pan ciabatta" loading="lazy" width="1200" height="800">
+<span class="absolute bottom-sm left-sm flex translate-y-2 items-center gap-xs rounded-full bg-white/95 px-md py-xs text-xs font-semibold text-primary opacity-0 transition duration-300 group-hover:translate-y-0 group-hover:opacity-100"><span class="material-symbols-outlined text-base">qr_code_2</span>Pídelo en tu mesa</span>
+</div>
+<div class="px-xs pb-xs pt-md">
+<h3 class="font-serif-alt text-2xl leading-tight">Sándwich de pollo</h3>
+<p class="text-sm text-on-surface-variant">Sándwiches</p>
+</div>
+</li>
+<li class="group w-[260px] md:w-[300px] flex-shrink-0 snap-start rounded-2xl bg-white p-sm luxury-shadow border border-outline-variant/40 transition-[box-shadow,border-color] duration-300 hover:shadow-xl hover:border-primary/40">
+<div class="relative aspect-[4/3] overflow-hidden rounded-xl">
+<img class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" src="img/hero-postres.jpg" alt="Vitrina de postres artesanales" loading="lazy" width="1200" height="800">
+<span class="absolute bottom-sm left-sm flex translate-y-2 items-center gap-xs rounded-full bg-white/95 px-md py-xs text-xs font-semibold text-primary opacity-0 transition duration-300 group-hover:translate-y-0 group-hover:opacity-100"><span class="material-symbols-outlined text-base">qr_code_2</span>Pídelo en tu mesa</span>
+</div>
+<div class="px-xs pb-xs pt-md">
+<h3 class="font-serif-alt text-2xl leading-tight">Postres de la casa</h3>
+<p class="text-sm text-on-surface-variant">Pastelería</p>
+</div>
+</li>
+</ul>
 </div>
 </section>
 <!-- Promocion -->
@@ -329,6 +444,11 @@
 </div>
 </div>
 </footer>
+<a class="wa-flotante fixed bottom-6 right-6 z-40 flex items-center gap-sm rounded-full bg-primary px-lg py-md font-semibold text-white shadow-xl" style="margin-bottom: env(safe-area-inset-bottom);" href="https://wa.me/51968429135?text=Hola%2C%20quiero%20reservar%20una%20mesa%20en%20Memo's%20Caf%C3%A9" target="_blank" rel="noopener noreferrer" aria-label="Reservar por WhatsApp" id="whatsapp-flotante" tabindex="-1" aria-hidden="true">
+<span class="wa-pulso" aria-hidden="true"></span>
+<span class="material-symbols-outlined">chat</span>
+<span class="hidden sm:inline">Reservar</span>
+</a>
 <script>
         window.addEventListener('scroll', () => {
             const nav = document.querySelector('nav');
@@ -343,19 +463,84 @@
             }
         });
 
-        const observerOptions = { threshold: 0.1 };
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.classList.add('fade-in-up');
-                    observer.unobserve(entry.target);
-                }
-            });
-        }, observerOptions);
+        const movimientoReducido = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-        document.querySelectorAll('section > div').forEach(el => {
-            el.style.opacity = '0';
-            observer.observe(el);
-        });
+        // Revelado al hacer scroll: cada bloque sube y aparece al entrar en
+        // pantalla. Con "reducir movimiento" todo se muestra de una.
+        if (!movimientoReducido) {
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.1 });
+            document.querySelectorAll('section:not(:first-of-type) > div').forEach(el => {
+                el.classList.add('revelar');
+                observer.observe(el);
+            });
+        }
+
+        // Carrusel del hero: cambia cada 5 s, se pausa con la pestaña oculta o
+        // con el mouse encima, y los puntos permiten elegir la foto.
+        (() => {
+            const slides = [...document.querySelectorAll('[data-carrusel] .hero-slide')];
+            const puntos = [...document.querySelectorAll('[data-carrusel-puntos] .hero-punto')];
+            if (slides.length < 2) return;
+            let actual = 0;
+            let temporizador = null;
+            const mostrar = (n) => {
+                actual = (n + slides.length) % slides.length;
+                slides.forEach((s, i) => s.classList.toggle('is-active', i === actual));
+                puntos.forEach((p, i) => p.setAttribute('aria-current', String(i === actual)));
+            };
+            const detener = () => { clearInterval(temporizador); temporizador = null; };
+            const iniciar = () => {
+                if (movimientoReducido || temporizador) return;
+                temporizador = setInterval(() => mostrar(actual + 1), 5000);
+            };
+            puntos.forEach((p, i) => p.addEventListener('click', () => { detener(); mostrar(i); iniciar(); }));
+            const hero = slides[0].closest('section');
+            hero.addEventListener('mouseenter', detener);
+            hero.addEventListener('mouseleave', iniciar);
+            document.addEventListener('visibilitychange', () => (document.hidden ? detener() : iniciar()));
+            iniciar();
+        })();
+
+        // Favoritos: flechas que deslizan la fila una tarjeta a la vez.
+        (() => {
+            const lista = document.getElementById('favoritos-lista');
+            document.querySelectorAll('[data-favoritos]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const tarjeta = lista.querySelector('li');
+                    const paso = tarjeta ? tarjeta.getBoundingClientRect().width + 24 : 300;
+                    lista.scrollBy({ left: paso * Number(btn.dataset.favoritos), behavior: movimientoReducido ? 'auto' : 'smooth' });
+                });
+            });
+        })();
+
+        // WhatsApp flotante: aparece cuando el hero ya salió de pantalla y se
+        // esconde mientras otro botón de WhatsApp está a la vista (no duplica
+        // el llamado ni lo tapa).
+        (() => {
+            const boton = document.getElementById('whatsapp-flotante');
+            const hero = document.querySelector('section');
+            const otros = [...document.querySelectorAll('a[href*="wa.me"]')].filter(a => a !== boton && !a.closest('nav'));
+            const enPantalla = new Set();
+            let heroVisible = true;
+            const actualizar = () => {
+                const visible = !heroVisible && enPantalla.size === 0;
+                boton.classList.toggle('visible', visible);
+                boton.setAttribute('aria-hidden', String(!visible));
+                boton.tabIndex = visible ? 0 : -1;
+            };
+            new IntersectionObserver(([entrada]) => { heroVisible = entrada.isIntersecting; actualizar(); }, { threshold: 0.15 }).observe(hero);
+            const obsOtros = new IntersectionObserver((entradas) => {
+                entradas.forEach(e => (e.isIntersecting ? enPantalla.add(e.target) : enPantalla.delete(e.target)));
+                actualizar();
+            });
+            otros.forEach(a => obsOtros.observe(a));
+        })();
     </script>
 </body></html>

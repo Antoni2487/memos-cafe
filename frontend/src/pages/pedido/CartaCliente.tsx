@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Plus, Search, X } from "lucide-react";
 import FichaProducto, { type ItemCarta } from "./FichaProducto";
-import { soles, type PedidoMesa } from "./usePedidoMesa";
+import { MiniGaleria } from "./GaleriaProducto";
+import { soles, type EntradaCarrito, type PedidoMesa } from "./usePedidoMesa";
+import { galeriaDe } from "../../utils/galeria";
 
 interface Seccion {
   id: string;
@@ -12,8 +14,19 @@ interface Seccion {
 const MS_FOTO = 4500;
 
 /** La carta: fotos que van cambiando arriba, categorías y productos. */
-export default function CartaCliente({ pedido }: { pedido: PedidoMesa }) {
-  const { productos, promociones, cargandoCarta, carrito, agregar, mesaNumero } = pedido;
+export default function CartaCliente({
+  pedido,
+  onAgregado,
+}: {
+  pedido: PedidoMesa;
+  /** Se agregó algo al carrito desde `origen` (para animarlo hacia la barra). */
+  onAgregado?: (origen: DOMRect | undefined, imagen: string | null | undefined) => void;
+}) {
+  const { productos, promociones, cargandoCarta, carrito, mesaNumero } = pedido;
+  const agregar = (entrada: EntradaCarrito, origen?: DOMRect) => {
+    pedido.agregar(entrada);
+    onAgregado?.(origen, entrada.imagen);
+  };
   const [ficha, setFicha] = useState<ItemCarta | null>(null);
   const [busqueda, setBusqueda] = useState("");
   const [activa, setActiva] = useState<string>("");
@@ -34,7 +47,7 @@ export default function CartaCliente({ pedido }: { pedido: PedidoMesa }) {
       const cat = p.categoria_nombre || "Otros";
       if (!porCategoria.has(cat)) porCategoria.set(cat, []);
       porCategoria.get(cat)!.push({
-        tipo: "producto", id: p.id, nombre: p.nombre, descripcion: p.descripcion, precio: p.precio, imagen: p.imagen, categoria: cat,
+        tipo: "producto", id: p.id, nombre: p.nombre, descripcion: p.descripcion, precio: p.precio, imagen: p.imagen, galeria: galeriaDe(p), categoria: cat,
       });
     }
     for (const [cat, items] of porCategoria) lista.push({ id: `cat-${cat}`, titulo: cat, items });
@@ -148,14 +161,15 @@ export default function CartaCliente({ pedido }: { pedido: PedidoMesa }) {
                   {s.titulo}
                 </h2>
                 <ul className="divide-y divide-linea">
-                  {s.items.map((item) => (
+                  {s.items.map((item, n) => (
                     <li key={`${item.tipo}-${item.id}`}>
                       <FilaProducto
                         item={item}
+                        orden={n}
                         cantidad={enCarrito(item)}
                         onAbrir={() => setFicha(item)}
-                        onAgregarRapido={() =>
-                          agregar({ tipo: item.tipo, id: item.id, nombre: item.nombre, precio: Number(item.precio), imagen: item.imagen, cantidad: 1, nota: "" })
+                        onAgregarRapido={(origen) =>
+                          agregar({ tipo: item.tipo, id: item.id, nombre: item.nombre, precio: Number(item.precio), imagen: item.imagen, cantidad: 1, nota: "" }, origen)
                         }
                       />
                     </li>
@@ -174,15 +188,19 @@ export default function CartaCliente({ pedido }: { pedido: PedidoMesa }) {
 
 function FilaProducto({
   item,
+  orden,
   cantidad,
   onAbrir,
   onAgregarRapido,
 }: {
   item: ItemCarta;
+  orden: number;
   cantidad: number;
   onAbrir: () => void;
-  onAgregarRapido: () => void;
+  onAgregarRapido: (origen?: DOMRect) => void;
 }) {
+  const foto = useRef<HTMLButtonElement>(null);
+  const fotos = item.galeria?.length ? item.galeria : item.imagen ? [item.imagen] : [];
   return (
     <div className="relative flex gap-4 py-4">
       <button type="button" onClick={onAbrir} className="flex min-w-0 flex-1 flex-col items-start text-left">
@@ -193,9 +211,9 @@ function FilaProducto({
         <span className="mt-2 text-[15px] font-medium text-espresso tabular-nums">{soles(item.precio)}</span>
       </button>
       <div className="relative shrink-0">
-        <button type="button" onClick={onAbrir} tabIndex={-1} aria-hidden className="block">
-          {item.imagen ? (
-            <img src={item.imagen} alt="" loading="lazy" className="size-24 rounded-2xl object-cover" />
+        <button ref={foto} type="button" onClick={onAbrir} tabIndex={-1} aria-hidden className="block">
+          {fotos.length ? (
+            <MiniGaleria fotos={fotos} retrasoMs={(orden % 4) * 450} />
           ) : (
             <span className="grid size-24 place-items-center rounded-2xl bg-salvia-clara font-display text-3xl text-salvia/60">
               {item.nombre.charAt(0)}
@@ -204,7 +222,7 @@ function FilaProducto({
         </button>
         <button
           type="button"
-          onClick={onAgregarRapido}
+          onClick={() => onAgregarRapido(foto.current?.getBoundingClientRect())}
           aria-label={cantidad ? `Agregar otro ${item.nombre} (llevas ${cantidad})` : `Agregar ${item.nombre}`}
           className={`absolute -bottom-2 -right-2 grid h-10 min-w-10 place-items-center rounded-full px-2 text-sm font-semibold shadow-suave ring-3 ring-beige transition-transform active:scale-90 ${
             cantidad ? "bg-salvia text-marfil" : "bg-marfil text-salvia-osc"

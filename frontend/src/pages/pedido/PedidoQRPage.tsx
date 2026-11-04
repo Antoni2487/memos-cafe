@@ -1,12 +1,47 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
-import { BookOpen, Flower2, ShoppingBag, WifiOff, type LucideIcon } from "lucide-react";
+import { BellRing, BookOpen, Flower2, ShoppingBag, WifiOff, type LucideIcon } from "lucide-react";
 import CartaCliente from "./CartaCliente";
 import MiPedido from "./MiPedido";
 import ConoceMemos from "./ConoceMemos";
+import Bienvenida from "./Bienvenida";
+import VueloAlCarrito from "./VueloAlCarrito";
 import { soles, usePedidoMesa } from "./usePedidoMesa";
+import { movimientoReducido } from "../../utils/movimiento";
+import type { OrdenQR } from "../../types";
 
 type Pestana = "carta" | "pedido" | "conoce";
+
+interface Aviso {
+  texto: string;
+  /** "listo": la cocina terminó una ronda (más visible y dura un poco más). */
+  tono?: "listo";
+}
+
+const MS_AVISO = 3500;
+const MS_AVISO_LISTO = 6000;
+
+const claveBienvenida = (codigo: string) => `bienvenida_mesa_${codigo}`;
+
+/** Una vez por mesa y por sesión del navegador, y nunca con movimiento reducido. */
+function debeDarBienvenida(codigo: string): boolean {
+  if (movimientoReducido()) return false;
+  try {
+    return !sessionStorage.getItem(claveBienvenida(codigo));
+  } catch {
+    return false;
+  }
+}
+
+/** Alguna ronda pasó a "lista" entre una consulta y la siguiente. */
+function seListoAlgo(antes: OrdenQR | null, ahora: OrdenQR | null): boolean {
+  if (!antes || !ahora || antes.id !== ahora.id) return false;
+  const previo = new Map(antes.comandas.map((c) => [c.numero, c.estado]));
+  return ahora.comandas.some((c) => {
+    const era = previo.get(c.numero);
+    return c.estado === "lista" && era !== undefined && era !== "lista" && era !== "entregada";
+  });
+}
 
 /**
  * Lo que ve el cliente al escanear el QR de su mesa: una app de tres
@@ -17,14 +52,42 @@ export default function PedidoQRPage() {
   const { codigo = "" } = useParams<{ codigo: string }>();
   const pedido = usePedidoMesa(codigo);
   const [pestana, setPestana] = useState<Pestana>("carta");
-  const [aviso, setAviso] = useState<string | null>(null);
+  const [aviso, setAviso] = useState<Aviso | null>(null);
+  const [bienvenida, setBienvenida] = useState(() => debeDarBienvenida(codigo));
+  const [vuelo, setVuelo] = useState<{ src: string; desde: DOMRect } | null>(null);
+  const contadorCarrito = useRef<HTMLSpanElement>(null);
 
   useEffect(() => { window.scrollTo({ top: 0 }); }, [pestana]);
   useEffect(() => {
     if (!aviso) return;
-    const t = setTimeout(() => setAviso(null), 3500);
+    const t = setTimeout(() => setAviso(null), aviso.tono === "listo" ? MS_AVISO_LISTO : MS_AVISO);
     return () => clearTimeout(t);
   }, [aviso]);
+
+  // Aviso cuando la cocina termina una ronda. Se compara con la orden de la
+  // consulta anterior durante el render (patrón de React para ajustar estado
+  // cuando cambia un dato, sin un efecto extra).
+  const [ordenPrevia, setOrdenPrevia] = useState(pedido.orden);
+  if (pedido.orden !== ordenPrevia) {
+    setOrdenPrevia(pedido.orden);
+    if (seListoAlgo(ordenPrevia, pedido.orden)) {
+      setAviso({ texto: "¡Tu pedido está listo! Te lo llevan a la mesa en un momento.", tono: "listo" });
+    }
+  }
+
+  const terminarBienvenida = useCallback(() => {
+    try {
+      sessionStorage.setItem(claveBienvenida(codigo), "1");
+    } catch {
+      // navegación privada: se volvería a saludar, nada grave
+    }
+    setBienvenida(false);
+  }, [codigo]);
+
+  const alAgregar = useCallback((origen: DOMRect | undefined, imagen: string | null | undefined) => {
+    if (origen && imagen && !movimientoReducido()) setVuelo({ src: imagen, desde: origen });
+  }, []);
+  const terminarVuelo = useCallback(() => setVuelo(null), []);
 
   // El theme-color de la barra del navegador acompaña a la portada.
   useEffect(() => {
@@ -56,8 +119,8 @@ export default function PedidoQRPage() {
 
   const enviar = async () => {
     const r = await pedido.enviar();
-    if (r === "orden") setAviso("¡Listo! Tu pedido ya está en cocina.");
-    if (r === "por_confirmar") setAviso("¡Pedido enviado! En un momento pasa a cocina.");
+    if (r === "orden") setAviso({ texto: "¡Listo! Tu pedido ya está en cocina." });
+    if (r === "por_confirmar") setAviso({ texto: "¡Pedido enviado! En un momento pasa a cocina." });
   };
 
   const activo = pedido.orden !== null || pedido.porConfirmar?.estado === "pendiente";
@@ -71,7 +134,7 @@ export default function PedidoQRPage() {
       )}
 
       <div className="mx-auto w-full max-w-lg">
-        {pestana === "carta" && <CartaCliente pedido={pedido} />}
+        {pestana === "carta" && <CartaCliente pedido={pedido} onAgregado={alAgregar} />}
         {pestana === "pedido" && <MiPedido pedido={pedido} onEnviar={enviar} onVerCarta={() => setPestana("carta")} />}
         {pestana === "conoce" && <ConoceMemos onVerCarta={() => setPestana("carta")} />}
       </div>
@@ -84,7 +147,12 @@ export default function PedidoQRPage() {
             onClick={() => setPestana("pedido")}
             className="flex h-14 w-full items-center gap-3 rounded-2xl bg-salvia pl-3 pr-5 text-marfil shadow-alta animate-in slide-in-from-bottom-4 duration-200 active:bg-salvia-osc"
           >
-            <span className="grid size-9 place-items-center rounded-xl bg-marfil/15 text-sm font-bold tabular-nums">
+            {/* key: al cambiar la cantidad se vuelve a montar y repite el rebote */}
+            <span
+              ref={contadorCarrito}
+              key={pedido.cantidadCarrito}
+              className="rebote grid size-9 place-items-center rounded-xl bg-marfil/15 text-sm font-bold tabular-nums"
+            >
               {pedido.cantidadCarrito}
             </span>
             <span className="flex-1 text-left text-[15px] font-semibold">Ver mi pedido</span>
@@ -94,10 +162,27 @@ export default function PedidoQRPage() {
       )}
 
       {aviso && (
-        <div role="status" className="fixed inset-x-0 top-4 z-50 mx-auto w-fit max-w-[90vw] rounded-full bg-espresso px-5 py-3 text-sm font-medium text-marfil shadow-alta animate-in fade-in-0 slide-in-from-top-2">
-          {aviso}
+        <div
+          role="status"
+          className={`fixed inset-x-0 top-4 z-50 mx-auto flex w-fit max-w-[90vw] items-center gap-3 bg-espresso text-sm font-medium text-marfil shadow-alta animate-in fade-in-0 ${
+            aviso.tono === "listo"
+              ? "rounded-2xl py-3 pl-3 pr-5 slide-in-from-top-6 duration-500"
+              : "rounded-full px-5 py-3 slide-in-from-top-2"
+          }`}
+          style={{ marginTop: "env(safe-area-inset-top)" }}
+        >
+          {aviso.tono === "listo" && (
+            <span className="campana-vaiven grid size-9 shrink-0 place-items-center rounded-full bg-salvia">
+              <BellRing className="size-4.5" />
+            </span>
+          )}
+          {aviso.texto}
         </div>
       )}
+
+      {vuelo && <VueloAlCarrito src={vuelo.src} desde={vuelo.desde} hacia={contadorCarrito} onFin={terminarVuelo} />}
+
+      {bienvenida && <Bienvenida mesaNumero={pedido.mesaNumero} onFin={terminarBienvenida} />}
 
       <nav
         aria-label="Secciones"

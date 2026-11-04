@@ -1,7 +1,8 @@
 import { MAX_POR_PRODUCTO } from "./usePedidoMesa";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Minus, Plus } from "lucide-react";
 import Hoja from "./Hoja";
+import { GaleriaGrande } from "./GaleriaProducto";
 import { precioNum, soles, type EntradaCarrito } from "./usePedidoMesa";
 
 export interface ItemCarta {
@@ -11,6 +12,8 @@ export interface ItemCarta {
   descripcion?: string;
   precio: number | string;
   imagen?: string | null;
+  /** Portada + fotos adicionales (si hay más de una, se muestran todas). */
+  galeria?: string[];
   categoria?: string;
 }
 
@@ -21,22 +24,29 @@ export default function FichaProducto({
   onCerrar,
 }: {
   item: ItemCarta;
-  onAgregar: (entrada: EntradaCarrito) => void;
+  /** `origen`: dónde está la foto en pantalla, para la animación al carrito. */
+  onAgregar: (entrada: EntradaCarrito, origen?: DOMRect) => void;
   onCerrar: () => void;
 }) {
   const [cantidad, setCantidad] = useState(1);
+  const foto = useRef<HTMLDivElement>(null);
+  const fotos = item.galeria?.length ? item.galeria : item.imagen ? [item.imagen] : [];
   const [nota, setNota] = useState("");
   const precio = precioNum(item.precio);
 
   return (
     <Hoja etiqueta={item.nombre} onCerrar={onCerrar} sinRelleno>
-      {item.imagen ? (
-        <img src={item.imagen} alt="" className="aspect-[4/3] w-full object-cover" />
-      ) : (
-        <div className="grid aspect-[5/2] w-full place-items-center bg-salvia-clara">
-          <span className="font-display text-5xl text-salvia/60">{item.nombre.charAt(0)}</span>
-        </div>
-      )}
+      <div ref={foto}>
+        {fotos.length > 1 ? (
+          <GaleriaGrande fotos={fotos} nombre={item.nombre} />
+        ) : fotos.length === 1 ? (
+          <img src={fotos[0]} alt="" className="aspect-[4/3] w-full object-cover" />
+        ) : (
+          <div className="grid aspect-[5/2] w-full place-items-center bg-salvia-clara">
+            <span className="font-display text-5xl text-salvia/60">{item.nombre.charAt(0)}</span>
+          </div>
+        )}
+      </div>
 
       <div className="flex flex-col gap-5 px-5 pb-4 pt-5">
         <div>
@@ -74,7 +84,10 @@ export default function FichaProducto({
         <button
           type="button"
           onClick={() => {
-            onAgregar({ tipo: item.tipo, id: item.id, nombre: item.nombre, precio, imagen: item.imagen, cantidad, nota });
+            onAgregar(
+              { tipo: item.tipo, id: item.id, nombre: item.nombre, precio, imagen: item.imagen, cantidad, nota },
+              foto.current?.getBoundingClientRect()
+            );
             onCerrar();
           }}
           className="flex h-13 flex-1 items-center justify-between gap-3 rounded-2xl bg-salvia px-5 text-[15px] font-semibold text-marfil transition-colors active:bg-salvia-osc"

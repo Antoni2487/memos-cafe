@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { FormModal, InputField, ImageUpload } from "../common";
+import GaleriaFotos from "./GaleriaFotos";
 import categoriaService from "../../services/categoriaService";
 import { esSoloAlfanumerico, LIMITES, MENSAJES, RANGOS, errorDeRango } from "../../utils/validators";
 import type { Categoria, Producto } from "../../types";
@@ -11,6 +12,8 @@ interface ProductoFormProps {
   onGuardar: (data: ProductoFormData) => void;
   onCerrar: () => void;
   cargando?: boolean;
+  /** La galería se guarda al momento: avisa para refrescar la lista. */
+  onFotosCambiadas?: () => void;
 }
 
 interface FormState {
@@ -31,7 +34,7 @@ function formInicial(producto: Producto | null): FormState {
     : { nombre: "", descripcion: "", precio: "", categoria: "" };
 }
 
-export default function ProductoForm({ abierto, producto, onGuardar, onCerrar, cargando }: ProductoFormProps) {
+export default function ProductoForm({ abierto, producto, onGuardar, onCerrar, cargando, onFotosCambiadas }: ProductoFormProps) {
   const [form, setForm] = useState<FormState>(() => formInicial(producto));
   const [imagenFile, setImagenFile] = useState<File | null>(null);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
@@ -106,11 +109,17 @@ export default function ProductoForm({ abierto, producto, onGuardar, onCerrar, c
       <InputField label="Categoría" value={form.categoria} onChange={set("categoria")}
         options={opcionesCategoria} required error={errores.categoria} />
 
-      <ImageUpload
-        label="Imagen"
-        value={producto?.imagen}
-        onChange={setImagenFile}
-      />
+      {/* Al crear se elige la portada; al editar, la galería completa (sus
+          cambios se guardan al momento, aparte de "Guardar cambios"). */}
+      {producto ? (
+        <GaleriaFotos producto={producto} onCambio={onFotosCambiadas} />
+      ) : (
+        <ImageUpload
+          label="Imagen"
+          value={null}
+          onChange={setImagenFile}
+        />
+      )}
     </FormModal>
   );
 }

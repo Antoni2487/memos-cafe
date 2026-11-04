@@ -177,7 +177,8 @@ export default function Navbar() {
               aria-expanded={abierto}
               className="relative grid size-10 place-items-center rounded-full border border-linea bg-marfil text-espresso transition-colors hover:bg-arena"
             >
-              <Bell className="size-4.5" strokeWidth={1.8} />
+              {/* key: cada aviso nuevo vuelve a montar el ícono y repite el vaivén */}
+              <Bell key={noLeidas} className={`size-4.5 ${noLeidas > 0 ? "campana-vaiven" : ""}`} strokeWidth={1.8} />
               {noLeidas > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 grid min-w-5 h-5 place-items-center rounded-full bg-peligro px-1 text-[10px] font-bold text-marfil ring-2 ring-beige">
                   {noLeidas > 9 ? "9+" : noLeidas}

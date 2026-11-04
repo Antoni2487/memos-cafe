@@ -2,7 +2,8 @@ from auditlog.registry import auditlog
 from django.db import models
 from django.utils import timezone
 
-from memos_cafe.productos.managers import ProductoManager, PromocionManager
+from memos_cafe.productos.managers import ProductoManager
+from memos_cafe.productos.managers import PromocionManager
 
 
 class Categoria(models.Model):
@@ -51,6 +52,33 @@ class Producto(models.Model):
         self.save(update_fields=["disponible"])
 
 
+class ProductoImagen(models.Model):
+    """Foto adicional de un producto (galería de la carta QR).
+
+    La portada sigue siendo ``Producto.imagen``: es la que usan el carrito,
+    las comandas y la tabla del admin. Estas fotos se muestran después de
+    la portada, en el orden de ``orden``.
+    """
+
+    producto = models.ForeignKey(
+        Producto,
+        on_delete=models.CASCADE,
+        related_name="fotos",
+    )
+    imagen = models.ImageField(upload_to="productos/%Y/%m/")
+    orden = models.PositiveSmallIntegerField(default=0)
+    creado_en = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "producto_imagen"
+        verbose_name = "Foto de producto"
+        verbose_name_plural = "Fotos de producto"
+        ordering = ["orden", "id"]
+
+    def __str__(self):
+        return f"{self.producto} · foto {self.orden + 1}"
+
+
 class Promocion(models.Model):
     nombre = models.CharField(max_length=100)
     descripcion = models.TextField(blank=True)
@@ -78,4 +106,5 @@ class Promocion(models.Model):
 
 auditlog.register(Categoria)
 auditlog.register(Producto)
+auditlog.register(ProductoImagen)
 auditlog.register(Promocion)

@@ -2,6 +2,7 @@ from rest_framework import serializers
 
 from memos_cafe.productos.models import Categoria
 from memos_cafe.productos.models import Producto
+from memos_cafe.productos.models import ProductoImagen
 from memos_cafe.productos.models import Promocion
 from memos_cafe.utils.limites import campo_precio
 
@@ -41,6 +42,38 @@ class ProductoSerializer(serializers.ModelSerializer):
             "disponible",
             "imagen",
         ]
+
+
+class FotoProductoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductoImagen
+        fields = ["id", "imagen", "orden"]
+
+
+class ProductoConFotosSerializer(ProductoSerializer):
+    """Lectura con la galería. Solo para los endpoints de productos: el
+    ProductoSerializer base se anida en órdenes y ahí las fotos sobran."""
+
+    fotos = FotoProductoSerializer(many=True, read_only=True)
+
+    class Meta(ProductoSerializer.Meta):
+        fields = [*ProductoSerializer.Meta.fields, "fotos"]
+
+
+class FotoSubirSerializer(serializers.Serializer):
+    imagen = serializers.ImageField()
+
+    def validate_imagen(self, value):
+        validar_tamano_imagen(value)
+        return value
+
+
+class FotosOrdenSerializer(serializers.Serializer):
+    orden = serializers.ListField(
+        child=serializers.IntegerField(min_value=1),
+        allow_empty=True,
+        max_length=10,
+    )
 
 
 class ProductoWriteSerializer(serializers.Serializer):

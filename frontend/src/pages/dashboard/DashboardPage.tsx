@@ -22,6 +22,7 @@ import {
 import dashboardService from "../../services/dashboardService";
 import { LoadingSpinner, EmptyState } from "../../components/common";
 import { useIsMobile } from "../../hooks/useMediaQuery";
+import { useContador, useMontado } from "../../hooks/useAnimacion";
 import type { DashboardCajaActiva, DashboardData, DashboardMesas } from "../../types";
 
 // --- Paleta de colores del proyecto ---
@@ -46,6 +47,32 @@ const METODO_LABELS: Record<string, string> = {
 // --- Formateadores ---
 const formatSoles = (v: number | string) =>
   `S/ ${Number(v).toLocaleString("es-PE", { minimumFractionDigits: 2 })}`;
+
+const formatEntero = (v: number) => String(Math.round(v));
+// Mientras cuenta se redondea a céntimos (si no, se verían 3 decimales).
+const formatSolesContado = (v: number) => formatSoles(Math.round(v * 100) / 100);
+
+/** Barra de progreso que crece desde 0 al montarse (escalonada con `delay`). */
+function BarraCrece({ pct, color, delay = 0 }: { pct: number; color: string; delay?: number }) {
+  const montado = useMontado();
+  return (
+    <div
+      style={{
+        height: "100%",
+        width: `${montado ? pct : 0}%`,
+        backgroundColor: color,
+        borderRadius: 999,
+        transition: "width 0.7s cubic-bezier(0, 0, 0.2, 1)",
+        transitionDelay: `${delay}ms`,
+      }}
+    />
+  );
+}
+
+/** Valor del KPI que cuenta desde 0 (o desde el valor anterior al actualizar). */
+function ValorContado({ valor, formato }: { valor: number; formato: (v: number) => string }) {
+  return <>{formato(useContador(valor))}</>;
+}
 
 const formatFecha = (str: string) => {
   if (!str) return "";
@@ -216,6 +243,7 @@ function Card({ titulo, children, accion, style = {} }: CardProps) {
 
 // --- Estado de mesas visual ---
 function MesasWidget({ mesas }: { mesas?: DashboardMesas }) {
+  const montado = useMontado();
   if (!mesas) return null;
   const items = [
     { label: "Libres",    valor: mesas.libres,    color: "var(--exito)", bg: "var(--exito-fondo)" },
@@ -233,9 +261,9 @@ function MesasWidget({ mesas }: { mesas?: DashboardMesas }) {
             <div
               key={it.label}
               style={{
-                width: `${mesas.total > 0 ? (it.valor / mesas.total) * 100 : 0}%`,
+                width: `${montado && mesas.total > 0 ? (it.valor / mesas.total) * 100 : 0}%`,
                 backgroundColor: it.color,
-                transition: "width 0.6s ease",
+                transition: "width 0.7s cubic-bezier(0, 0, 0.2, 1)",
               }}
             />
           ))}
@@ -459,7 +487,7 @@ export default function DashboardPage() {
         <div className="grid grid-cols-2 gap-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" }}>
           <KPICard
             titulo="Ventas hoy"
-            valor={formatSoles(data?.ventas?.total ?? 0)}
+            valor={<ValorContado valor={Number(data?.ventas?.total ?? 0)} formato={formatSolesContado} />}
             subtitulo={`Ticket prom. ${formatSoles(data?.ventas?.ticket_promedio ?? 0)}`}
             icono={TrendingUp}
             acento
@@ -467,33 +495,33 @@ export default function DashboardPage() {
           />
           <KPICard
             titulo="Ganancias del mes"
-            valor={formatSoles(data?.ventas?.mes ?? 0)}
+            valor={<ValorContado valor={Number(data?.ventas?.mes ?? 0)} formato={formatSolesContado} />}
             icono={TrendingUp}
             delay={20}
           />
           <KPICard
             titulo="Ganancias del año"
-            valor={formatSoles(data?.ventas?.anio ?? 0)}
+            valor={<ValorContado valor={Number(data?.ventas?.anio ?? 0)} formato={formatSolesContado} />}
             icono={TrendingUp}
             delay={40}
           />
           <KPICard
             titulo="Órdenes abiertas"
-            valor={data?.ordenes?.abiertas ?? 0}
+            valor={<ValorContado valor={data?.ordenes?.abiertas ?? 0} formato={formatEntero} />}
             subtitulo={`${data?.ordenes?.cerradas_hoy ?? 0} cerradas hoy`}
             icono={ClipboardList}
             delay={60}
           />
           <KPICard
             titulo="Mesas ocupadas"
-            valor={data?.mesas?.ocupadas ?? 0}
+            valor={<ValorContado valor={data?.mesas?.ocupadas ?? 0} formato={formatEntero} />}
             subtitulo={`${data?.mesas?.libres ?? 0} libres de ${data?.mesas?.total ?? 0}`}
             icono={Table2}
             delay={120}
           />
           <KPICard
             titulo="Órdenes cobradas"
-            valor={data?.ordenes?.cerradas_hoy ?? 0}
+            valor={<ValorContado valor={data?.ordenes?.cerradas_hoy ?? 0} formato={formatEntero} />}
             subtitulo={`${data?.ordenes?.anuladas_hoy ?? 0} anuladas hoy`}
             icono={Receipt}
             delay={180}
@@ -640,15 +668,7 @@ export default function DashboardPage() {
                           </span>
                         </div>
                         <div style={{ height: 4, backgroundColor: VERDE_CLARO, borderRadius: 999, overflow: "hidden" }}>
-                          <div
-                            style={{
-                              height: "100%",
-                              width: `${pct}%`,
-                              backgroundColor: i === 0 ? DORADO : VERDE,
-                              borderRadius: 999,
-                              transition: "width 0.6s ease",
-                            }}
-                          />
+                          <BarraCrece pct={pct} color={i === 0 ? DORADO : VERDE} delay={i * 80} />
                         </div>
                       </div>
                     </div>

@@ -1,6 +1,9 @@
 from django.contrib import admin
 
-from memos_cafe.productos.models import Categoria, Producto, Promocion
+from memos_cafe.productos.models import Categoria
+from memos_cafe.productos.models import Producto
+from memos_cafe.productos.models import ProductoImagen
+from memos_cafe.productos.models import Promocion
 
 
 @admin.register(Categoria)
@@ -14,8 +17,15 @@ class CategoriaAdmin(admin.ModelAdmin):
         return obj.productos.count()
 
 
+class ProductoImagenInline(admin.TabularInline):
+    model = ProductoImagen
+    extra = 0
+    fields = ["imagen", "orden"]
+
+
 @admin.register(Producto)
 class ProductoAdmin(admin.ModelAdmin):
+    inlines = [ProductoImagenInline]
     list_display = ["nombre", "categoria", "precio", "disponible"]
     list_filter = ["disponible", "categoria"]
     search_fields = ["nombre", "descripcion"]
@@ -35,7 +45,14 @@ class ProductoAdmin(admin.ModelAdmin):
 
 @admin.register(Promocion)
 class PromocionAdmin(admin.ModelAdmin):
-    list_display = ["nombre", "precio", "activo", "fecha_inicio", "fecha_fin", "vigente"]
+    list_display = [
+        "nombre",
+        "precio",
+        "activo",
+        "fecha_inicio",
+        "fecha_fin",
+        "vigente",
+    ]
     list_filter = ["activo"]
     search_fields = ["nombre", "descripcion"]
     ordering = ["fecha_fin"]

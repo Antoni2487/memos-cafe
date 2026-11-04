@@ -193,3 +193,40 @@
 @media (prefers-reduced-motion: reduce) {
     .notif-entrar { animation: none; }
 }
+
+/* ── Movimiento (tokens del Design System, colección "Movimiento") ──────────
+   Lo que aparece usa salida (ease-out), lo que se cierra entrada (ease-in) y
+   los cambios de estado entrada-salida. */
+:root {
+    --duracion-rapida: 200ms;
+    --duracion-base: 250ms;
+    --duracion-lenta: 300ms;
+    --curva-salida: cubic-bezier(0, 0, 0.2, 1);
+    --curva-entrada: cubic-bezier(0.4, 0, 1, 1);
+    --curva-entrada-salida: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Campana del navbar: vaivén corto cuando llega un aviso nuevo. */
+@keyframes campana-vaiven {
+    0%, 100% { transform: rotate(0); }
+    20% { transform: rotate(16deg); }
+    45% { transform: rotate(-12deg); }
+    70% { transform: rotate(6deg); }
+}
+.campana-vaiven {
+    transform-origin: 50% 10%;
+    animation: campana-vaiven 650ms var(--curva-salida) both;
+}
+
+/* Contador del carrito del cliente QR: pequeño rebote al sumar algo. */
+@keyframes rebote {
+    0%, 100% { transform: scale(1); }
+    40% { transform: scale(1.25); }
+}
+.rebote {
+    animation: rebote 350ms var(--curva-salida);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .campana-vaiven, .rebote { animation: none; }
+}

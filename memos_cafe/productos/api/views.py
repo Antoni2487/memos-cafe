@@ -10,8 +10,10 @@ from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
 from memos_cafe.productos.api.serializers import CategoriaSerializer
+from memos_cafe.productos.api.serializers import FotosOrdenSerializer
+from memos_cafe.productos.api.serializers import FotoSubirSerializer
+from memos_cafe.productos.api.serializers import ProductoConFotosSerializer
 from memos_cafe.productos.api.serializers import ProductoEditarSerializer
-from memos_cafe.productos.api.serializers import ProductoSerializer
 from memos_cafe.productos.api.serializers import ProductoWriteSerializer
 from memos_cafe.productos.api.serializers import PromocionEditarSerializer
 from memos_cafe.productos.api.serializers import PromocionSerializer
@@ -20,6 +22,7 @@ from memos_cafe.productos.models import Categoria
 from memos_cafe.productos.models import Producto
 from memos_cafe.productos.models import Promocion
 from memos_cafe.productos.services import CategoriaService
+from memos_cafe.productos.services import FotoProductoService
 from memos_cafe.productos.services import ProductoService
 from memos_cafe.productos.services import PromocionService
 from memos_cafe.utils.permissions import EsAdmin
@@ -121,8 +124,10 @@ class ProductoViewSet(
 
     def get_queryset(self):
         if self.request.user.groups.filter(name="admin").exists():
-            return Producto.objects.con_categoria()
-        return Producto.objects.disponibles()
+            qs = Producto.objects.con_categoria()
+        else:
+            qs = Producto.objects.disponibles()
+        return qs.prefetch_related("fotos")
 
     def get_permissions(self):
         if self.action in ["list", "retrieve"]:
@@ -132,7 +137,22 @@ class ProductoViewSet(
         return [EsAdmin()]
 
     def get_serializer_class(self):
-        return ProductoSerializer
+        return ProductoConFotosSerializer
+
+    def _respuesta(self, producto, status_code=status.HTTP_200_OK):
+        """Serializa el producto recién guardado. Se vuelve a leer para que
+        la galería no salga del caché de prefetch de antes del cambio."""
+        fresco = (
+            Producto.objects.con_categoria()
+            .prefetch_related("fotos")
+            .get(
+                pk=producto.pk,
+            )
+        )
+        return Response(
+            ProductoConFotosSerializer(fresco, context={"request": self.request}).data,
+            status=status_code,
+        )
 
     @action(
         detail=False,
@@ -148,10 +168,7 @@ class ProductoViewSet(
             producto = ProductoService.crear(**serializer.validated_data)
         except ValueError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        return Response(
-            ProductoSerializer(producto).data,
-            status=status.HTTP_201_CREATED,
-        )
+        return self._respuesta(producto, status.HTTP_201_CREATED)
 
     @action(
         detail=True,
@@ -168,7 +185,7 @@ class ProductoViewSet(
             ProductoService.editar(producto, **serializer.validated_data)
         except ValueError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        return Response(ProductoSerializer(producto).data)
+        return self._respuesta(producto)
 
     @action(
         detail=True,
@@ -189,7 +206,7 @@ class ProductoViewSet(
             ProductoService.actualizar_precio(producto, Decimal(str(precio)))
         except ValueError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        return Response(ProductoSerializer(producto).data)
+        return self._respuesta(producto)
 
     @action(
         detail=True,
@@ -201,7 +218,7 @@ class ProductoViewSet(
         """POST /api/productos/{id}/activar/"""
         producto = self.get_object()
         producto.activar()
-        return Response(ProductoSerializer(producto).data)
+        return self._respuesta(producto)
 
     @action(
         detail=True,
@@ -213,7 +230,87 @@ class ProductoViewSet(
         """POST /api/productos/{id}/desactivar/"""
         producto = self.get_object()
         producto.desactivar()
-        return Response(ProductoSerializer(producto).data)
+        return self._respuesta(producto)
+
+    # ── Galería de fotos ───────────────────────────────────────────────────
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="fotos",
+        permission_classes=[EsAdmin],
+    )
+    def subir_foto(self, request, pk=None):
+        """POST /api/productos/{id}/fotos/ — multipart con `imagen`."""
+        producto = self.get_object()
+        serializer = FotoSubirSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            FotoProductoService.agregar(producto, serializer.validated_data["imagen"])
+        except ValueError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return self._respuesta(producto, status.HTTP_201_CREATED)
+
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="fotos/ordenar",
+        permission_classes=[EsAdmin],
+    )
+    def ordenar_fotos(self, request, pk=None):
+        """POST /api/productos/{id}/fotos/ordenar/ — {"orden": [ids...]}"""
+        producto = self.get_object()
+        serializer = FotosOrdenSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            FotoProductoService.ordenar(producto, serializer.validated_data["orden"])
+        except ValueError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return self._respuesta(producto)
+
+    @action(
+        detail=True,
+        methods=["delete"],
+        url_path="fotos/portada",
+        permission_classes=[EsAdmin],
+    )
+    def quitar_portada(self, request, pk=None):
+        """DELETE /api/productos/{id}/fotos/portada/"""
+        producto = self.get_object()
+        try:
+            FotoProductoService.quitar_portada(producto)
+        except ValueError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return self._respuesta(producto)
+
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path=r"fotos/(?P<foto_id>\d+)/portada",
+        permission_classes=[EsAdmin],
+    )
+    def hacer_portada(self, request, pk=None, foto_id=None):
+        """POST /api/productos/{id}/fotos/{foto_id}/portada/"""
+        producto = self.get_object()
+        try:
+            FotoProductoService.hacer_portada(producto, int(foto_id))
+        except ValueError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return self._respuesta(producto)
+
+    @action(
+        detail=True,
+        methods=["delete"],
+        url_path=r"fotos/(?P<foto_id>\d+)",
+        permission_classes=[EsAdmin],
+    )
+    def eliminar_foto(self, request, pk=None, foto_id=None):
+        """DELETE /api/productos/{id}/fotos/{foto_id}/"""
+        producto = self.get_object()
+        try:
+            FotoProductoService.eliminar(producto, int(foto_id))
+        except ValueError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_404_NOT_FOUND)
+        return self._respuesta(producto)
 
     @action(
         detail=False,
@@ -227,13 +324,19 @@ class ProductoViewSet(
         pedido por QR. Mismo serializer que list(), sin datos sensibles."""
         # Los descartables (bolsas y envases para llevar) los agrega el
         # personal; no se ofrecen en la carta del cliente sentado en la mesa.
-        productos = Producto.objects.disponibles().exclude(
-            categoria__nombre=CATEGORIA_DESCARTABLES,
+        productos = (
+            Producto.objects.disponibles()
+            .exclude(categoria__nombre=CATEGORIA_DESCARTABLES)
+            .prefetch_related("fotos")
         )
         # Con request en el contexto las fotos salen con URL completa: el
         # celular del cliente las pide al dominio de la API, no al del front.
         return Response(
-            ProductoSerializer(productos, many=True, context={"request": request}).data,
+            ProductoConFotosSerializer(
+                productos,
+                many=True,
+                context={"request": request},
+            ).data,
         )
 
 

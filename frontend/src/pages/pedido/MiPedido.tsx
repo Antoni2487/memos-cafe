@@ -247,7 +247,7 @@ function Progreso({ estado }: { estado: EstadoComanda }) {
         const Icono = p.icono;
         return (
           <li key={p.estado} className="flex flex-col items-center gap-1.5">
-            <span className={`h-1.5 w-full rounded-full ${hecho ? "bg-salvia" : "bg-linea"}`} />
+            <span className={`h-1.5 w-full rounded-full transition-colors duration-500 ease-out ${hecho ? "bg-salvia" : "bg-linea"}`} />
             <span className={`flex items-center gap-1 text-xs ${n === actual ? "font-semibold text-salvia-osc" : hecho ? "text-suave" : "text-tenue"}`}>
               {n === actual && <Icono className="size-3.5" />}
               {p.label}

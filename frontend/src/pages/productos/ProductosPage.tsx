@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Eye, Pencil, ToggleLeft, ToggleRight, Plus } from "lucide-react";
 import useProductos from "../../hooks/useProductos";
 import ProductoForm from "../../components/productos/ProductoForm";
@@ -22,6 +22,18 @@ export default function ProductosPage() {
   const [productoVer, setProductoVer]     = useState<Producto | null>(null);
   const [guardando, setGuardando]         = useState(false);
   const [toggling, setToggling]           = useState(false);
+  // La galería se guarda al momento; la tabla se refresca al cerrar el modal
+  // (no en cada foto, para no parpadear detrás del modal).
+  const fotosCambiadas = useRef(false);
+
+  const cerrarForm = () => {
+    setShowForm(false);
+    setProductoEditar(null);
+    if (fotosCambiadas.current) {
+      fotosCambiadas.current = false;
+      recargar();
+    }
+  };
 
   const filtrados = productos.filter((p) =>
     p.nombre.toLowerCase().includes(busqueda.toLowerCase())
@@ -38,6 +50,7 @@ export default function ProductosPage() {
       }
       setShowForm(false);
       setProductoEditar(null);
+      fotosCambiadas.current = false;
       await recargar();
     } finally {
       setGuardando(false);
@@ -184,8 +197,9 @@ export default function ProductosPage() {
         abierto={showForm}
         producto={productoEditar}
         onGuardar={handleGuardar}
-        onCerrar={() => { setShowForm(false); setProductoEditar(null); }}
+        onCerrar={cerrarForm}
         cargando={guardando}
+        onFotosCambiadas={() => { fotosCambiadas.current = true; }}
       />
       <ConfirmDialog
         abierto={!!productoToggle}

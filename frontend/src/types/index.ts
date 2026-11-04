@@ -59,6 +59,14 @@ export interface Producto {
   categoria_nombre?: string;
   disponible: boolean;
   imagen?: string | null;
+  /** Fotos adicionales a la portada (`imagen`), en el orden de la galería. */
+  fotos?: FotoProducto[];
+}
+
+export interface FotoProducto {
+  id: number;
+  imagen: string;
+  orden: number;
 }
 
 export interface Promocion {
